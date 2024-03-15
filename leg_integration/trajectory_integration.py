@@ -1,14 +1,12 @@
-from MotionPlanning.kinematics.kinematics_solvers import KinematicsSolver
-from elkapod_driver.driver import ElkapodDriver
 import numpy as np
 import time
+from MotionPlanning.kinematics.kinematics_solvers import KinematicsSolver
+from elkapod_driver.driver import ElkapodDriver
 from leg_trajectory import LegTrajectory
+from general.config_load import load_parameters
 
 if __name__ == "__main__":
-    m1 = np.array([0, 0, 0.05])
-    a1 = np.array([0.05, 0, 0])
-    a2 = np.array([0.09, 0, 0])
-    a3 = np.array([0.205, 0, 0])
+    m1, a1, a2, a3 = load_parameters("leg_integration/config/leg_configuration.yaml")
 
     kinematics_solver = KinematicsSolver(m1, a1, a2, a3)
     driver = ElkapodDriver()
