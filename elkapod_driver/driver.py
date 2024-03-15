@@ -7,14 +7,15 @@ import time
 class ElkapodDriver:
     def __init__(self, max_speed=1000000):
         self._spi = spidev.SpiDev()
-        self._spi.max_speed_hz = max_speed
-        self._spi.mode = 0b00
 
         try:
             self._spi.open(0, 0)  # Bus 0, Device 0
         except Exception:
             print("[ERROR] Selected SPI interface cannot be opened!")
             sys.exit(1)
+
+        self._spi.max_speed_hz = max_speed
+        self._spi.mode = 0b00
 
     def close_conn(self):
         self._spi.close()
@@ -35,13 +36,13 @@ class ElkapodDriver:
             angle_float_parts.append(float_part)
 
         message2 = one_leg_frame(leg_id, servo_op_codes, angle_int_parts, angle_float_parts)
-        self._send_data(frame_lengths[FrameType.ONE_SERVO], message2)
+        self._send_data(frame_lengths[FrameType.ONE_LEG], message2)
 
-    def _send_data(self, nbytes: int, bytes: list):
+    def _send_data(self, nbytes: int, bytes_to_be_send: list):
         # Send how many bytes the MCU should expect to be sent
-        self._spi.writebytes2(nbytes)
+        self._spi.writebytes2([nbytes])
         time.sleep(0.01)
-        self._spi.writebytes2(bytes)
+        self._spi.writebytes2(bytes_to_be_send)
 
 
 
