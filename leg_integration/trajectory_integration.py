@@ -34,7 +34,7 @@ if __name__ == "__main__":
     frequency = 100
     send_time = 1/frequency
 
-    discrete_points = np.arange(0, movement_time)
+    discrete_points = np.arange(0, movement_time, send_time)
     positions = [trajectory.get_position(t, 0) for t in discrete_points]
     angles = [kinematics_solver.inverse(p) for p in positions]
 
@@ -46,9 +46,10 @@ if __name__ == "__main__":
         if t2 - t1 < movement_time:
             if t2 - t3 > send_time:
                 q = angles[i]
-                angles = [float(q[0]) + 90, float(q[1]) + 90, -float(q[2])]
+                print(q)
+                send_angles = [float(q[0]) + 90, float(q[1]) + 90, -float(q[2])]
 
-                driver.send_one_leg_frame(1, [1, 1, 1], angles)
+                driver.send_one_leg_frame(1, [1, 1, 1], send_angles)
                 t3 = time.time()
                 i += 1
         else:
