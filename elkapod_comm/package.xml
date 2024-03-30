@@ -3,8 +3,8 @@
 <package format="3">
   <name>elkapod_comm</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="piotrpatek17@gmail.com">vistek528</maintainer>
+  <description>Provides communication services with Hardware Controller for rest of the Elkapod Robotic System</description>
+  <maintainer email="hexapod.bionik@gmail.com">Piotr Patek</maintainer>
   <license>MIT</license>
 
   <depend>rclpy</depend>

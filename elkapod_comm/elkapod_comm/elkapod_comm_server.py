@@ -1,18 +1,18 @@
 import sys
-import time
 import rclpy
-import threading
-from rclpy.node import Node
-from rclpy.executors import MultiThreadedExecutor
+from rclpy.node import Node, ParameterDescriptor, IntegerRange
 import spidev
 from elkapod_msgs.msg import ElkapodCommLegFrame
-from .hexapod_protocol import one_servo_frame, one_leg_frame, split_to_integer_and_float_parts, FrameType, frame_lengths
+from .hexapod_protocol import one_leg_frame, split_to_integer_and_float_parts, FrameType, frame_lengths
 
 
 class ElkapodCommServer(Node):
     def __init__(self):
         super().__init__("elkapod_comm_server")
-        self.declare_parameter("spi_speed", value=1000000)
+        self.declare_parameter("spi_speed", value=1000000,
+                               descriptor=ParameterDescriptor(
+                                   description="Operating frequency of SPI peripherial in Hz",
+                                   integer_range=[IntegerRange(from_value=1000000, to_value=15000000, step=0)]))
 
         self._elkapod_leg_subscription = self.create_subscription(
             ElkapodCommLegFrame,
@@ -30,11 +30,13 @@ class ElkapodCommServer(Node):
         except Exception:
             self.get_logger().fatal("Cannot open SPI connection to Hexapod Hardware Controller! Aborting...")
             sys.exit(1)
-        spi_speed = self.get_parameter("spi_speed").value
 
-        self._spi.max_speed_hz = 2500000
+        spi_speed = self.get_parameter("spi_speed").value
+        self._spi.max_speed_hz = spi_speed
         self._spi.mode = 0b00
 
+    def parameters_callback(self, params):
+        pass
 
     def _leg_frame_callback(self, msg):
         leg_id = msg.leg_nb
@@ -87,9 +89,7 @@ class ElkapodCommServer(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-
     driver = ElkapodCommServer()
-    executor = MultiThreadedExecutor(2)
 
     rclpy.spin(driver)
     driver.destroy_node()

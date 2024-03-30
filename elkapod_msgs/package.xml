@@ -3,9 +3,9 @@
 <package format="3">
   <name>elkapod_msgs</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="piotrpatek17@gmail.com">vistek528</maintainer>
-  <license>TODO: License declaration</license>
+  <description>Package containing templates of messages for topics, services and messages for the Elkapod Robotic System</description>
+  <maintainer email="hexapod.bionik@gmail.com">Piotr Patek</maintainer>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
