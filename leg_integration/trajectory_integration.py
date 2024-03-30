@@ -31,22 +31,27 @@ if __name__ == "__main__":
     time.sleep(2)
 
     # Period between next discrete points of the trajectory will be probed and next send to the controller
-    send_time = 0.01
+    frequency = 100
+    send_time = 1/frequency
 
+    discrete_points = np.arange(0, movement_time, send_time)
+    positions = [trajectory.get_position(t, 0) for t in discrete_points]
+    angles = [kinematics_solver.inverse(p) for p in positions]
+
+    i = 0
     t1 = time.time()
     t3 = time.time()
     while True:
         t2 = time.time()
         if t2 - t1 < movement_time:
             if t2 - t3 > send_time:
-                p = trajectory.get_position(t2 - t1, 0)
+                q = angles[i]
+                print(q)
+                send_angles = [float(q[0]) + 90, float(q[1]) + 90, -float(q[2])]
 
-                q = kinematics_solver.inverse(p)
-
-                angles = [float(q[0]) + 90, float(q[1]) + 90, -float(q[2])]
-
-                driver.send_one_leg_frame(1, [1, 1, 1], angles)
+                driver.send_one_leg_frame(1, [1, 1, 1], send_angles)
                 t3 = time.time()
+                i += 1
         else:
             break
 
