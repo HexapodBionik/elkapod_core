@@ -2,7 +2,7 @@ import sys
 import rclpy
 from rclpy.node import Node, ParameterDescriptor, IntegerRange
 import spidev
-from elkapod_msgs.msg import ElkapodCommLegFrame
+from elkapod_msgs.msg import LegFrames
 from .hexapod_protocol import one_leg_frame, split_to_integer_and_float_parts, FrameType, FRAME_LENGTHS_TRANSMIT, FRAME_LENGTHS_RECEIVE, INFO_FRAME_LIST, check_info_frame
 from .hexapod_protocol import __version__ as HexapodProtocolVersion
 from .hexapod_protocol_exceptions import MalformedHexapodInfoFrameError, IncompatibleHexapodProtocolVersionError, OldHexapodProtocolVersionWarning, NewHexapodProtocolVersionWarning
@@ -17,7 +17,7 @@ class ElkapodCommServer(Node):
                                    integer_range=[IntegerRange(from_value=1000000, to_value=15000000, step=0)]))
 
         self._elkapod_leg_subscription = self.create_subscription(
-            ElkapodCommLegFrame,
+            LegFrames,
             "elkapod_comm_server_leg_frames",
             self._leg_frame_callback,
             10
@@ -46,24 +46,25 @@ class ElkapodCommServer(Node):
         self.get_hhc_info()
 
     def _leg_frame_callback(self, msg):
-        leg_id = msg.leg_nb
-        servo_op_codes = msg.servo_op_codes.tolist()
-        angles = msg.servo_angles.tolist()
+        leg_frames = msg.leg_frames
+        for frame in leg_frames:
+            leg_id = frame.leg_nb
+            servo_op_codes = frame.servo_op_codes.tolist()
+            angles = frame.servo_angles.tolist()
 
-        angle_int_parts = []
-        angle_float_parts = []
-        for angle in angles:
-            int_part, float_part = split_to_integer_and_float_parts(angle)
-            angle_int_parts.append(int_part)
-            angle_float_parts.append(float_part)
+            angle_int_parts = []
+            angle_float_parts = []
+            for angle in angles:
+                int_part, float_part = split_to_integer_and_float_parts(angle)
+                angle_int_parts.append(int_part)
+                angle_float_parts.append(float_part)
 
-        message2 = one_leg_frame(leg_id, servo_op_codes, angle_int_parts, angle_float_parts)
-        self.get_logger().info(f"Setting raw angles {angles} for leg {leg_id}!")
+            message2 = one_leg_frame(leg_id, servo_op_codes, angle_int_parts, angle_float_parts)
+            self.get_logger().info(f"Setting raw angles {angles} for leg {leg_id}!")
 
-        self._send_data(FRAME_LENGTHS_TRANSMIT[FrameType.ONE_LEG], message2)
+            self._send_data(FRAME_LENGTHS_TRANSMIT[FrameType.ONE_LEG], message2)
 
     def get_hhc_info(self):
-        data = []
         self._send_data(FRAME_LENGTHS_TRANSMIT[FrameType.INFO], INFO_FRAME_LIST)
         data = self._spi.readbytes(FRAME_LENGTHS_RECEIVE[FrameType.INFO])
 
@@ -74,17 +75,11 @@ class ElkapodCommServer(Node):
             self.get_logger().error(str(e))
         except (OldHexapodProtocolVersionWarning, NewHexapodProtocolVersionWarning) as w:
             self.get_logger().warning(str(w))
-        
-
 
     def get_adc_info(self):
-        data = []
         self._spi.writebytes2([0x02])
         self._spi.writebytes2([0x02, 0x04])
         data = self._spi.readbytes(7)
-
-        print(data)
-
         
         raw_voltage = 0
         for i in range(4):
