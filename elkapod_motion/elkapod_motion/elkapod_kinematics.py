@@ -1,23 +1,24 @@
 import numpy as np
 import sys
 sys.path.append("./")
+
+sys.path.append("./elkapod_motion")
 from MotionPlanning.kinematics.kinematics_solvers import KinematicsSolver
 from MotionPlanning.kinematics.kinematics_exceptions import PointOutOfReach
 
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Point
-from elkapod_msgs.msg import LegPositions, LegFrames, LegFrame
+from elkapod_msgs.msg import LegPositions, LegFrames
 
-
-from leg_integration.general.config_load import load_parameters
+from elkapod_left_leg_description.utils.config_load import load_parameters
 
 
 class ElkapodKinematics(Node):
     def __init__(self):
         super().__init__("elkapod_kinematics")
 
-        path_to_parameters = "leg_integration/config/leg_configuration.yaml"
+        path_to_parameters = "elkapod_left_leg_description/config/leg_configuration.yaml"
         leg_parameters = load_parameters(path_to_parameters)
         self._leg_positions = [[0.0, 0.0, 0.0] for _ in range(6)]
 
@@ -56,8 +57,7 @@ class ElkapodKinematics(Node):
         message.leg_nb = leg_nb
         message.servo_op_codes = [1, 1, 1]
         p = [point.x, point.y, point.z]
-        # print(p)
-        # print(point)
+
         try:
             message.servo_angles = self._kinematics_solver.inverse(np.array(p)).tolist()
             self._leg_positions[leg_nb] = p

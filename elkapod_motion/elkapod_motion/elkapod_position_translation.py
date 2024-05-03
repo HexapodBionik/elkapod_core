@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from elkapod_msgs.msg import LegFrames, LegFrame
+from elkapod_msgs.msg import LegFrames
 import numpy as np
 from sensor_msgs.msg import JointState
 
