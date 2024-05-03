@@ -54,10 +54,13 @@ class ElkapodKinematics(Node):
     def _point_to_leg_frame(self, leg_nb, point):
         message = LegFrame()
         message.leg_nb = leg_nb
-        message.servo_op_code = [1, 1, 1]
+        message.servo_op_codes = [1, 1, 1]
+        p = [point.x, point.y, point.z]
+        # print(p)
+        # print(point)
         try:
-            message.servo_angles = self._kinematics_solver.inverse(np.array(point)).tolist()
-            self._leg_positions[leg_nb] = point
+            message.servo_angles = self._kinematics_solver.inverse(np.array(p)).tolist()
+            self._leg_positions[leg_nb] = p
             return message
         except PointOutOfReach:
             self.get_logger().error(f"For leg {leg_nb}, given point {point.x},{point.y},{point.z} is out of range")
