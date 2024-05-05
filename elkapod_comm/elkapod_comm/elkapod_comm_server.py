@@ -26,9 +26,11 @@ class ElkapodCommServer(Node):
         # In seconds
         self._info_timer_period = 30
         self._adc_timer_period = 0.1
+        self._temperature_timer_period = 0.1
 
 
         self._get_info_timer = self.create_timer(self._info_timer_period, self.get_hhc_info)
+        self._get_temperature_timer = self.create_timer(self._temperature_timer_period, self.get_temperature_info)
         # self._adc_info_timer = self.create_timer(self._adc_timer_period, self.get_adc_info)
 
         self._spi = spidev.SpiDev()
@@ -87,6 +89,19 @@ class ElkapodCommServer(Node):
         
         voltage = (raw_voltage / 4096)*3.3
         print(f"Voltage: {voltage} V")
+
+    def get_temperature_info(self):
+        self._spi.writebytes2([0x02])
+        self._spi.writebytes2([0x02, 0x05])
+        data = self._spi.readbytes(6)
+
+        temperature = 0
+        for i in range(4):
+            temperature |= data[3 + i] << (3 - i) * 8
+            
+        temperature /= 1000
+
+        print(f"Temperature: {temperature:.3f} deg")
 
     def _send_data(self, nbytes: int, bytes_to_be_send: list):
         # Send how many bytes the MCU should expect to be sent
