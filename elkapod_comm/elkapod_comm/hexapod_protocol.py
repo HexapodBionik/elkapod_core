@@ -10,7 +10,7 @@ from .hexapod_protocol_exceptions import (
 __name__ = "Hexapod Protocol"
 __doc__ = "Hardware Controller Hexapod Communication Protocol"
 __author__ = "Piotr Patek"
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
 
 class FrameType(Enum):
@@ -18,6 +18,7 @@ class FrameType(Enum):
     ONE_SERVO = 2
     INFO = 3
     ADC = 4
+    TEMPERATURE = 5
 
 
 class ServoOpCodes(Enum):
@@ -30,12 +31,14 @@ FRAME_LENGTHS_TRANSMIT = {
     FrameType.ONE_LEG: 14,
     FrameType.ONE_SERVO: 6,
     FrameType.INFO: 2,
-    FrameType.ADC: 2
+    FrameType.ADC: 2,
+    FrameType.TEMPERATURE: 2
 }
 
 FRAME_LENGTHS_RECEIVE = {
     FrameType.INFO: 7,
-    FrameType.ADC: 7
+    FrameType.ADC: 7,
+    FrameType.TEMPERATURE: 6
 }
 
 INFO_FRAME_FIRST_CHECK_BYTE = 0x15

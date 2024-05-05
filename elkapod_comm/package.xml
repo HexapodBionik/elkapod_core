@@ -9,6 +9,7 @@
 
   <depend>rclpy</depend>
   <depend>elkapod_msgs</depend>
+  <depend>sensor_msgs</depend>
 
   <exec_depend>std_msgs</exec_depend>
 

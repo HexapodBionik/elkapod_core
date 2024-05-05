@@ -2,6 +2,7 @@ import sys
 import rclpy
 from rclpy.node import Node, ParameterDescriptor, IntegerRange
 import spidev
+from sensor_msgs.msg import Temperature
 from elkapod_msgs.msg import LegFrames
 from .hexapod_protocol import one_leg_frame, split_to_integer_and_float_parts, FrameType, FRAME_LENGTHS_TRANSMIT, FRAME_LENGTHS_RECEIVE, INFO_FRAME_LIST, check_info_frame
 from .hexapod_protocol import __version__ as HexapodProtocolVersion
@@ -15,24 +16,8 @@ class ElkapodCommServer(Node):
                                descriptor=ParameterDescriptor(
                                    description="Operating frequency of SPI peripherial in Hz",
                                    integer_range=[IntegerRange(from_value=1000000, to_value=15000000, step=0)]))
-
-        self._elkapod_leg_subscription = self.create_subscription(
-            LegFrames,
-            "elkapod_comm_server_leg_frames",
-            self._leg_frame_callback,
-            10
-        )
-
-        # In seconds
-        self._info_timer_period = 30
-        self._adc_timer_period = 0.1
-        self._temperature_timer_period = 0.1
-
-
-        self._get_info_timer = self.create_timer(self._info_timer_period, self.get_hhc_info)
-        self._get_temperature_timer = self.create_timer(self._temperature_timer_period, self.get_temperature_info)
-        # self._adc_info_timer = self.create_timer(self._adc_timer_period, self.get_adc_info)
-
+        
+        # Setup SPI connection
         self._spi = spidev.SpiDev()
         try:
             self._spi.open(0, 0)
@@ -43,6 +28,27 @@ class ElkapodCommServer(Node):
         spi_speed = self.get_parameter("spi_speed").value
         self._spi.max_speed_hz = spi_speed
         self._spi.mode = 0b00
+
+
+        # Control subscriptions
+        self._elkapod_leg_subscription = self.create_subscription(
+            LegFrames,
+            "elkapod_comm_server_leg_frames",
+            self._leg_frame_callback,
+            10
+        )
+
+
+        # Sensor & Info publishers
+        self._info_timer_period = 30
+        self._adc_timer_period = 0.1
+        self._temperature_timer_period = 1
+
+
+        self._get_info_timer = self.create_timer(self._info_timer_period, self.get_hhc_info)
+        self._get_temperature_timer = self.create_timer(self._temperature_timer_period, self.get_temperature_info)
+        self._mcu_temperature_publisher = self.create_publisher(Temperature, "/elkapod_mcu_temp", 10)
+
 
         # Check Hardware Controler
         self.get_hhc_info()
@@ -79,34 +85,39 @@ class ElkapodCommServer(Node):
             self.get_logger().warning(str(w))
 
     def get_adc_info(self):
-        self._spi.writebytes2([0x02])
-        self._spi.writebytes2([0x02, 0x04])
-        data = self._spi.readbytes(7)
+        self._send_data(FRAME_LENGTHS_TRANSMIT[FrameType.ADC], [FRAME_LENGTHS_TRANSMIT[FrameType.ADC], FrameType.ADC.value])
+        data = self._spi.readbytes(FRAME_LENGTHS_RECEIVE[FrameType.ADC])
         
-        raw_voltage = 0
-        for i in range(4):
-            raw_voltage |= data[3+i] << (3-i)*8
-        
+        raw_voltage = self._convert_bytes_to_value(data[3:])
         voltage = (raw_voltage / 4096)*3.3
+
         print(f"Voltage: {voltage} V")
 
     def get_temperature_info(self):
-        self._spi.writebytes2([0x02])
-        self._spi.writebytes2([0x02, 0x05])
-        data = self._spi.readbytes(6)
+        self._send_data(FRAME_LENGTHS_TRANSMIT[FrameType.TEMPERATURE], [FRAME_LENGTHS_TRANSMIT[FrameType.TEMPERATURE], FrameType.TEMPERATURE.value])
+        data = self._spi.readbytes(FRAME_LENGTHS_RECEIVE[FrameType.TEMPERATURE])
 
-        temperature = 0
-        for i in range(4):
-            temperature |= data[3 + i] << (3 - i) * 8
-            
-        temperature /= 1000
+        temperature = self._convert_bytes_to_value(data[2:]) / 1000
 
-        print(f"Temperature: {temperature:.3f} deg")
+
+        temperature_msg = Temperature()
+        temperature_msg.header.stamp = self.get_clock().now().to_msg()
+        temperature_msg.temperature = temperature
+        temperature_msg.variance = 0.0                # for now variance not specified
+
+        self._mcu_temperature_publisher.publish(temperature_msg)
 
     def _send_data(self, nbytes: int, bytes_to_be_send: list):
         # Send how many bytes the MCU should expect to be sent
         self._spi.writebytes2([nbytes])
         self._spi.writebytes2(bytes_to_be_send)
+
+    @staticmethod
+    def _convert_bytes_to_value(datas: list) -> float:
+        value = 0
+        for i, data in enumerate(datas):
+            value |= data << (len(datas) - i - 1) * 8
+        return value
 
 
 def main(args=None):
