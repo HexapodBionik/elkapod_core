@@ -37,7 +37,7 @@ class ElkapodTranslation(Node):
                 return
             else:
                 # self._joint_state[i] = [np.deg2rad(el) for el in frame.servo_angles]
-                self._joint_state[i][0] = np.deg2rad(frame.servo_angles[0]+self._ma1)
+                self._joint_state[i][0] = np.deg2rad(frame.servo_angles[0] +self._ma1)
                 self._joint_state[i][1] = np.deg2rad(frame.servo_angles[1] + self._ma2)
                 self._joint_state[i][2] = np.deg2rad(frame.servo_angles[2] + self._ma3)
                 # print(self._joint_state[i])

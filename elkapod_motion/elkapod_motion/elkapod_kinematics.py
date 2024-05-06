@@ -9,7 +9,7 @@ from MotionPlanning.kinematics.kinematics_exceptions import PointOutOfReach
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Point
-from elkapod_msgs.msg import LegPositions, LegFrames
+from elkapod_msgs.msg import LegPositions, LegFrames, LegFrame
 
 from elkapod_left_leg_description.utils.config_load import load_parameters
 
@@ -60,6 +60,10 @@ class ElkapodKinematics(Node):
 
         try:
             message.servo_angles = self._kinematics_solver.inverse(np.array(p)).tolist()
+
+            # TODO This hardcoded values should be changed
+            message.servo_angles[1] += 17.5
+            message.servo_angles[2] += 40.7
             self._leg_positions[leg_nb] = p
             return message
         except PointOutOfReach:
