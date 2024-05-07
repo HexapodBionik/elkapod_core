@@ -2,7 +2,7 @@ import numpy as np
 import sys
 sys.path.append("./")
 
-sys.path.append("./elkapod_motion")
+# sys.path.append("./elkapod_motion")
 from MotionPlanning.kinematics.kinematics_solvers import KinematicsSolver
 from MotionPlanning.kinematics.kinematics_exceptions import PointOutOfReach
 
@@ -28,6 +28,13 @@ class ElkapodKinematics(Node):
                                                    a2=leg_parameters[2],
                                                    a3=leg_parameters[3])
 
+        self.declare_parameter("soft_angle1", value=0.0)
+        self.declare_parameter("soft_angle2", value=0.0)
+        self.declare_parameter("soft_angle3", value=0.0)
+        self._soft_angle1 = self.get_parameter("soft_angle1").get_parameter_value().double_value
+        self._soft_angle2 = self.get_parameter("soft_angle2").get_parameter_value().double_value
+        self._soft_angle3 = self.get_parameter("soft_angle3").get_parameter_value().double_value
+
         self._elkapod_legs_positions_subscription = self.create_subscription(LegPositions,
                                                                              "elkapod_legs_goals",
                                                                              self._leg_positions_callback,
@@ -42,6 +49,7 @@ class ElkapodKinematics(Node):
                                                               10)
         self._timer_period = 0.05
         self._leg_position_timer = self.create_timer(self._timer_period, self._publish_leg_positions)
+        self.get_logger().info(f"Initialized ElkapodKinematics with software angles: {[self._soft_angle1,self._soft_angle2,self._soft_angle3]}")
 
     def _leg_positions_callback(self, msg):
         result = list()
@@ -62,8 +70,11 @@ class ElkapodKinematics(Node):
             message.servo_angles = self._kinematics_solver.inverse(np.array(p)).tolist()
 
             # TODO This hardcoded values should be changed
-            message.servo_angles[1] += 17.5
-            message.servo_angles[2] += 40.7
+            # message.servo_angles[1] += 17.5
+            # message.servo_angles[2] += 40.7
+            message.servo_angles[0] += self._soft_angle1
+            message.servo_angles[1] += self._soft_angle2
+            message.servo_angles[2] += self._soft_angle3
             self._leg_positions[leg_nb] = p
             return message
         except PointOutOfReach:
