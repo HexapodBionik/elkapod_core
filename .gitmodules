@@ -1,3 +1,6 @@
 [submodule "elkapod_motion/MotionPlanning"]
 	path = elkapod_motion/MotionPlanning
 	url = https://github.com/HexapodBionik/MotionPlanning.git
+[submodule "MotionPlanning"]
+	path = MotionPlanning
+	url = git@github.com:HexapodBionik/MotionPlanning.git
