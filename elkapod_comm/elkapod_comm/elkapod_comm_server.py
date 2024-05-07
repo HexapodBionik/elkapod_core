@@ -60,6 +60,11 @@ class ElkapodCommServer(Node):
             servo_op_codes = frame.servo_op_codes.tolist()
             angles = frame.servo_angles.tolist()
 
+            # Translation from kinematics ranges to servo ranges
+            angles[0] += 90
+            angles[1] += 90
+            angles[2] *= -1
+
             angle_int_parts = []
             angle_float_parts = []
             for angle in angles:
