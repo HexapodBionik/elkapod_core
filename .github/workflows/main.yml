@@ -4,12 +4,12 @@ on:
   # Triggered whenever push to the main branch
   push:
     branches:
-      - "elkapod_comm"
+      - "*"
 
   # Triggered whenever a pull request is created on main
   pull_request:
     branches:
-      - "elkapod_comm"
+      - "*"
     types: [opened]
 
 
