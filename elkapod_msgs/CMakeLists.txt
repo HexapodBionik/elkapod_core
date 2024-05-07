@@ -15,6 +15,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/LegFrame.msg"
   "msg/LegFrames.msg"
   "msg/LegPositions.msg"
+  "msg/TrajectoryParameters.msg"
   DEPENDENCIES std_msgs
   DEPENDENCIES geometry_msgs
 )
