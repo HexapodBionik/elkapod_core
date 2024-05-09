@@ -22,14 +22,15 @@ class ElkapodTranslation(Node):
                                                     self._joint_state_publish)
 
         # Assuming kinematic solver does not take care of this
-        self.declare_parameter("ma1", value=0.0)
-        self.declare_parameter("ma2", value=0.0)
-        self.declare_parameter("ma3", value=0.0)
-        self._ma1 = self.get_parameter("ma1").get_parameter_value().double_value
-        self._ma2 = self.get_parameter("ma2").get_parameter_value().double_value
-        self._ma3 = self.get_parameter("ma3").get_parameter_value().double_value
-        print(self._ma3)
-
+        self.declare_parameter("hard_angle1", value=0.0)
+        self.declare_parameter("hard_angle2", value=0.0)
+        self.declare_parameter("hard_angle3", value=0.0)
+        self._hard_angle1 = self.get_parameter("hard_angle1").get_parameter_value().double_value
+        self._hard_angle2 = self.get_parameter("hard_angle2").get_parameter_value().double_value
+        self._hard_angle3 = self.get_parameter("hard_angle3").get_parameter_value().double_value
+        self.get_logger().info(
+            f"Initialized ElkapodTranslation with hardware angles: {[self._hard_angle1, self._hard_angle2, self._hard_angle3]}"
+        )
 
     def _elkapod_frames_callback(self, msg):
         for i, frame in enumerate(msg.leg_frames):
@@ -37,9 +38,9 @@ class ElkapodTranslation(Node):
                 return
             else:
                 # self._joint_state[i] = [np.deg2rad(el) for el in frame.servo_angles]
-                self._joint_state[i][0] = np.deg2rad(frame.servo_angles[0] +self._ma1)
-                self._joint_state[i][1] = np.deg2rad(frame.servo_angles[1] + self._ma2)
-                self._joint_state[i][2] = np.deg2rad(frame.servo_angles[2] + self._ma3)
+                self._joint_state[i][0] = np.deg2rad(frame.servo_angles[0] + self._hard_angle1)
+                self._joint_state[i][1] = np.deg2rad(frame.servo_angles[1] + self._hard_angle2)
+                self._joint_state[i][2] = np.deg2rad(frame.servo_angles[2] + self._hard_angle3)
                 # print(self._joint_state[i])
 
     def _joint_state_publish(self):

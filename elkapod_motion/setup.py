@@ -8,7 +8,7 @@ data_files.append(('share/ament_index/resource_index/packages', ['resource/' + p
 data_files.append(('share/' + package_name, ['package.xml']))
 data_files.append((os.path.join('share', package_name, 'MotionPlanning/kinematics/'), glob('MotionPlanning/kinematics/*.py')))
 data_files.append((os.path.join('share', package_name, 'MotionPlanning'), glob('MotionPlanning/*.*')))
-
+data_files.append((os.path.join('share', package_name, 'launch'), glob(os.path.join('launch', '*launch.[pxy][yma]*'))))
 setup(
     name=package_name,
     version='0.0.0',
