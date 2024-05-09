@@ -1,0 +1,21 @@
+movement_core:
+  diagram_variables:
+    m1:
+      - 0
+      - 0
+      - 0
+    a1:
+      - 0.0676
+      - 0
+      - 0
+    a2:
+      - 0.09237
+      - 0
+      - 0
+    a3:
+      - 0.22524
+      - 0
+      - 0
+    software_angle1: 4.0
+    software_angle2: 2.0
+    software_angle3: 0.0

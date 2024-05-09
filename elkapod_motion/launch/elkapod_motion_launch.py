@@ -1,11 +1,8 @@
-import os
 from launch import LaunchDescription
-from launch.substitutions import Command, LaunchConfiguration
+from launch.substitutions import  LaunchConfiguration
 from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import Node
-from launch_ros.substitutions import FindPackageShare
-from launch_ros.parameter_descriptions import ParameterValue
-from launch.conditions import IfCondition, UnlessCondition, LaunchConfigurationEquals
+from launch.conditions import IfCondition
 
 
 def generate_launch_description():
@@ -22,16 +19,14 @@ def generate_launch_description():
             package='elkapod_motion',
             executable='elkapod_kinematics',
             parameters=[
-                {"soft_angle1": 2.0},
-                {"soft_angle2": 1.0},
-                {"soft_angle3": 3.0}
+                {"config_path": "elkapod_motion/config/leg_configuration.yaml"}
             ]
         )
     )
 
     ld.add_action(
         Node(
-            package='elkapod_motion',
+            package='elkapod_visualization_translation',
             executable='elkapod_translation',
             condition=IfCondition(LaunchConfiguration(translation_node_name)),
             parameters=[

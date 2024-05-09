@@ -23,8 +23,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "elkapod_kinematics = elkapod_motion.elkapod_kinematics:main",
-            "elkapod_translation = elkapod_motion.elkapod_position_translation:main"
+            "elkapod_kinematics = elkapod_motion.elkapod_kinematics:main"
         ],
     },
 )

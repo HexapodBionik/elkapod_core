@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+
 sys.path.append("./")
 
 # sys.path.append("./elkapod_motion")
@@ -10,30 +11,24 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Point
 from elkapod_msgs.msg import LegPositions, LegFrames, LegFrame
-
-from elkapod_left_leg_description.utils.config_load import load_parameters
+from .utils import load_parameters
 
 
 class ElkapodKinematics(Node):
     def __init__(self):
         super().__init__("elkapod_kinematics")
+        self.declare_parameter("config_path")
+        path = self.get_parameter("config_path").get_parameter_value().string_value
+        m1, a1, a2, a3, soft_ang1, soft_ang2, soft_ang3 = load_parameters(path)
 
-        path_to_parameters = "elkapod_left_leg_description/config/leg_configuration.yaml"
-        leg_parameters = load_parameters(path_to_parameters)
         self._leg_positions = [[0.0, 0.0, 0.0] for _ in range(6)]
 
         # TODO Will need an update when mount angles are added to solver
-        self._kinematics_solver = KinematicsSolver(m1=leg_parameters[0],
-                                                   a1=leg_parameters[1],
-                                                   a2=leg_parameters[2],
-                                                   a3=leg_parameters[3])
+        self._kinematics_solver = KinematicsSolver(m1, a1, a2, a3)
 
-        self.declare_parameter("soft_angle1", value=0.0)
-        self.declare_parameter("soft_angle2", value=0.0)
-        self.declare_parameter("soft_angle3", value=0.0)
-        self._soft_angle1 = self.get_parameter("soft_angle1").get_parameter_value().double_value
-        self._soft_angle2 = self.get_parameter("soft_angle2").get_parameter_value().double_value
-        self._soft_angle3 = self.get_parameter("soft_angle3").get_parameter_value().double_value
+        self._soft_angle1 = soft_ang1
+        self._soft_angle2 = soft_ang2
+        self._soft_angle3 = soft_ang3
 
         self._elkapod_legs_positions_subscription = self.create_subscription(LegPositions,
                                                                              "elkapod_legs_goals",
@@ -49,7 +44,8 @@ class ElkapodKinematics(Node):
                                                               10)
         self._timer_period = 0.05
         self._leg_position_timer = self.create_timer(self._timer_period, self._publish_leg_positions)
-        self.get_logger().info(f"Initialized ElkapodKinematics with software angles: {[self._soft_angle1,self._soft_angle2,self._soft_angle3]}")
+        self.get_logger().info(
+            f"Initialized ElkapodKinematics with software angles: {[self._soft_angle1, self._soft_angle2, self._soft_angle3]}")
 
     def _leg_positions_callback(self, msg):
         result = list()
