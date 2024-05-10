@@ -1,6 +1,0 @@
-<?xml version="1.0" ?>
-<robot name="Elkapod">
-    <webots>
-        <plugin type="elkapod_sim.webots_bringup.MyRobotDriver" />
-    </webots>
-</robot>

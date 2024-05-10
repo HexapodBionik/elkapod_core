@@ -1,9 +1,6 @@
 from typing import Callable
 import numpy as np
-import sys
-
-sys.path.append("./")
-from MotionPlanning.kinematics.kinematics_utils import rot_x, rot_y, rot_z
+from elkapod_algorithms.kinematics.kinematics_utils import rot_x, rot_y, rot_z
 
 
 def base_backward_flat_traj_without_omega(pos: np.ndarray,

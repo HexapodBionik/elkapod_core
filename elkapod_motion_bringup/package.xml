@@ -1,16 +1,11 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>elkapod_sim</name>
-  <version>1.0.0</version>
-  <description>Elkapod simulation package</description>
-  <maintainer email="hexapod.bionik@gmail.com">Piotr Patek</maintainer>
-  <license>BSD</license>
-
-  <depend>rclpy</depend>
-  <depend>geometry_msgs</depend>
-  <depend>webots_ros2_driver</depend>
-  <depend>elkapod_msgs</depend>
+  <name>elkapod_motion_bringup</name>
+  <version>0.0.0</version>
+  <description>TODO: Package description</description>
+  <maintainer email="piotrpatek17@gmail.com">vistek528</maintainer>
+  <license>MIT</license>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

@@ -1,17 +1,11 @@
 import numpy as np
-import sys
-
-sys.path.append("./")
-
-# sys.path.append("./elkapod_motion")
-from MotionPlanning.kinematics.kinematics_solvers import KinematicsSolver
-from MotionPlanning.kinematics.kinematics_exceptions import PointOutOfReach
-
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Point
 from elkapod_msgs.msg import LegPositions, LegFrames, LegFrame
 from .utils import load_parameters
+from elkapod_algorithms.kinematics.kinematics_solvers import KinematicsSolver
+from elkapod_algorithms.kinematics.kinematics_exceptions import PointOutOfReach
 
 
 class ElkapodKinematics(Node):

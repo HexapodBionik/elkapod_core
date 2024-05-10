@@ -10,6 +10,7 @@ from .traj_params import TrajParams
 from .trajectory import traj_shape
 from .gait import build_gait
 
+
 class TrajectoryGenerator(Node):
     def __init__(self):
         super().__init__("TrajectoryGenerator")

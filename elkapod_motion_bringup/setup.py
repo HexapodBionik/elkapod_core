@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'elkapod_visualization_translation'
+package_name = 'elkapod_motion_bringup'
 
 setup(
     name=package_name,
@@ -13,14 +13,13 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='damian',
-    maintainer_email='baraniak.damian@gmail.com',
+    maintainer='vistek528',
+    maintainer_email='piotrpatek17@gmail.com',
     description='TODO: Package description',
-    license='TODO: License declaration',
+    license='MIT',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "elkapod_translation = elkapod_motion.elkapod_position_translation:main"
         ],
     },
 )
