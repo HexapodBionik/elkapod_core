@@ -30,8 +30,12 @@ def load_parameters(path: str):
     a1 = np.array(diagram_variables.get("a1"))
     a2 = np.array(diagram_variables.get("a2"))
     a3 = np.array(diagram_variables.get("a3"))
+    soft_ang1 = diagram_variables.get("software_angle1")
+    soft_ang2 = diagram_variables.get("software_angle2")
+    soft_ang3 = diagram_variables.get("software_angle3")
 
-    if any(vector is None for vector in [m1, a1, a2, a3]):
+    if any(vector is None for vector in [m1, a1, a2, a3, soft_ang1, soft_ang2, soft_ang3]):
         raise RuntimeError(
             "Kinematics initialization has failed! 'diagram_variables' are corrupted! ")
-    return m1, a1, a2, a3
+
+    return m1, a1, a2, a3, soft_ang1, soft_ang2, soft_ang3

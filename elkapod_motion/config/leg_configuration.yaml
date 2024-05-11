@@ -16,3 +16,9 @@ movement_core:
       - 0.205
       - 0
       - 0
+    software_angle1: 0.0
+    software_angle2: 0.0
+    software_angle3: 0.0
+    hardware_angle1: 0.0
+    hardware_angle2: 0.0
+    hardware_angle3: 0.0
