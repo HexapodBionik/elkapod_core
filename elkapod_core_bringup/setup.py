@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'elkapod_motion_bringup'
+package_name = 'elkapod_core_bringup'
 
 setup(
     name=package_name,
