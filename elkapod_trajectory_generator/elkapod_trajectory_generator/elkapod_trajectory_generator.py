@@ -13,7 +13,7 @@ from .gait import build_gait
 
 class TrajectoryGenerator(Node):
     def __init__(self):
-        super().__init__("/elkapod_trajectory_gen")
+        super().__init__("elkapod_trajectory_gen")
 
         self.declare_parameter("frequency", 100)
         self._timer_period = 1./self.get_parameter("frequency").value
