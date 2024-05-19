@@ -1,0 +1,5 @@
+repositories:
+  OtherElkapod/elkapod_msgs:
+    type: git
+    url: https://github.com/HexapodBionik/elkapod_msgs.git
+    version: main

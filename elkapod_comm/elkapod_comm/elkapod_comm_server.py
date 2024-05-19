@@ -73,8 +73,6 @@ class ElkapodCommServer(Node):
                 angle_float_parts.append(float_part)
 
             message2 = one_leg_frame(leg_id, servo_op_codes, angle_int_parts, angle_float_parts)
-            self.get_logger().info(f"Setting raw angles {angles} for leg {leg_id}!")
-
             self._send_data(FRAME_LENGTHS_TRANSMIT[FrameType.ONE_LEG], message2)
 
     def get_hhc_info(self):

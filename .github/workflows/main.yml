@@ -47,12 +47,14 @@ jobs:
           sudo apt update
           sudo apt install -y ros-humble-ros-base python3-colcon-common-extensions ros-dev-tools
           sudo apt install -y lcov
+          sudo apt install -y pythob3-vcstool
 
       - name: Setup Workspace
         run: |
           source /opt/ros/humble/setup.bash
           mkdir -p ros_ws/src
           cd ros_ws
+          vcs import src/ < src/repos.yaml
           colcon build
           source install/setup.bash
 

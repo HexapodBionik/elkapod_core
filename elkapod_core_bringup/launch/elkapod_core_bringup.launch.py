@@ -15,22 +15,14 @@ def generate_launch_description():
         DeclareLaunchArgument(name="sim", default_value="true", choices=["true", "false"])
     )
 
-    elkapod_motion_pkg_prefix = get_package_share_directory('elkapod_motion')
-    elkapod_motion_handler_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            [elkapod_motion_pkg_prefix, '/launch/elkapod_motion_launch.py']),
-        launch_arguments={}.items()
-    )
-
     elkapod_sim_pkg_prefix = get_package_share_directory('elkapod_sim')
     elkapod_sim_handler_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             [elkapod_sim_pkg_prefix, '/launch/robot_launch.py']),
         launch_arguments={}.items(),
-        condition=IfCondition(LaunchConfiguration("sim"))
-    )
+        condition=IfCondition(LaunchConfiguration("sim")),
 
-    ld.add_action(elkapod_motion_handler_launch)
+    )
     ld.add_action(elkapod_sim_handler_launch)
 
     ld.add_action(
@@ -40,6 +32,14 @@ def generate_launch_description():
             condition=UnlessCondition(LaunchConfiguration("sim"))
         )
     )
+
+    elkapod_motion_pkg_prefix = get_package_share_directory('elkapod_motion')
+    elkapod_motion_handler_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            [elkapod_motion_pkg_prefix, '/launch/elkapod_motion_launch.py']),
+        launch_arguments={}.items()
+    )
+    ld.add_action(elkapod_motion_handler_launch)
 
     ld.add_action(
         Node(
