@@ -1,17 +1,11 @@
 name: elkapod
 
 on:
-  # Triggered whenever push to the main branch
   push:
-    branches:
-      - "*"
-
-  # Triggered whenever a pull request is created on main
   pull_request:
     branches:
-      - "*"
+      - "main"
     types: [opened]
-
 
 jobs:
   linting:

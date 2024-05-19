@@ -1,1 +1,0 @@
-LegFrame[6] leg_frames
