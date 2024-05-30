@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            "elkapod_core_bringup = elkapod_core_bringup.__init__.py"
         ],
     },
 )

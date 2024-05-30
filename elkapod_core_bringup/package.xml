@@ -7,6 +7,10 @@
   <maintainer email="piotrpatek17@gmail.com">vistek528</maintainer>
   <license>MIT</license>
 
+  <depend>elkapod_comm</depend>
+  <depend>elkapod_trajectory_generator</depend>
+  <depend>elkapod_motion</depend>
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
