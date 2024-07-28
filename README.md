@@ -28,13 +28,13 @@ vcs import . < repos.yaml
 After building and sourcing run the following command
 
 ```bash
-ros2 elkapod_core_bringup elkapod_core_bringup.launch.py sim:=False
+ros2 launch elkapod_core_bringup elkapod_core_bringup.launch.py sim:=False
 ```
 
 If this repository is used as submodule for [ElkapodSimulation](https://github.com/HexapodBionik/elkapod_simulation) then run
 
 ```bash
-ros2 elkapod_core_bringup elkapod_core_bringup.launch.py sim:=True
+ros2 launch elkapod_core_bringup elkapod_core_bringup.launch.py sim:=True
 ```
 
 The default value of `sim` arugment is `True`.
