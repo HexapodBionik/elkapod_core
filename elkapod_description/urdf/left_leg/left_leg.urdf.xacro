@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:macro name="leg_left" params="leg_name parent pos_x pos_y pos_z roll pitch yaw">
+
+    <!-- Base Link -->
+    <link name="${leg_name}_base_link">
+      <inertial>
+        <origin
+          xyz="-0.00966842245121491 0.00138280482572167 0.021949062103167"
+          rpy="0 0 0" />
+        <mass
+          value="0.0812294220882115" />
+        <inertia
+          ixx="1.27671065778251E-05"
+          ixy="5.30871182380821E-13"
+          ixz="-2.82406806420912E-08"
+          iyy="2.30006815785064E-05"
+          iyz="-4.3969876504666E-07"
+          izz="1.62921012676759E-05" />
+        </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://elkapod_description/meshes/left_leg/base_link.STL" />
+        </geometry>
+        <material name="">
+          <color rgba="0.898 0.918 0.929 1" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://elkapod_description/meshes/left_leg/base_link.STL" />
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="${leg_name}_base_joint" type="fixed">
+      <origin xyz="${pos_x} ${pos_y} ${pos_z}" rpy="${roll} ${pitch} ${yaw}" />
+      <parent link="${parent}" />
+      <child link="${leg_name}_base_link" />
+      <axis xyz="0 0 0" />
+    </joint>
+
+    <!-- Link A -->
+    <link name="${leg_name}_linkA">
+      <inertial>
+        <origin xyz="0.03385 0.00126 0.00129" rpy="0 0 0" />
+        <mass value="0.04544" />
+        <inertia ixx="1.9828E-05" ixy="1.195E-12" ixz="-5.464E-13" iyy="1.6727E-05" iyz="-1.074E-12" izz="1.6727E-05" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://elkapod_description/meshes/left_leg/linkA.STL" />
+        </geometry>
+        <material name="">
+          <color rgba="0.898 0.918 0.929 1" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://elkapod_description/meshes/left_leg/linkA.STL" />
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Joint J1 -->
+    <joint name="${leg_name}_J1" type="revolute">
+      <origin xyz="0 0 0.02428" rpy="0 0 0" />
+      <parent link="${leg_name}_base_link" />
+      <child link="${leg_name}_linkA" />
+      <axis xyz="0 0 1" />
+      <limit lower="-1.57" upper="1.57" effort="5" velocity="1.0" />
+    </joint>
+
+    <!-- Link B -->
+    <link name="${leg_name}_linkB">
+      <inertial>
+        <origin xyz="0.0318 0.03385 0.00347" rpy="0 0 0" />
+        <mass value="0.17153" />
+        <inertia ixx="3.545E-05" ixy="-8.639E-06" ixz="-4.662E-07" iyy="3.792E-05" iyz="5.374E-07" izz="3.388E-05" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://elkapod_description/meshes/left_leg/linkB.STL" />
+        </geometry>
+        <material name="">
+          <color rgba="0.251 0.251 0.251 1" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://elkapod_description/meshes/left_leg/linkB.STL" />
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Joint J2 -->
+    <joint name="${leg_name}_J2" type="revolute">
+      <origin xyz="0.0676 0 0" rpy="1.5708 0.7146 0" />
+      <parent link="${leg_name}_linkA" />
+      <child link="${leg_name}_linkB" />
+      <axis xyz="0 0 1" />
+      <limit lower="-1.57" upper="1.57" effort="5" velocity="1.0" />
+    </joint>
+
+    <!-- Link C -->
+    <link name="${leg_name}_linkC">
+      <inertial>
+        <origin xyz="0.03063 -0.05443 -0.00114" rpy="0 0 0" />
+        <mass value="0.04744" />
+        <inertia ixx="5.613E-05" ixy="1.497E-05" ixz="1.598E-07" iyy="2.328E-05" iyz="-2.931E-07" izz="5.235E-05" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://elkapod_description/meshes/left_leg/linkC.STL" />
+        </geometry>
+        <material name="">
+          <color rgba="1 0.529 0 1" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://elkapod_description/meshes/left_leg/linkC.STL" />
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Joint J3 -->
+    <joint name="${leg_name}_J3" type="revolute">
+      <origin xyz="0.06977 0.06053 0" rpy="0 0 1.951" />
+      <parent link="${leg_name}_linkB" />
+      <child link="${leg_name}_linkC" />
+      <axis xyz="0 0 1" />
+      <limit lower="-3.14" upper="1.57" effort="5" velocity="1.0" />
+    </joint>
+
+    <!-- FCP Link -->
+    <link name="${leg_name}_FCP">
+      <inertial>
+        <origin xyz="0.00034 0 0" rpy="0 0 0" />
+        <mass value="0.01116" />
+        <inertia ixx="1.199E-06" ixy="3.584E-24" ixz="-1.195E-23" iyy="1.067E-06" iyz="-7.636E-37" izz="1.067E-06" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://elkapod_description/meshes/left_leg/FCP.STL" />
+        </geometry>
+        <material name="">
+          <color rgba="0.298 0.298 0.298 1" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://elkapod_description/meshes/left_leg/FCP.STL" />
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Fixed Joint for FCP -->
+    <joint name="${leg_name}_FCP_joint" type="fixed">
+      <origin xyz="0.07008 -0.20186 0" rpy="0 0 -1.571" />
+      <parent link="${leg_name}_linkC" />
+      <child link="${leg_name}_FCP" />
+      <axis xyz="0 0 0" />
+    </joint>
+
+  </xacro:macro>
+
+</robot>
