@@ -1,0 +1,40 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 50  # Hz
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    joint_position_controller:
+      type: position_controllers/JointGroupPositionController
+
+joint_position_controller:
+  ros__parameters:
+    publish_rate: 50
+    type: position_controllers/JointGroupPositionController
+    joints:
+      - leg1_J1
+      - leg1_J2
+      - leg1_J3
+      - leg2_J1
+      - leg2_J2
+      - leg2_J3
+      - leg3_J1
+      - leg3_J2
+      - leg3_J3
+      - leg4_J1
+      - leg4_J2
+      - leg4_J3
+      - leg5_J1
+      - leg5_J2
+      - leg5_J3
+      - leg6_J1
+      - leg6_J2
+      - leg6_J3
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+
+
+

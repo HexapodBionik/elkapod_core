@@ -3,9 +3,8 @@
 <package format="3">
   <name>elkapod_description</name>
   <version>0.0.0</version>
-  <description>Description package for Dobot Magician</description>
+  <description>Description package for Elkapod Robot</description>
   <maintainer email="piotr.patek.stud@pw.edu.pl">Piotr Patek</maintainer>
-  <maintainer email="damian.baraniak.stud@pw.edu.pl">Damian Baraniak</maintainer>
   <license>BSD</license>
   <buildtool_depend>ament_cmake</buildtool_depend>
 
