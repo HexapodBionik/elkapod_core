@@ -17,7 +17,7 @@ static inline double sign(double x){
 
 
 static inline double rad2deg(double deg){
-    return deg * M_PI / 180;
+    return deg * 180 / M_PI;
 }
 
 
@@ -44,7 +44,10 @@ Eigen::Vector3d KinematicsSolver::inverse(const Eigen::Vector3d& point){
 
     const double q1 = x > 0 ? atan2(y, x) : sign(y) * static_cast<double>(M_PI) / 2;
 
-    const double span = (x > 0 ? sign(x) : 1) * sqrt(pow(x, 2) + pow(y, 2) - a1_[0]);
+    const double span = (x > 0 ? sign(x) : 1) * sqrt(pow(x, 2) + pow(y, 2)) - a1_[0];
+
+
+    std::cout<<pow(x, 2) + pow(y, 2) - a1_[0]<<std::endl;
 
     const double P = sqrt(pow(span, 2) + pow(z, 2));
 

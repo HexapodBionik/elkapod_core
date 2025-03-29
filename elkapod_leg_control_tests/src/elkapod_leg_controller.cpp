@@ -26,7 +26,7 @@ ElkapodLegPublisher::ElkapodLegPublisher(): Node("elkapod_leg_publisher"){
 
     this->my_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("/joint_position_controller/commands", 10);
     this->timer_ = this->create_wall_timer(20ms, std::bind(&ElkapodLegPublisher::timerCallback, this));
-    this->height = 0;
+    this->height = -0.1;
     this->sign = 1;
 }
 
@@ -61,25 +61,24 @@ void ElkapodLegPublisher::init(){
 
 
 void ElkapodLegPublisher::timerCallback(){
-    if(height > -0.15 && sign == 1){
-        height -= 0.001;
+    if(height > -0.2 && sign == 1){
+        height -= 0.0005;
     }
-    if(height < 0 && sign == -1){
-        height += 0.001;
+    else if(height < -0.1 && sign == -1){
+        height += 0.0005;
     }
 
-    if(height <= -0.15 && sign == 1){
+    if(height <= -0.2 && sign == 1){
         sign = -1;
     }
-
-    if(height >= 0 && sign == -1){
+    else if(height >= -0.1 && sign == -1){
         sign = 1;
     }
 
     std::string current_height_str = "Current height" + std::to_string(height);
 
     //RCLCPP_INFO(this->get_logger(), current_height_str.c_str());
-    Eigen::Vector3d input(0.0, 0.0, height);
+    Eigen::Vector3d input(0.15, 0.0, height);
     Eigen::Vector3d anglesDeg = this->solver->inverse(input);
 
     auto msg =  std_msgs::msg::Float64MultiArray();
@@ -87,7 +86,7 @@ void ElkapodLegPublisher::timerCallback(){
 
     std::vector<float> pattern = {deg2rad(anglesDeg[0]), deg2rad(anglesDeg[1]), deg2rad(anglesDeg[2])};
 
-    std::string current_angles = "Q1: " + std::to_string(pattern[0]) + "\t" + "Q2: " + std::to_string(pattern[1]) + "Q3: " + std::to_string(pattern[2]);
+    std::string current_angles = "Q1: " + std::to_string(pattern[0]) + "\t" + "Q2: " + std::to_string(pattern[1]) + "\t" + "Q3: " + std::to_string(pattern[2]);
     RCLCPP_INFO(this->get_logger(), current_angles.c_str());
 
     for(int i = 0; i < 18; ++i){
