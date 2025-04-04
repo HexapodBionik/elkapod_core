@@ -33,7 +33,7 @@ class ElkapodLegPublisher: public rclcpp::Node
 
         rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr my_publisher_;
         rclcpp::TimerBase::SharedPtr timer_;
-        std::unique_ptr<KinematicsSolver> solver;
+        std::shared_ptr<KinematicsSolver> solver;
         std::string config_path_;
         double height;
         double sign;

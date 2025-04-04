@@ -54,7 +54,7 @@ void ElkapodLegPublisher::init(){
     Eigen::Vector3d a3(a3_v[0], a3_v[1], a3_v[2]);
 
     const std::vector<Eigen::Vector3d> input = {m1, a1, a2, a3};
-    this->solver = std::make_unique<KinematicsSolver>(input);
+    this->solver = std::make_shared<KinematicsSolver>(input);
     RCLCPP_INFO(this->get_logger(), "Initialized!");
 }
 
@@ -78,7 +78,7 @@ void ElkapodLegPublisher::timerCallback(){
     std::string current_height_str = "Current height" + std::to_string(height);
 
     //RCLCPP_INFO(this->get_logger(), current_height_str.c_str());
-    Eigen::Vector3d input(0.15, 0.0, height);
+    Eigen::Vector3d input(0.2, 0.0, height);
     Eigen::Vector3d anglesDeg = this->solver->inverse(input);
 
     auto msg =  std_msgs::msg::Float64MultiArray();

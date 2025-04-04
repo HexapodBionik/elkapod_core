@@ -40,8 +40,6 @@ Eigen::Vector3d KinematicsSolver::inverse(const Eigen::Vector3d& point){
     const double y = point[1];
     const double z = point[2] - m1_[2] - a1_[2];
 
-    std::cout<<x<<"\t"<<y<<"\t"<<z<<std::endl;
-
     const double q1 = x > 0 ? atan2(y, x) : sign(y) * static_cast<double>(M_PI) / 2;
 
     const double span = (x > 0 ? sign(x) : 1) * sqrt(pow(x, 2) + pow(y, 2)) - a1_[0];

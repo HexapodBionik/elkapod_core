@@ -9,6 +9,9 @@
 
   <!-- INCLUDES -->
 
+  <!-- Colors -->
+  <xacro:include filename="$(find elkapod_description)/urdf/colors.urdf.xacro" />
+
   <!-- Base -->
   <xacro:include filename="$(find elkapod_description)/urdf/body/body.urdf.xacro" />
 

@@ -23,7 +23,7 @@ if(BUILD_TESTING)
 endif()
 
 install(
-    DIRECTORY config launch urdf textures meshes
+    DIRECTORY config urdf textures meshes
     DESTINATION share/${PROJECT_NAME}
 )
 

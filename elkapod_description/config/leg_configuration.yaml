@@ -16,9 +16,26 @@ movement_core:
       - 0.22524
       - 0
       - 0
-    software_angle1: 0.0
-    software_angle2: 17.5
-    software_angle3: 40.7
-    hardware_angle1: 0.0
-    hardware_angle2: 0.0
-    hardware_angle3: 0.0
+
+    joint_info:
+      j1:
+        position_limits:
+          lower: -1.57079633
+          upper: 1.57079633
+        offsets:
+          software: 0.0
+          hardware: 0.0
+      j2:
+        position_limits:
+          lower: -1.57079633
+          upper: 1.57079633
+        offsets:
+          software: 3.1
+          hardware: 14.4
+      j3:
+        position_limits:
+          lower: -3.14159265
+          upper: 0.0
+        offsets:
+          software: -2.5
+          hardware: 43.2

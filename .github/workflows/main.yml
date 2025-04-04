@@ -59,12 +59,6 @@ jobs:
         with:
           path: ros_ws/src
 
-      - name: Install Python Dependencies && Import dependency ROS2 packages
-        run: |
-          cd ros_ws/
-          vcs import src/ < src/repos.yaml
-          pip3 install -r src/requirements.txt
-
       # Build for test coverage
       - name: Configure CMake flags and build exectables
         run: |

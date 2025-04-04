@@ -1,7 +1,0 @@
-<library path="elkapog_gait_controller">
-  <class name="elkapog_gait_controller/ElkapodGaitController" type="elkapog_gait_controller::ElkapodGaitController" base_class_type="controller_interface::ControllerInterface">
-  <description>
-    TODO
-  </description>
-  </class>
-</library>
