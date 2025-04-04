@@ -40,14 +40,6 @@ void ElkapodLegPublisher::init(){
     auto a2_v = diagram_variables["a2"].as<std::vector<double>>();
     auto a3_v = diagram_variables["a3"].as<std::vector<double>>();
 
-    double software_angle1 = diagram_variables["software_angle1"].as<double>();
-    double software_angle2 = diagram_variables["software_angle2"].as<double>();
-    double software_angle3 = diagram_variables["software_angle3"].as<double>();
-
-    double hardware_angle1 = diagram_variables["hardware_angle1"].as<double>();
-    double hardware_angle2 = diagram_variables["hardware_angle2"].as<double>();
-    double hardware_angle3 = diagram_variables["hardware_angle3"].as<double>();
-
     Eigen::Vector3d m1(m1_v[0], m1_v[1], m1_v[2]);
     Eigen::Vector3d a1(a1_v[0], a1_v[1], a1_v[2]);
     Eigen::Vector3d a2(a2_v[0], a2_v[1], a2_v[2]);

@@ -9,7 +9,7 @@ on:
 
 jobs:
   linting:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Setup workspace
         run: |
@@ -31,12 +31,12 @@ jobs:
     # Create a container of the latest Ubuntu, other values could be
     # ubuntu-latest, ubuntu-22.04, etc.
     needs: linting
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       
       # Install some system pacakges
-      - name: Install ROS 2 Humble packages
+      - name: Install ROS 2 Jazzy packages
         run: |
           sudo apt update
           sudo apt install -y software-properties-common
@@ -45,13 +45,13 @@ jobs:
           sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
           sudo apt update
-          sudo apt install -y ros-humble-ros-base python3-colcon-common-extensions ros-dev-tools
+          sudo apt install -y ros-jazzy-ros-base python3-colcon-common-extensions ros-dev-tools
           sudo apt install -y lcov
           sudo apt install -y python3-vcstool
 
       - name: Setup Workspace
         run: |
-          source /opt/ros/humble/setup.bash
+          source /opt/ros/jazzy/setup.bash
           mkdir -p ros_ws/src
 
       # We want to use GitHub CI checkout version 3 for checking out the branch
@@ -62,7 +62,7 @@ jobs:
       # Build for test coverage
       - name: Configure CMake flags and build exectables
         run: |
-          source /opt/ros/humble/setup.bash
+          source /opt/ros/jazzy/setup.bash
           sudo apt install python3-rosdep
           sudo rosdep init
           rosdep update --include-eol-distros
