@@ -1,0 +1,41 @@
+movement_core:
+  diagram_variables:
+    m1:
+      - 0
+      - 0
+      - 0.025
+    a1:
+      - 0.0676
+      - 0
+      - 0
+    a2:
+      - 0.09237
+      - 0
+      - 0
+    a3:
+      - 0.22524
+      - 0
+      - 0
+
+    joint_info:
+      j1:
+        position_limits:
+          lower: -1.57079633
+          upper: 1.57079633
+        offsets:
+          software: 0.0
+          hardware: 0.0
+      j2:
+        position_limits:
+          lower: -1.57079633
+          upper: 1.57079633
+        offsets:
+          software: 3.1
+          hardware: 14.4
+      j3:
+        position_limits:
+          lower: -3.14159265
+          upper: 0.0
+        offsets:
+          software: -2.5
+          hardware: 43.2

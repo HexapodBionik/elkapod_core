@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="elkapod">
+
+  <!-- Execution env config -->
+  <xacro:arg name="use_sim_time" default="false"/>
+
+  <!-- Execution env configuration -->
+  <xacro:property name="use_sim_time" default="$(arg use_sim_time)"/>
+
+  <!-- INCLUDES -->
+
+  <!-- Colors -->
+  <xacro:include filename="$(find elkapod_description)/urdf/colors.urdf.xacro" />
+
+  <!-- Base -->
+  <xacro:include filename="$(find elkapod_description)/urdf/body/body.urdf.xacro" />
+
+  <!-- Legs-->
+  <xacro:include filename="$(find elkapod_description)/urdf/left_leg/left_leg.urdf.xacro" />
+  <xacro:include filename="$(find elkapod_description)/urdf/right_leg/right_leg.urdf.xacro" /> 
+
+
+  <xacro:leg_left leg_name="leg1" parent="base_link" pos_x="0.17841" pos_y="0.13276" pos_z="-0.03" roll="0" pitch="0" yaw="0.63973287"/>
+  <xacro:leg_left leg_name="leg3" parent="base_link" pos_x="0.0138" pos_y="0.1643" pos_z="-0.03" roll="0" pitch="0" yaw="1.57"/>
+  <xacro:leg_left leg_name="leg5" parent="base_link" pos_x="-0.15903" pos_y="0.15038" pos_z="-0.03" roll="0" pitch="0" yaw="2.384143643587"/>
+
+  <xacro:leg_right leg_name="leg2" parent="base_link" pos_x="0.17841" pos_y="-0.13276" pos_z="-0.03" roll="0" pitch="0" yaw="-0.63973287"/>
+  <xacro:leg_right leg_name="leg4" parent="base_link" pos_x="0.0138" pos_y="-0.1643" pos_z="-0.03" roll="0" pitch="0" yaw="-1.57"/>
+  <xacro:leg_right leg_name="leg6" parent="base_link" pos_x="-0.15903" pos_y="-0.15038" pos_z="-0.03" roll="0" pitch="0" yaw="-2.384143643587"/>
+
+  <xacro:include filename="$(find elkapod_description)/urdf/imu.xacro" />
+
+  <!-- ros2_control -->
+  <xacro:include filename="$(find elkapod_description)/urdf/ros2_control.xacro" />
+
+</robot>
