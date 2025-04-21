@@ -10,6 +10,8 @@
 #include <yaml-cpp/yaml.h>
 #include <eigen3/Eigen/Eigen>
 
+using std::placeholders::_1;
+
 static inline float deg2rad(float deg){
     return deg / 180.f * M_PI;
 }
@@ -25,7 +27,8 @@ ElkapodLegPublisher::ElkapodLegPublisher(): Node("elkapod_leg_publisher"){
     }
 
     this->my_publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("/joint_position_controller/commands", 10);
-    this->timer_ = this->create_wall_timer(20ms, std::bind(&ElkapodLegPublisher::timerCallback, this));
+    this->my_subscription_ =  this->create_subscription<std_msgs::msg::Float64MultiArray>("elkapod_leg_positions", 10, std::bind(&ElkapodLegPublisher::topicCallback, this, _1));
+    //this->timer_ = this->create_wall_timer(20ms, std::bind(&ElkapodLegPublisher::timerCallback, this));
     this->height = -0.1;
     this->sign = 1;
 }
@@ -48,6 +51,32 @@ void ElkapodLegPublisher::init(){
     const std::vector<Eigen::Vector3d> input = {m1, a1, a2, a3};
     this->solver = std::make_shared<KinematicsSolver>(input);
     RCLCPP_INFO(this->get_logger(), "Initialized!");
+}
+
+void ElkapodLegPublisher::topicCallback(std_msgs::msg::Float64MultiArray::SharedPtr msg){
+    /*  Topic input: 3x6=18 values in following order x1, y1, z1, x2, y2, z2, x3, ...
+    */
+
+    auto output_msg = std_msgs::msg::Float64MultiArray();
+    output_msg.data.resize(18);
+    Eigen::Vector3d input;
+    for(int i = 0; i < 6; ++i){
+        input[0] = msg->data[i*3];
+        input[1] = msg->data[i*3 + 1];
+        input[2] = msg->data[i*3 + 2];
+
+        std::string msg = "Point for leg " + std::to_string(i+1) + " x: " + std::to_string(input[0]) + " y: " + std::to_string(input[1]) + " z: " + std::to_string(input[2]);
+        RCLCPP_INFO(this->get_logger(), msg.c_str());
+
+        Eigen::Vector3d anglesDeg = this->solver->inverse(input);
+        output_msg.data[i*3] = deg2rad(anglesDeg[0]);
+        output_msg.data[i*3 + 1] = deg2rad(anglesDeg[1]);
+        output_msg.data[i*3 + 2] = deg2rad(anglesDeg[2]);
+
+        std::string msg2 = "Angles for leg " + std::to_string(i+1) + " theta0: " + std::to_string(output_msg.data[i*3]) + " theta1: " + std::to_string(output_msg.data[i*3+1]) + " theta2: " + std::to_string(output_msg.data[i*3+2]);
+        RCLCPP_INFO(this->get_logger(), msg2.c_str());
+    }
+    this->my_publisher_->publish(output_msg);
 }
 
 
