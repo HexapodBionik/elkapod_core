@@ -24,7 +24,12 @@ class ElkapodLegPathBase:
 
         self._x_func_swing = lambda s: -self._step_length / 2 + self._step_length * s
         self._y_func_swing = lambda s: 0.0
-        self._z_func_swing = lambda s: R * np.sin(np.pi * s) - h
+
+        # Old
+        #self._z_func_swing = lambda s: R * np.sin(np.pi * s) - h
+
+        # New (smootherstep - https://en.wikipedia.org/wiki/Smoothstep)
+        self._z_func_swing = lambda s: R * np.sin(np.pi * (10*pow(s, 3)-15*pow(s, 4)+6*pow(s, 5))) - h
 
 
     def __call__(self, *args, **kwargs):

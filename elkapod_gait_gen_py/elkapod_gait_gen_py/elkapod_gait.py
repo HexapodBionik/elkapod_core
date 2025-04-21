@@ -47,7 +47,7 @@ class ElkapodGait(Node):
         
 
         self._current_velocity = np.array([0.0, 0.0, 0.0])  # Linear vx, vy and angular wz
-        self._leg_clock_freq = 50                   # in Hz
+        self._leg_clock_freq = 10                   # in Hz
         self._cycle_time = 2.0                      # in seconds
         self._min_cycle_time = 0.5
         self._step_length = 0.1
@@ -80,6 +80,7 @@ class ElkapodGait(Node):
         self._base_traj.init()
         self.changeGait(self._gait_type)
         self._leg_clock_timer.reset()
+        self.get_logger().info("Elkapod gait generator prototype initialized!")
 
     def velocityTopicCallback(self, msg: Twist):
         self._current_velocity[0] = msg.linear.x
