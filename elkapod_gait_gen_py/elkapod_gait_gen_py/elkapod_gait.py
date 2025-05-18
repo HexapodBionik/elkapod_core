@@ -44,16 +44,24 @@ class ElkapodGait(Node):
                                 translate(0.0138, 0.1643, -0.03), translate(0.0138, -0.1643, -0.03),
                                 translate(-0.15903, 0.15038, -0.03), translate(-0.15903, -0.15038, -0.03)
         ]
+
         
 
-        self._current_velocity = np.array([0.0, 0.0, 0.0])  # Linear vx, vy and angular wz
+        self._current_vel = np.array([0.0, 0.0, 0.0])  # Linear vx, vy and angular wz
+        self._current_vel_scalar = 0.0
+        self._current_angular_velocity = 0.0
+        self._current_velocity = np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]])
+
+        self._last_leg_position = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
+
         self._leg_clock_freq = 10                   # in Hz
         self._cycle_time = 2.0                      # in seconds
         self._min_cycle_time = 0.5
         self._step_length = 0.1
         self._step_height = 0.05
         self._base_height = 0.15
-        self._current_vel = 0.0
+  
+        self._leg_spacing = 0.2
 
         self._phase_offset = None
         self._phase_offset = None
@@ -83,27 +91,38 @@ class ElkapodGait(Node):
         self.get_logger().info("Elkapod gait generator prototype initialized!")
 
     def velocityTopicCallback(self, msg: Twist):
-        self._current_velocity[0] = msg.linear.x
-        self._current_velocity[1] = msg.linear.y
-        self._current_velocity[2] = msg.angular.z
+        self._current_vel[0] = msg.linear.x
+        self._current_vel[1] = msg.linear.y
+        self._current_vel[2] = msg.angular.z
 
         self.get_logger().info(f"New velocity command received: Vx: {msg.linear.x}\tVy: {msg.linear.y} Wz: {msg.angular.z}")
 
         # TODO check vel calc
-        vel = np.linalg.norm(self._current_velocity[:2])
-        if vel != 0 and vel != self._current_vel:
+        vel = np.linalg.norm(self._current_vel[:2])
+        if (vel != 0 and vel != self._current_vel_scalar):
             T = self._step_length / vel
             if self._min_cycle_time > T:
                 self.get_logger().warning(f"Max speed {self._step_length/self._min_cycle_time} m/s reached! Cannot set required speed - {vel} m/s")
             else:
-                self._current_vel = vel
+                self.get_logger().info(f"Inside New velocity command received: Vx: {msg.linear.x}\tVy: {msg.linear.y} Wz: {msg.angular.z}")
+                for leg_nb in range(6):
+                    leg_vel = np.array([self._current_vel[0], self._current_vel[1]])
+                
+                    self._current_velocity[leg_nb] = leg_vel
+                self._current_vel_scalar = vel
                 self._cycle_time = T
                 self.changeGait(self._gait_type)
+        elif self._current_vel[2] != 0:
+            # For now R ~ self._leg_spacing + 0.15 (half body width) approx
+            R = self._leg_spacing + 0.15
+            arc_angle = self._step_length / R 
+            self._cycle_time = (arc_angle / abs(self._current_vel[2])) * 2
+            self.changeGait(self._gait_type)
 
-        if not self._current_velocity.any() and self._state == State.WALKING:
+        if not self._current_vel.any() and self._state == State.WALKING:
             self.get_logger().info("Going to IDLE state")
             self._state = State.IDLE
-        elif self._current_velocity.any() and self._state == State.IDLE:
+        elif self._current_vel.any() and self._state == State.IDLE:
             self.get_logger().info("Going to WALKING state")
             self._init_time = self.get_clock().now().nanoseconds
             self._state = State.WALKING
@@ -159,16 +178,48 @@ class ElkapodGait(Node):
 
             if self._state == State.WALKING:
                 p = self._base_traj(self._leg_clock[leg_nb], self._leg_phase[leg_nb])
-                p = rotZ(np.arctan2(self._current_velocity[1], self._current_velocity[0])) @ p
+                
+                # Add angular velocity component
+                theta = self._current_vel[2]
+                #print(theta)
+                #angular_part = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]]) @ np.array([-self._last_leg_position[leg_nb][1], self._last_leg_position[leg_nb][0]])
+                angular_part = theta * np.array([-self._last_leg_position[leg_nb][1], self._last_leg_position[leg_nb][0]])
+
+                self.get_logger().info(f"Agular part for leg {leg_nb}: {theta} {angular_part[0]:.3f} {angular_part[1]:.3f}")
+
+
+                vel = self._current_velocity[leg_nb] + angular_part
+   
+
+                p = rotZ(np.arctan2(vel[1], vel[0])) @ p
             else:
                 p = np.array([0.0, 0.0, 0.0])
 
             
             #p = p + self._translations[leg_nb]
-            p = rotZ(self._rotations_from_base_link[leg_nb]).transpose() @ p
+            p = rotZ(-self._rotations_from_base_link[leg_nb]) @ p
 
             # Add base height and leg spacing
-            p = p + np.array([0.2, 0.0, -self._base_height])
+            p = p + np.array([self._leg_spacing, 0.0, -self._base_height])
+
+            
+            rot = self._rotations_from_base_link[leg_nb]
+            trans = self._translations[leg_nb]
+            L_B_H = np.array([
+                [np.cos(rot), -np.sin(rot), 0, -(np.cos(rot) * self._leg_spacing + trans[0])],
+                [np.sin(rot), np.cos(rot), 0, -(np.sin(rot) * self._leg_spacing + trans[1])],
+                [0, 0, 1, self._base_height],
+                [0, 0, 0, 1]
+            ])
+
+            p_homogeneus = np.array([p[0], p[1], p[2], 1])
+            p_base_homogeneus = L_B_H @ p_homogeneus
+
+
+            self._last_leg_position[leg_nb] = p_base_homogeneus[:3]
+
+            #self.get_logger().info(f"Leg: {leg_nb} positon: {p_base_homogeneus[0]:.3f} {p_base_homogeneus[1]:.3f} {p_base_homogeneus[2]:.3f}")
+
 
             msg3.data[leg_nb*3] = p[0]
             msg3.data[leg_nb*3+1] = p[1]
