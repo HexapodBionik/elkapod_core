@@ -36,6 +36,7 @@ class ElkapodGait(Node):
 
         self._gait_type = GaitType.TRIPOID
         self._state = State.IDLE
+        self._was_idle = [True for _ in range(6)]
 
         # Leg parameters
         self._rotations_from_base_link = np.array([0.63973287, -0.63973287, np.pi/2, -np.pi/2, 2.38414364, -2.38414364])
@@ -50,18 +51,20 @@ class ElkapodGait(Node):
         self._current_vel = np.array([0.0, 0.0, 0.0])  # Linear vx, vy and angular wz
         self._current_vel_scalar = 0.0
         self._current_angular_velocity = 0.0
+        self._current_base_direction = 0.0
         self._current_velocity = np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]])
 
         self._last_leg_position = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
 
-        self._leg_clock_freq = 10                   # in Hz
+        self._leg_clock_freq = 50                   # in Hz
+        self._leg_clock_freq2 = 10                   # in Hz
         self._cycle_time = 2.0                      # in seconds
         self._min_cycle_time = 0.5
-        self._step_length = 0.1
+        self._step_length = 0.15
         self._step_height = 0.05
-        self._base_height = 0.15
+        self._base_height = 0.17
   
-        self._leg_spacing = 0.2
+        self._leg_spacing = 0.175
 
         self._phase_offset = None
         self._phase_offset = None
@@ -72,14 +75,12 @@ class ElkapodGait(Node):
         self._base_traj = ElkapodLegPathBase(self._step_length, self._step_height)
         self._base_traj.init()
 
-        self._leg_clock_timer = self.create_timer(1/self._leg_clock_freq, self.legClockCallback, callback_group=ReentrantCallbackGroup(), autostart=False)
+        our_callback_gr = ReentrantCallbackGroup()
+
+        self._leg_clock_timer = self.create_timer(1/self._leg_clock_freq, self.legClockCallback, autostart=False)
 
 
-
-        self._velocity_sub = self.create_subscription(Twist, "/cmd_vel", qos_profile=10, callback=self.velocityTopicCallback, callback_group=ReentrantCallbackGroup())
-
-        self._leg_clock_pub = self.create_publisher(Float64MultiArray, "leg_clock", qos_profile=qos, callback_group=ReentrantCallbackGroup())
-        self._leg_clock_thresh_pub = self.create_publisher(Float64MultiArray, "leg_clock_thresh", qos_profile=qos, callback_group=ReentrantCallbackGroup())
+        self._velocity_sub = self.create_subscription(Twist, "/cmd_vel", qos_profile=qos, callback=self.velocityTopicCallback, callback_group=our_callback_gr)
         self._leg_signal = self.create_publisher(Float64MultiArray, "elkapod_leg_positions", qos_profile=qos, callback_group=ReentrantCallbackGroup())
 
         self._init_time = self.get_clock().now().nanoseconds
@@ -95,16 +96,15 @@ class ElkapodGait(Node):
         self._current_vel[1] = msg.linear.y
         self._current_vel[2] = msg.angular.z
 
-        self.get_logger().info(f"New velocity command received: Vx: {msg.linear.x}\tVy: {msg.linear.y} Wz: {msg.angular.z}")
-
-        # TODO check vel calc
         vel = np.linalg.norm(self._current_vel[:2])
-        if (vel != 0 and vel != self._current_vel_scalar):
+        direction = np.arctan2(self._current_vel[1], self._current_vel[0])
+        if (vel != 0 and vel != self._current_vel_scalar) or direction != self._current_base_direction:
             T = self._step_length / vel
             if self._min_cycle_time > T:
                 self.get_logger().warning(f"Max speed {self._step_length/self._min_cycle_time} m/s reached! Cannot set required speed - {vel} m/s")
             else:
-                self.get_logger().info(f"Inside New velocity command received: Vx: {msg.linear.x}\tVy: {msg.linear.y} Wz: {msg.angular.z}")
+                self.get_logger().info(f"New velocity command received: Vx: {msg.linear.x}\tVy: {msg.linear.y} Wz: {msg.angular.z}")
+                self._current_base_direction = direction
                 for leg_nb in range(6):
                     leg_vel = np.array([self._current_vel[0], self._current_vel[1]])
                 
@@ -112,9 +112,12 @@ class ElkapodGait(Node):
                 self._current_vel_scalar = vel
                 self._cycle_time = T
                 self.changeGait(self._gait_type)
-        elif self._current_vel[2] != 0:
+                
+        elif self._current_vel[2] != 0 and not np.isclose(self._current_angular_velocity, self._current_vel[2]):
+            self._current_angular_velocity = self._current_vel[2]
             # For now R ~ self._leg_spacing + 0.15 (half body width) approx
-            R = self._leg_spacing + 0.15
+
+            R = self._leg_spacing + 0.22
             arc_angle = self._step_length / R 
             self._cycle_time = (arc_angle / abs(self._current_vel[2])) * 2
             self.changeGait(self._gait_type)
@@ -126,7 +129,7 @@ class ElkapodGait(Node):
             self.get_logger().info("Going to WALKING state")
             self._init_time = self.get_clock().now().nanoseconds
             self._state = State.WALKING
-
+            self._was_idle = [True for _ in range(6)]
     
 
     def changeGait(self, gait_type: GaitType):
@@ -163,33 +166,24 @@ class ElkapodGait(Node):
                 elapsed_time_sec = (current_time - self._init_time) / 1e9
                 self._leg_phase[leg_nb], self._leg_clock[leg_nb] = self.clockFunction(elapsed_time_sec, self._cycle_time, self._phase_offset[leg_nb])
 
-        msg = Float64MultiArray()
-        msg.data = self._leg_clock
-
-        self._leg_clock_pub.publish(msg)
-
-        msg2 = Float64MultiArray()
-        msg2.data = self._leg_phase
-        self._leg_clock_thresh_pub.publish(msg2)
-
         msg3 = Float64MultiArray()
         msg3.data = [0 for _ in range(18)]
         for leg_nb in range(6):
 
             if self._state == State.WALKING:
                 p = self._base_traj(self._leg_clock[leg_nb], self._leg_phase[leg_nb])
+
+                if self._was_idle[leg_nb]:
+                    if abs(p[0]) > 0.02:
+                        p = np.array([0.0, 0.0, 0.0])
+                    else:
+                        self._was_idle[leg_nb] = False
                 
-                # Add angular velocity component
-                theta = self._current_vel[2]
-                #print(theta)
-                #angular_part = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]]) @ np.array([-self._last_leg_position[leg_nb][1], self._last_leg_position[leg_nb][0]])
-                angular_part = theta * np.array([-self._last_leg_position[leg_nb][1], self._last_leg_position[leg_nb][0]])
 
-                self.get_logger().info(f"Agular part for leg {leg_nb}: {theta} {angular_part[0]:.3f} {angular_part[1]:.3f}")
+                omega = self._current_angular_velocity
+                angular_part = omega * np.array([-self._last_leg_position[leg_nb][1], self._last_leg_position[leg_nb][0]])
 
-
-                vel = self._current_velocity[leg_nb] + angular_part
-   
+                vel = self._current_velocity[leg_nb] + angular_part   
 
                 p = rotZ(np.arctan2(vel[1], vel[0])) @ p
             else:
@@ -217,9 +211,6 @@ class ElkapodGait(Node):
 
 
             self._last_leg_position[leg_nb] = p_base_homogeneus[:3]
-
-            #self.get_logger().info(f"Leg: {leg_nb} positon: {p_base_homogeneus[0]:.3f} {p_base_homogeneus[1]:.3f} {p_base_homogeneus[2]:.3f}")
-
 
             msg3.data[leg_nb*3] = p[0]
             msg3.data[leg_nb*3+1] = p[1]

@@ -1,51 +1,51 @@
 from launch import LaunchDescription
-from launch.substitutions import LaunchConfiguration
-from launch.actions import DeclareLaunchArgument 
-from launch_ros.actions import Node
-from launch.conditions import IfCondition, UnlessCondition
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.actions import IncludeLaunchDescription
-from ament_index_python import get_package_share_directory
+from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
+from ament_index_python.packages import get_package_share_directory
+import os
 
 
 def generate_launch_description():
-
-    ld = LaunchDescription()
-    ld.add_action(
-        DeclareLaunchArgument(name="sim", default_value="true", choices=["true", "false"])
+    sim_arg = DeclareLaunchArgument(
+        'sim',
+        default_value='True',
     )
 
-    elkapod_sim_pkg_prefix = get_package_share_directory('elkapod_sim')
-    elkapod_sim_handler_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            [elkapod_sim_pkg_prefix, '/launch/robot_launch.py']),
-        launch_arguments={}.items(),
-        condition=IfCondition(LaunchConfiguration("sim")),
+    elkapod_description_dir = get_package_share_directory('elkapod_description')
+    config_path = os.path.join(elkapod_description_dir, 'config', 'leg_configuration.yaml')
 
-    )
-    ld.add_action(elkapod_sim_handler_launch)
-
-    ld.add_action(
-        Node(
-            package="elkapod_comm",
-            executable="elkapod_comm_server",
-            condition=UnlessCondition(LaunchConfiguration("sim"))
-        )
+    gazebo_launch_path = os.path.join(
+        get_package_share_directory('elkapod_gazebo'),
+        'launch',
+        'elkapod.gazebo.launch.py'
     )
 
-    elkapod_motion_pkg_prefix = get_package_share_directory('elkapod_motion')
-    elkapod_motion_handler_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            [elkapod_motion_pkg_prefix, '/launch/elkapod_motion_launch.py']),
-        launch_arguments={}.items()
-    )
-    ld.add_action(elkapod_motion_handler_launch)
-
-    ld.add_action(
-        Node(
-            package="elkapod_trajectory_generator",
-            executable="elkapod_trajectory_generator",
-        )
+    gazebo_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(gazebo_launch_path),
+        condition=IfCondition(LaunchConfiguration('sim'))
     )
 
-    return ld
+    control_node = Node(
+        package="elkapod_leg_control_tests",
+        executable="elkapod_control",
+        parameters=[{
+            "config_path": config_path
+        }],
+        output="screen"
+    )
+
+    gait_node = Node(
+        package="elkapod_gait_gen_py",
+        executable="elkapod_gait",
+        output="screen"
+    )
+
+    return LaunchDescription([
+        sim_arg,
+        gazebo_launch,
+        control_node,
+        gait_node
+    ])

@@ -66,7 +66,7 @@ void ElkapodLegPublisher::topicCallback(std_msgs::msg::Float64MultiArray::Shared
         input[2] = msg->data[i*3 + 2];
 
         std::string msg = "Point for leg " + std::to_string(i+1) + " x: " + std::to_string(input[0]) + " y: " + std::to_string(input[1]) + " z: " + std::to_string(input[2]);
-        RCLCPP_INFO(this->get_logger(), msg.c_str());
+        RCLCPP_DEBUG(this->get_logger(), msg.c_str());
 
         Eigen::Vector3d anglesDeg = this->solver->inverse(input);
         output_msg.data[i*3] = deg2rad(anglesDeg[0]);
@@ -74,7 +74,7 @@ void ElkapodLegPublisher::topicCallback(std_msgs::msg::Float64MultiArray::Shared
         output_msg.data[i*3 + 2] = deg2rad(anglesDeg[2]);
 
         std::string msg2 = "Angles for leg " + std::to_string(i+1) + " theta0: " + std::to_string(output_msg.data[i*3]) + " theta1: " + std::to_string(output_msg.data[i*3+1]) + " theta2: " + std::to_string(output_msg.data[i*3+2]);
-        RCLCPP_INFO(this->get_logger(), msg2.c_str());
+        RCLCPP_DEBUG(this->get_logger(), msg2.c_str());
     }
     this->my_publisher_->publish(output_msg);
 }
