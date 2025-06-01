@@ -24,29 +24,29 @@
             
             
             <xacro:joint_interface name="leg1_J1" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
-            <xacro:joint_interface name="leg1_J2" min_pos_rad="-3.14" max_pos_rad="3.14" initial_angle_rad="0.0"/>
-            <xacro:joint_interface name="leg1_J3" min_pos_rad="-3.14" max_pos_rad="3.14" initial_angle_rad="0.0"/>
+            <xacro:joint_interface name="leg1_J2" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+            <xacro:joint_interface name="leg1_J3" min_pos_rad="-3.14" max_pos_rad="0.0" initial_angle_rad="0.0"/>
             
             <xacro:joint_interface name="leg3_J1" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
-            <xacro:joint_interface name="leg3_J2" min_pos_rad="-3.14" max_pos_rad="3.14" initial_angle_rad="0.0"/>
-            <xacro:joint_interface name="leg3_J3" min_pos_rad="-3.14" max_pos_rad="3.14" initial_angle_rad="0.0"/>
+            <xacro:joint_interface name="leg3_J2" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+            <xacro:joint_interface name="leg3_J3" min_pos_rad="-3.14" max_pos_rad="0.0" initial_angle_rad="0.0"/>
             
             <xacro:joint_interface name="leg5_J1" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
-            <xacro:joint_interface name="leg5_J2" min_pos_rad="-3.14" max_pos_rad="3.14" initial_angle_rad="0.0"/>
-            <xacro:joint_interface name="leg5_J3" min_pos_rad="-3.14" max_pos_rad="3.14" initial_angle_rad="0.0"/>
+            <xacro:joint_interface name="leg5_J2" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+            <xacro:joint_interface name="leg5_J3" min_pos_rad="-3.14" max_pos_rad="0.0" initial_angle_rad="0.0"/>
             
             
             <xacro:joint_interface name="leg2_J1" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
-            <xacro:joint_interface name="leg2_J2" min_pos_rad="-3.14" max_pos_rad="3.14" initial_angle_rad="0.0"/>
-            <xacro:joint_interface name="leg2_J3" min_pos_rad="-3.14" max_pos_rad="3.14" initial_angle_rad="0.0"/>
+            <xacro:joint_interface name="leg2_J2" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+            <xacro:joint_interface name="leg2_J3" min_pos_rad="-3.14" max_pos_rad="0.0" initial_angle_rad="0.0"/>
             
             <xacro:joint_interface name="leg4_J1" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
-            <xacro:joint_interface name="leg4_J2" min_pos_rad="-3.14" max_pos_rad="3.14" initial_angle_rad="0.0"/>
-            <xacro:joint_interface name="leg4_J3" min_pos_rad="-3.14" max_pos_rad="3.14" initial_angle_rad="0.0"/>
+            <xacro:joint_interface name="leg4_J2" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+            <xacro:joint_interface name="leg4_J3" min_pos_rad="-3.14" max_pos_rad="0.0" initial_angle_rad="0.0"/>
             
             <xacro:joint_interface name="leg6_J1" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
-            <xacro:joint_interface name="leg6_J2" min_pos_rad="-3.14" max_pos_rad="3.14" initial_angle_rad="0.0"/>
-            <xacro:joint_interface name="leg6_J3" min_pos_rad="-3.14" max_pos_rad="3.14" initial_angle_rad="0.0"/>
+            <xacro:joint_interface name="leg6_J2" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+            <xacro:joint_interface name="leg6_J3" min_pos_rad="-3.14" max_pos_rad="0.0" initial_angle_rad="0.0"/>
 
         </ros2_control>
     </xacro:if>
