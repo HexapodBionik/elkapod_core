@@ -60,7 +60,7 @@ class ElkapodGait(Node):
         self._leg_clock_freq2 = 10                   # in Hz
         self._cycle_time = 2.0                      # in seconds
         self._min_cycle_time = 0.5
-        self._step_length = 0.15
+        self._step_length = 0.1
         self._step_height = 0.05
         self._base_height = 0.17
   
@@ -118,8 +118,7 @@ class ElkapodGait(Node):
             # For now R ~ self._leg_spacing + 0.15 (half body width) approx
 
             R = self._leg_spacing + 0.22
-            arc_angle = self._step_length / R 
-            self._cycle_time = (arc_angle / abs(self._current_vel[2])) * 2
+            self._cycle_time = self._step_length / (0.5 * R * abs(self._current_vel[2]))
             self.changeGait(self._gait_type)
 
         if not self._current_vel.any() and self._state == State.WALKING:
@@ -190,7 +189,6 @@ class ElkapodGait(Node):
                 p = np.array([0.0, 0.0, 0.0])
 
             
-            #p = p + self._translations[leg_nb]
             p = rotZ(-self._rotations_from_base_link[leg_nb]) @ p
 
             # Add base height and leg spacing
