@@ -34,7 +34,7 @@ class RotationWaypointsFollower(Node):
         self._x = 0
         self._y = 0
         self._angle = 0
-        self._tolerance = 0.1
+        self._tolerance = 0.075
 
     def _rotate_angle(self, deg):
         msg = Twist()
