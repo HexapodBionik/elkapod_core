@@ -56,6 +56,13 @@
             <parameters>$(find elkapod_description)/config/my_controllers.yaml</parameters>
             <parameters>$(find elkapod_description)/config/gaz_ros2_ctl_use_sim.yaml</parameters>
         </plugin>
+
+        <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+            <odom_frame>base_link</odom_frame>
+            <robot_base_frame>base_link</robot_base_frame>
+            <odom_publish_frequency>50</odom_publish_frequency>
+        </plugin>
+
     </gazebo>
 
 

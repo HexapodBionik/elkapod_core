@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 import os
 from glob import glob
 
-package_name = 'elkapod_rot_tests'
+package_name = 'elkapod_locomotion_examples'
 data_files = []
 data_files.append(('share/ament_index/resource_index/packages', ['resource/' + package_name]))
 data_files.append(('share/' + package_name, ['package.xml']))
@@ -22,7 +22,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'elkapod_rot = elkapod_rot_tests.elkapod_rot:main',
+            'rot_waypoints = elkapod_locomotion_examples.rot_waypoints:main',
+            'rectangle_drawer = elkapod_locomotion_examples.rectangle_drawer:main',
         ],
     },
 )

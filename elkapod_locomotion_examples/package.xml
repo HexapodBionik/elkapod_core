@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>elkapod_rot_tests</name>
+  <name>elkapod_locomotion_examples</name>
   <version>1.0.0</version>
   <description>Gait generator prototype for Elkapod Walking Robot developed at WUT</description>
   <maintainer email="piotrpatek17@gmail.com">Piotr Patek</maintainer>
