@@ -1,3 +1,10 @@
+#
+# Created by Piotr Patek.
+#
+# Copyright (c) 2025.
+# Elkapod Bionik, Warsaw University of Technology. All rights reserved.
+#
+
 import numpy as np
 from enum import Enum
 
@@ -27,19 +34,19 @@ class State(Enum):
 
 class GaitType(Enum):
     WAVE = 0
-    RIPPLE = 1
-    TRIPOID = 2
+    TRIPOID = 1
 
 
 class ElkapodGait(Node):
     def __init__(self):
         super().__init__(node_name="elkapod_gait")
-        self.declare_parameter("trajectory_frequency", value=20.0, descriptor=ParameterDescriptor(description="Leg trajectory frequency in Hz"))
+        self.declare_parameter("trajectory_frequency", value=50.0, descriptor=ParameterDescriptor(description="Leg trajectory frequency in Hz"))
         self.declare_parameter("min_cycle_time", value=0.5, descriptor=ParameterDescriptor(description="Minimal gait cycle time in seconds"))
 
         self.declare_parameter("leg_spacing", value=0.175, descriptor=ParameterDescriptor(description="Leg spacing from base in meters"))
         self.declare_parameter("step_length", value=0.2, descriptor=ParameterDescriptor(description="Length of single step in meters (swing and stance phases)"))
         self.declare_parameter("step_height", value=0.05, descriptor=ParameterDescriptor(description="Height of single step in meters (swing phase)"))
+        self.declare_parameter("phase_lag", value=0.03, descriptor=ParameterDescriptor(description="Additional lag on start of swing phase which helps to stabilizate the body, value is a percentage of cycle time"))
 
         # Leg parameters
         self._rotations_from_base_link = np.array([0.63973287, -0.63973287, np.pi/2, -np.pi/2, 2.38414364, -2.38414364])
@@ -52,7 +59,6 @@ class ElkapodGait(Node):
         # Main variables
         self._gait_type = GaitType.TRIPOID
         self._state = State.IDLE
-        self._was_idle = [True for _ in range(6)]
 
         self._current_vel = np.array([0.0, 0.0, 0.0])  # Linear vx, vy and angular wz
         self._current_vel_scalar = 0.0
@@ -72,13 +78,13 @@ class ElkapodGait(Node):
         self._leg_phase = [0 for _ in range(6)]
         self._leg_phase_shift = [0 for _ in range(6)]
         self._leg_start_phase_shift = 0.0
-        self._phase_lag = 0.1
 
         self._trajectory_frequency = self.get_parameter("trajectory_frequency").get_parameter_value().double_value
         self._min_cycle_time = self.get_parameter("min_cycle_time").get_parameter_value().double_value
         self._step_length = self.get_parameter("step_length").get_parameter_value().double_value
         self._step_height = self.get_parameter("step_height").get_parameter_value().double_value
         self._leg_spacing = self.get_parameter("leg_spacing").get_parameter_value().double_value
+        self._phase_lag = self.get_parameter("leg_spacing").get_parameter_value().double_value
 
         self._base_traj = ElkapodLegPathBase(self._step_length, self._step_height)
         self._base_traj.init()
@@ -142,7 +148,6 @@ class ElkapodGait(Node):
             self.get_logger().info("Going to WALKING state")
             self._init_time = self.get_clock().now().nanoseconds
             self._state = State.WALKING
-            self._was_idle = [True for _ in range(6)]
             self._leg_phase_shift = [0 for _ in range(6)]
     
 
@@ -157,17 +162,21 @@ class ElkapodGait(Node):
         
     def clockFunction(self, t: float, cycle_time: float, phase_shift: float, leg_nb: int):
         T = cycle_time
-        if self._was_idle[leg_nb] and not np.isclose(self._leg_phase_shift[leg_nb], phase_shift, atol=1e-3):
-            self._leg_phase_shift[leg_nb] += 0.05 * phase_shift
-        elif self._was_idle[leg_nb] and np.isclose(self._leg_phase_shift[leg_nb], phase_shift, atol=1e-3):
-            self._was_idle[leg_nb] = False
+        if not np.isclose(self._leg_phase_shift[leg_nb], phase_shift, atol=1e-3):
+            if self._leg_phase_shift[leg_nb] < phase_shift:
+                self._leg_phase_shift[leg_nb] += 0.05 * phase_shift
+            else:
+                self._leg_phase_shift[leg_nb] -= 0.05 * phase_shift
 
-        t_mod = (t + T/2 + self._leg_phase_shift[leg_nb]) % T
-
-        if t_mod < T * self._swing_percentage:      # swing
+        t_mod = (t + 3*T/4 + self._leg_phase_shift[leg_nb]) % T
+        
+        if t_mod < T*self._phase_lag:                                       # swing lag phase
             self._leg_phase[leg_nb] = 1
-            self._leg_clock[leg_nb] = t_mod / (T * self._swing_percentage)                          
-        else:                                       # stance
+            self._leg_clock[leg_nb] = 0.0
+        elif T*self._phase_lag < t_mod < T * self._swing_percentage:        # swing
+            self._leg_phase[leg_nb] = 1
+            self._leg_clock[leg_nb] = (t_mod - T * self._phase_lag) / (T - T * self._phase_lag)                  
+        else:                                                               # stance
             self._leg_phase[leg_nb] = 0
             self._leg_clock[leg_nb] = (t_mod - T * self._swing_percentage) / (T - T * self._swing_percentage)
 
@@ -179,9 +188,9 @@ class ElkapodGait(Node):
             for leg_nb in range(6):
                 self._leg_phase[leg_nb], self._leg_clock[leg_nb] = 0.0, 0.0
         else:
+            current_time = self.get_clock().now().nanoseconds
+            elapsed_time_sec = (current_time - self._init_time) / 1e9
             for leg_nb in range(6):
-                current_time = self.get_clock().now().nanoseconds
-                elapsed_time_sec = (current_time - self._init_time) / 1e9
                 self.clockFunction(elapsed_time_sec, self._cycle_time, self._phase_offset[leg_nb], leg_nb)
                 msg_phase.data[leg_nb] = self._leg_phase[leg_nb]
 
