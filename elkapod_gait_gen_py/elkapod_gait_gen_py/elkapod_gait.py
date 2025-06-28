@@ -15,7 +15,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 from rcl_interfaces.msg import ParameterDescriptor
 
-from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import Float64MultiArray, Float64, Int32
 from geometry_msgs.msg import Twist
 
 from .elkapod_leg_path import ElkapodLegPathBase
@@ -45,7 +45,7 @@ class ElkapodGait(Node):
 
         self.declare_parameter("leg_spacing", value=0.175, descriptor=ParameterDescriptor(description="Leg spacing from base in meters"))
         self.declare_parameter("step_length", value=0.2, descriptor=ParameterDescriptor(description="Length of single step in meters (swing and stance phases)"))
-        self.declare_parameter("step_height", value=0.05, descriptor=ParameterDescriptor(description="Height of single step in meters (swing phase)"))
+        self.declare_parameter("step_height", value=0.1, descriptor=ParameterDescriptor(description="Height of single step in meters (swing phase)"))
         self.declare_parameter("phase_lag", value=0.03, descriptor=ParameterDescriptor(description="Additional lag on start of swing phase which helps to stabilizate the body, value is a percentage of cycle time"))
 
         # Leg parameters
@@ -70,6 +70,7 @@ class ElkapodGait(Node):
 
         self._cycle_time = 2.0                      # in seconds
         self._base_height = 0.17
+        self._set_base_height = 0.17
 
         self._phase_offset = None
         self._phase_offset = None
@@ -84,7 +85,7 @@ class ElkapodGait(Node):
         self._step_length = self.get_parameter("step_length").get_parameter_value().double_value
         self._step_height = self.get_parameter("step_height").get_parameter_value().double_value
         self._leg_spacing = self.get_parameter("leg_spacing").get_parameter_value().double_value
-        self._phase_lag = self.get_parameter("leg_spacing").get_parameter_value().double_value
+        self._phase_lag = self.get_parameter("phase_lag").get_parameter_value().double_value
 
         self._base_traj = ElkapodLegPathBase(self._step_length, self._step_height)
         self._base_traj.init()
@@ -92,6 +93,9 @@ class ElkapodGait(Node):
         self._leg_clock_timer = self.create_timer(1/self._trajectory_frequency, self.legClockCallback, autostart=False)
 
         self._velocity_sub = self.create_subscription(Twist, "/cmd_vel", qos_profile=10, callback=self.velocityTopicCallback, callback_group=ReentrantCallbackGroup())
+        self._parameters_sub = self.create_subscription(Float64, "/cmd_base_param", qos_profile=10, callback=self.paramTopicCallback, callback_group=ReentrantCallbackGroup())
+        self._gait_type_sub = self.create_subscription(Int32, "/cmd_gait_type", qos_profile=10, callback=self.paramGaitTypeTopicCallabck, callback_group=ReentrantCallbackGroup())
+
         self._leg_signal = self.create_publisher(Float64MultiArray, "/elkapod_leg_positions", qos_profile=10, callback_group=ReentrantCallbackGroup())
         self._leg_phase_signal = self.create_publisher(Float64MultiArray, "leg_phase_signal", qos_profile=10, callback_group=ReentrantCallbackGroup())
 
@@ -104,6 +108,22 @@ class ElkapodGait(Node):
         self.changeGait(self._gait_type)
         self._leg_clock_timer.reset()
         self.get_logger().info("Elkapod gait generator prototype initialized!")
+
+    def paramGaitTypeTopicCallabck(self, msg: Int32):
+        if msg.data == 0 and self._state == State.IDLE:
+            self.get_logger().info("Gait set to WAVE")
+            self._gait_type = GaitType.WAVE
+            self.changeGait(self._gait_type)
+        elif msg.data == 1 and self._state == State.IDLE:
+            self._gait_type = GaitType.TRIPOID
+            self.changeGait(self._gait_type)
+            self.get_logger().info("Gait set to TRIPOD")
+
+    def paramTopicCallback(self, msg: Float64):
+        if 0.1 < msg.data < 0.2:
+            self._set_base_height = msg.data
+        else:
+            self.get_logger().warning("Couldn't set new base height goal - value out of allowed range")
 
     def velocityTopicCallback(self, msg: Twist):
         self._current_vel[0] = msg.linear.x
@@ -158,7 +178,7 @@ class ElkapodGait(Node):
             self._phase_offset = [0, self._cycle_time/2, self._cycle_time/2, 0, 0, self._cycle_time/2]
         elif gait_type == GaitType.WAVE:
             self._swing_percentage = 1/6
-            self._phase_offset = [1/6 * self._cycle_time * i for i in range(6)]
+            self._phase_offset = [i*self._cycle_time/6 for i in range(6)]
         
     def clockFunction(self, t: float, cycle_time: float, phase_shift: float, leg_nb: int):
         T = cycle_time
@@ -175,7 +195,7 @@ class ElkapodGait(Node):
             self._leg_clock[leg_nb] = 0.0
         elif T*self._phase_lag < t_mod < T * self._swing_percentage:        # swing
             self._leg_phase[leg_nb] = 1
-            self._leg_clock[leg_nb] = (t_mod - T * self._phase_lag) / (T - T * self._phase_lag)                  
+            self._leg_clock[leg_nb] = (t_mod - T * self._phase_lag) / (T * self._swing_percentage - T * self._phase_lag)                  
         else:                                                               # stance
             self._leg_phase[leg_nb] = 0
             self._leg_clock[leg_nb] = (t_mod - T * self._swing_percentage) / (T - T * self._swing_percentage)
@@ -203,6 +223,13 @@ class ElkapodGait(Node):
         # for leg_nb in range(6):
         #     string += f" {self._leg_phase_shift[leg_nb]:.3f}/{self._phase_offset[leg_nb]:.3f}\t"
         # self.get_logger().info(string)
+
+
+        if not np.isclose(self._base_height, self._set_base_height, atol=1e-3):
+                if self._base_height < self._set_base_height:
+                    self._base_height += 0.005
+                else:
+                    self._base_height -= 0.005
 
         for leg_nb in range(6):
             if self._state == State.WALKING:
