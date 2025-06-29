@@ -16,6 +16,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 from rcl_interfaces.msg import ParameterDescriptor
 
 from std_msgs.msg import Float64MultiArray, Float64, Int32
+from std_srvs.srv import Trigger, Trigger_Request, Trigger_Response
 from geometry_msgs.msg import Twist
 
 from .elkapod_leg_path import ElkapodLegPathBase
@@ -31,6 +32,7 @@ qos = QoSProfile(
 class State(Enum):
     IDLE = 0
     WALKING = 1
+    DISABLED = 2
 
 class GaitType(Enum):
     WAVE = 0
@@ -58,7 +60,7 @@ class ElkapodGait(Node):
 
         # Main variables
         self._gait_type = GaitType.TRIPOID
-        self._state = State.IDLE
+        self._state = State.DISABLED
 
         self._current_vel = np.array([0.0, 0.0, 0.0])  # Linear vx, vy and angular wz
         self._current_vel_scalar = 0.0
@@ -93,8 +95,15 @@ class ElkapodGait(Node):
         self._leg_clock_timer = self.create_timer(1/self._trajectory_frequency, self.legClockCallback, autostart=False)
 
         self._velocity_sub = self.create_subscription(Twist, "/cmd_vel", qos_profile=10, callback=self.velocityTopicCallback, callback_group=ReentrantCallbackGroup())
-        self._parameters_sub = self.create_subscription(Float64, "/cmd_base_param", qos_profile=10, callback=self.paramTopicCallback, callback_group=ReentrantCallbackGroup())
-        self._gait_type_sub = self.create_subscription(Int32, "/cmd_gait_type", qos_profile=10, callback=self.paramGaitTypeTopicCallabck, callback_group=ReentrantCallbackGroup())
+
+        # TODO
+        # In final version of gait generation && execution node those topic subscriptions should be changed into services with custom messages, for now this is left like this
+        # for simplicity.
+        self._parameters_sub = self.create_subscription(Float64, "/cmd_base_param", qos_profile=10, callback=self._paramTopicCallback, callback_group=ReentrantCallbackGroup())
+        self._gait_type_sub = self.create_subscription(Int32, "/cmd_gait_type", qos_profile=10, callback=self._paramGaitTypeTopicCallabck, callback_group=ReentrantCallbackGroup())
+
+        self._enable_service = self.create_service(Trigger, "/gait_gen_enable", self._enable_service_callback)
+        self._disable_service = self.create_service(Trigger, "/gait_gen_disable", self._disable_service_callback)
 
         self._leg_signal = self.create_publisher(Float64MultiArray, "/elkapod_leg_positions", qos_profile=10, callback_group=ReentrantCallbackGroup())
         self._leg_phase_signal = self.create_publisher(Float64MultiArray, "leg_phase_signal", qos_profile=10, callback_group=ReentrantCallbackGroup())
@@ -108,8 +117,36 @@ class ElkapodGait(Node):
         self.changeGait(self._gait_type)
         self._leg_clock_timer.reset()
         self.get_logger().info("Elkapod gait generator prototype initialized!")
+        self._state = State.IDLE
 
-    def paramGaitTypeTopicCallabck(self, msg: Int32):
+    def deinit(self):
+        self._leg_clock_timer.cancel()
+        self._state = State.DISABLED
+
+
+    def _enable_service_callback(self, request: Trigger_Request, response: Trigger_Response):
+        if self._state == State.DISABLED:
+            self.init()
+            response.success = True
+        else:
+            response.success = False
+            response.message = "Couldn't enable gait gen because it's already enabled and working"
+        return response
+
+    def _disable_service_callback(self, request: Trigger_Request, response: Trigger_Response):
+        if self._state == State.DISABLED:
+            response.success = False
+            response.message = "Couldn't disable gait gen because it's already disabled"
+        elif self._state == State.WALKING:
+            response.success = False
+            response.message = "Couldn't disable gait gen when robot is actively walking"
+        elif self._state == State.IDLE:
+            response.success = True
+            self.deinit()
+
+        return response
+
+    def _paramGaitTypeTopicCallabck(self, msg: Int32):
         if msg.data == 0 and self._state == State.IDLE:
             self.get_logger().info("Gait set to WAVE")
             self._gait_type = GaitType.WAVE
@@ -119,7 +156,7 @@ class ElkapodGait(Node):
             self.changeGait(self._gait_type)
             self.get_logger().info("Gait set to TRIPOD")
 
-    def paramTopicCallback(self, msg: Float64):
+    def _paramTopicCallback(self, msg: Float64):
         if 0.1 < msg.data < 0.2:
             self._set_base_height = msg.data
         else:
@@ -276,7 +313,7 @@ class ElkapodGait(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = ElkapodGait()
-    node.init()
+    #node.init()
 
     executor = MultiThreadedExecutor()
     executor.add_node(node)
