@@ -35,14 +35,20 @@ public:
 class LegPlanner{
     public:
         virtual ~LegPlanner() = default;
-        virtual Trajectory plan(const Vec3& start, const Vec3& goal, double duration, double dt) = 0;
+        virtual Trajectory plan(const Vec3& start, const Vec3& goal, double duration, double hz) = 0;
     private:
 };
 
 class LinearLegPlanner: public LegPlanner{
     public:
         LinearLegPlanner() = default;
-        Trajectory plan(const Vec3& start, const Vec3& goal, double duration, double dt) override;
+        Trajectory plan(const Vec3& start, const Vec3& goal, double duration, double hz) override;
+};
+
+class HopLegPlanner: public LegPlanner{
+    public:
+        HopLegPlanner() = default;
+        Trajectory plan(const Vec3& start, const Vec3& goal, double duration, double hz) override;
 };
 
 class TrajectoryExecutor{

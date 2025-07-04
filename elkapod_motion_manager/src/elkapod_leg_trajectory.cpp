@@ -27,8 +27,33 @@ double Trajectory::totalDuration() const{
     return points.size() * timestep;
 }
 
+Trajectory HopLegPlanner::plan(const Vec3& start, const Vec3& goal, double duration, double hz){
+    const double dt = 1 / hz;
+    const double hop_height = 0.025;
 
-Trajectory LinearLegPlanner::plan(const Vec3& start, const Vec3& goal, double duration, double dt){
+    const double path_length = std::sqrt(std::pow(start[0] - goal[0], 2) + std::pow(start[1] - goal[1], 2) + std::pow(start[2] - goal[2], 2));
+
+    const double R = (std::pow(hop_height, 2) + std::pow(path_length, 2) / 4) / (2 * hop_height);
+
+    auto x_func = [start, goal](double s){return start[0] + (goal[0] - start[0])*s;};
+    auto y_func = [start, goal](double s){return start[1] + (goal[1] - start[1])*s;};
+    auto z_func = [start, goal, R](double s){return start[2] + (goal[2] - start[2])*s + R * std::sin(M_PI * s);};
+
+    size_t steps = duration / dt;
+    Trajectory traj(dt);
+
+    for(size_t i = 0; i < steps; ++i){
+        double s = static_cast<double>(i) / static_cast<double>(steps);
+        Vec3 p = {x_func(s), y_func(s), z_func(s)};
+        traj.addPoint(p);
+    }
+    return traj;
+}
+
+
+Trajectory LinearLegPlanner::plan(const Vec3& start, const Vec3& goal, double duration, double hz){
+    const double dt = 1 / hz;
+    
     auto x_func = [start, goal](double s){return start[0] + (goal[0] - start[0])*s;};
     auto y_func = [start, goal](double s){return start[1] + (goal[1] - start[1])*s;};
     auto z_func = [start, goal](double s){return start[2] + (goal[2] - start[2])*s;};

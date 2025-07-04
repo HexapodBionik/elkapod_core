@@ -6,7 +6,7 @@ int main(int argc, char * argv[])
   rclcpp::init(argc, argv);
 
   auto my_node = std::make_shared<ElkapodMotionManager>();
-  my_node->init();
+  my_node->initNode();
 
   rclcpp::spin(my_node);
   rclcpp::shutdown();

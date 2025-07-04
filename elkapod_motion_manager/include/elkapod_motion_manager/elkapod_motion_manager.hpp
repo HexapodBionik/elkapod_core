@@ -36,32 +36,49 @@ class ElkapodMotionManager: public rclcpp::Node
 {
     public:
         ElkapodMotionManager();
-        void init();
+        void initNode();
         
     private:
+        void lowerDownPlanning();
+        void standUpPlanning();
+        void initPlanning();
+
+        void standUpServiceCallback(std::shared_ptr<std_srvs::srv::Trigger_Request> request, std::shared_ptr<std_srvs::srv::Trigger_Response> response);
+        void lowerDownServiceCallback(std::shared_ptr<std_srvs::srv::Trigger_Request> request, std::shared_ptr<std_srvs::srv::Trigger_Response> response);
         void initServiceCallback(std::shared_ptr<std_srvs::srv::Trigger_Request> request, std::shared_ptr<std_srvs::srv::Trigger_Response> response);
         void legControlCallback();
-        // void topicCallback(std_msgs::msg::Float64MultiArray::SharedPtr msg);
 
         rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr init_service_;
-        
+        rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr standup_service_;
+        rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr lower_service_;
 
         rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr leg_positions_pub_;
         rclcpp::TimerBase::SharedPtr timer_;
         State state_;
         
-        std::vector<std::vector<double>> leg_positions;
-        // std::array<std::array<double, 3>, 6> leg_positions;
-        // std::string config_path_;
-        // double height;
-        // double sign;
-        
-        std::array<Trajectory, 6> trajs;
+        std::vector<std::array<Trajectory, 6>> trajs;
         LinearLegPlanner planner;
+        HopLegPlanner hop_planner;
         TrajectoryExecutor executor;
         bool executor_enable;
 
-    
+        // Standing up variables
+        double base_height_waypoint;
+        double leg_spacing_waypoint;
+
+        // Height variables
+        double base_height;
+        double base_height_min;
+        double base_height_max;
+
+        // Leg spacing variables
+        double leg_spacing;
+        double leg_spacing_min;
+        double leg_spacing_max;
+
+        // Trajectory variables
+        double trajectory_freq_hz;
+
 };
 
 
