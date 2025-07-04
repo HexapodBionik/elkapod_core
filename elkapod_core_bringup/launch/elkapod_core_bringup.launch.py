@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -23,9 +23,19 @@ def generate_launch_description():
         'elkapod.gazebo.launch.py'
     )
 
+    motion_manager_launch_path = os.path.join(
+        get_package_share_directory('elkapod_motion_manager'),
+        'launch',
+        'elkapod_motion_manager.launch.py'
+    )
+
     gazebo_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(gazebo_launch_path),
         condition=IfCondition(LaunchConfiguration('sim'))
+    )
+
+    motion_manager_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(motion_manager_launch_path)
     )
 
     control_node = Node(
@@ -43,9 +53,17 @@ def generate_launch_description():
         output="screen"
     )
 
+    delayed_actions = TimerAction(
+        period=10.0,
+        actions=[
+            motion_manager_launch,
+            control_node,
+            gait_node
+        ]
+    )
+
     return LaunchDescription([
         sim_arg,
         gazebo_launch,
-        control_node,
-        gait_node
+        delayed_actions
     ])

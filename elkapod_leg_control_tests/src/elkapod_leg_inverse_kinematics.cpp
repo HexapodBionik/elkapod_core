@@ -51,7 +51,7 @@ Eigen::Vector3d KinematicsSolver::inverse(const Eigen::Vector3d& point){
 
     double q2 = 0;
 
-    if(P >= 0.3){
+    if(P >= 0.39){
         if(a2_[0] != a3_[0]){
             throw std::runtime_error("Given point cannot be reached");
         }

@@ -50,7 +50,7 @@ void ElkapodLegPublisher::init(){
 
     const std::vector<Eigen::Vector3d> input = {m1, a1, a2, a3};
     this->solver = std::make_shared<KinematicsSolver>(input);
-    RCLCPP_INFO(this->get_logger(), "Initialized!");
+    RCLCPP_INFO(this->get_logger(), "Elkapod leg controller initialized!");
 }
 
 void ElkapodLegPublisher::topicCallback(std_msgs::msg::Float64MultiArray::SharedPtr msg){

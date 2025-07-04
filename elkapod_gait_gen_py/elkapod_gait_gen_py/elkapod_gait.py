@@ -109,7 +109,7 @@ class ElkapodGait(Node):
         self._leg_phase_signal = self.create_publisher(Float64MultiArray, "leg_phase_signal", qos_profile=10, callback_group=ReentrantCallbackGroup())
 
 
-
+        self.get_logger().info("Elkapog gait generator prototype started! Use service to activate the node!")
         self._init_time = self.get_clock().now().nanoseconds
 
     def init(self):
