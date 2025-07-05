@@ -75,12 +75,11 @@ class ElkapodGait(Node):
         self._set_base_height = 0.17
 
         self._phase_offset = None
-        self._phase_offset = None
+        self._swing_percentage = None
 
         self._leg_clock = [0 for _ in range(6)]
         self._leg_phase = [0 for _ in range(6)]
         self._leg_phase_shift = [0 for _ in range(6)]
-        self._leg_start_phase_shift = 0.0
 
         self._trajectory_frequency = self.get_parameter("trajectory_frequency").get_parameter_value().double_value
         self._min_cycle_time = self.get_parameter("min_cycle_time").get_parameter_value().double_value
