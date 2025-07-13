@@ -1,4 +1,4 @@
-elkapod_motion_manager:
+common_config:
   ros__parameters:
     base_height:
       default: 0.17
@@ -8,6 +8,28 @@ elkapod_motion_manager:
       default: 0.175
       min: 0.1
       max: 0.25
+
+elkapog_gait_gen_cpp:
+  ros__parameters:
+    trajectory:
+      frequency_hz: 50.0
+
+    gait:
+      min_swing_time_sec: 0.42
+      default_phase_lag_sec: 0.03
+
+      step:
+        length:             # tutaj też min będzie można lepiej dobrać
+          default: 0.15
+          min: 0.1
+          max: 0.2
+        height:             # parametry min i max do doprecyzowania
+          default: 0.05
+          min: 0.05       
+          max: 0.15
+
+elkapod_motion_manager:
+  ros__parameters:
     standing_up:
       base_height_waypoint: 0.1
       leg_spacing_waypoint: 0.25

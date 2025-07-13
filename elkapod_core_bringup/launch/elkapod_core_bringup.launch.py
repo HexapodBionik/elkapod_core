@@ -14,9 +14,6 @@ def generate_launch_description():
         default_value='True',
     )
 
-    elkapod_description_dir = get_package_share_directory('elkapod_description')
-    config_path = os.path.join(elkapod_description_dir, 'config', 'leg_configuration.yaml')
-
     gazebo_launch_path = os.path.join(
         get_package_share_directory('elkapod_gazebo'),
         'launch',
@@ -38,27 +35,10 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(motion_manager_launch_path)
     )
 
-    control_node = Node(
-        package="elkapod_leg_control_tests",
-        executable="elkapod_control",
-        parameters=[{
-            "config_path": config_path
-        }],
-        output="screen"
-    )
-
-    gait_node = Node(
-        package="elkapod_gait_gen_py",
-        executable="elkapod_gait",
-        output="screen"
-    )
-
     delayed_actions = TimerAction(
         period=10.0,
         actions=[
             motion_manager_launch,
-            control_node,
-            gait_node
         ]
     )
 

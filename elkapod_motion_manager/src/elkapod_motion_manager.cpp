@@ -4,13 +4,13 @@ using std::placeholders::_1;
 using std::placeholders::_2;
 
 ElkapodMotionManager::ElkapodMotionManager(): Node("elkapod_motion_manager"){
-    base_height = this->declare_parameter<double>("base_height.default", 0.17);
-    base_height_min = this->declare_parameter<double>("base_height.min", 0.12);
-    base_height_max = this->declare_parameter<double>("base_height.max", 0.22);
+    base_height = this->declare_parameter<double>("../common_config.base_height.default", 0.17);
+    base_height_min = this->declare_parameter<double>("../common_config.base_height.min", 0.12);
+    base_height_max = this->declare_parameter<double>("../common_config.base_height.max", 0.22);
 
-    leg_spacing = this->declare_parameter<double>("leg_spacing.default", 0.175);
-    leg_spacing_min = this->declare_parameter<double>("leg_spacing.min", 0.1);
-    leg_spacing_max = this->declare_parameter<double>("leg_spacing.max", 0.25);
+    leg_spacing = this->declare_parameter<double>("../common_config.leg_spacing.default", 0.175);
+    leg_spacing_min = this->declare_parameter<double>("../common_config.leg_spacing.min", 0.1);
+    leg_spacing_max = this->declare_parameter<double>("../common_config.leg_spacing.max", 0.25);
 
     leg_spacing_waypoint = this->declare_parameter<double>("standing_up.leg_spacing_waypoint", 0.25);
     base_height_waypoint = this->declare_parameter<double>("standing_up.base_height_waypoint", 0.1);
@@ -80,7 +80,7 @@ void ElkapodMotionManager::standUpPlanning(){
 
     // Final lift up
     for(int i = 0; i < 6; ++i)  {
-      auto traj = planner.plan({leg_spacing, 0.0, -base_height_waypoint}, {0.2, 0.0, -base_height}, 10, trajectory_freq_hz);
+      auto traj = planner.plan({leg_spacing, 0.0, -base_height_waypoint}, {leg_spacing, 0.0, -base_height}, 10, trajectory_freq_hz);
       step_trajs[i] = traj;
     }
     trajs.push_back(step_trajs);

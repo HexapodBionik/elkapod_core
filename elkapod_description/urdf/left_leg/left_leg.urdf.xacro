@@ -59,7 +59,7 @@
       <parent link="${leg_name}_base_link" />
       <child link="${leg_name}_linkA" />
       <axis xyz="0 0 1" />
-      <limit lower="-1.57" upper="1.57" effort="3.5" velocity="7.3" />
+      <limit lower="-1.57" upper="1.57" effort="50.0" velocity="7.3" />
     </joint>
 
     <!-- Link B -->
@@ -90,7 +90,7 @@
       <parent link="${leg_name}_linkA" />
       <child link="${leg_name}_linkB" />
       <axis xyz="0 0 1" />
-      <limit lower="-1.57" upper="1.57" effort="3.5" velocity="7.3" />
+      <limit lower="-1.57" upper="1.57" effort="50.0" velocity="7.3" />
     </joint>
 
     <!-- Link C -->
@@ -121,7 +121,7 @@
       <parent link="${leg_name}_linkB" />
       <child link="${leg_name}_linkC" />
       <axis xyz="0 0 1" />
-      <limit lower="-3.14" upper="1.57" effort="3.5" velocity="7.3" />
+      <limit lower="-3.14" upper="1.57" effort="50.0" velocity="7.3" />
     </joint>
 
     <!-- FCP Link -->
@@ -149,9 +149,10 @@
     </link>
 
     <gazebo reference="${leg_name}_FCP">
-      <mu1>1000.0</mu1>
-      <mu2>1000.0</mu2>
+      <mu1>10.0</mu1>
+      <mu2>10.0</mu2>
     </gazebo>
+
     
     <!-- Fixed Joint for FCP -->
     <joint name="${leg_name}_FCP_joint" type="fixed">
