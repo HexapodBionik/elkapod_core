@@ -7,6 +7,7 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(Eigen3 REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
@@ -14,29 +15,29 @@ find_package(std_msgs REQUIRED)
 include_directories(include)
 FILE(GLOB_RECURSE INCLUDE_FILES "include/elkapod_gait_gen_cpp/*.hpp")
 
-add_executable(elkapod_gait_gen src/elkapod_gait_gen_init.cpp src/elkapod_gait_gen.cpp src/leg_path.cpp)
-target_sources(elkapod_gait_gen PRIVATE ${INCLUDE_FILES})
+add_executable(elkapod_gait src/elkapod_gait_gen_init.cpp src/elkapod_gait_gen.cpp src/leg_path.cpp)
+target_sources(elkapod_gait PRIVATE ${INCLUDE_FILES})
 
-target_include_directories(elkapod_gait_gen PUBLIC
+target_include_directories(elkapod_gait PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/include/elkapod_gait_gen_cpp
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>)
-target_compile_features(elkapod_gait_gen PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(elkapod_gait PUBLIC c_std_99 cxx_std_20)  # Require C99 and C++17
 ament_target_dependencies(
-        elkapod_gait_gen
+        elkapod_gait
         "rclcpp"
         "geometry_msgs"
         "std_srvs"
         "std_msgs"
 )
 
-install(TARGETS elkapod_gait_gen
+install(TARGETS elkapod_gait
   DESTINATION lib/${PROJECT_NAME})
 
 
 # Install the executable
-install(TARGETS elkapod_gait_gen
+install(TARGETS elkapod_gait
         DESTINATION lib/${PROJECT_NAME}
 )
 

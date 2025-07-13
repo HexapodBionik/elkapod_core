@@ -15,7 +15,7 @@
 
 class ElkapodLegPath{
     public:
-        ElkapodLegPath(const double step_length, const double step_height): step_length_(step_length), step_height_(step_height_){};
+        ElkapodLegPath(const double step_length, const double step_height): step_length_(step_length), step_height_(step_height){};
         void init();
         Eigen::Vector3d operator()(double s, double phase) const;
     private:

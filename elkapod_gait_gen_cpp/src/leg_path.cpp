@@ -3,7 +3,7 @@
 #include "../include/elkapod_gait_gen_cpp/leg_path.hpp"
 
 void ElkapodLegPath::init(){
-    const double R = (std::pow(step_height_, 2) + std::pow(step_length_, 2) / 4) / (2 * step_height_);
+    const double R = (std::pow(step_height_, 2) + std::pow(step_length_, 2) / 4.) / (2 * step_height_);
     const double h = R - step_height_;
     if (h < 0) {
     throw std::invalid_argument("Invalid step parameters: computed height offset is negative.");

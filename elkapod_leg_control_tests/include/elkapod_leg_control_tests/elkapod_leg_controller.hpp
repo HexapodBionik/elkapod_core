@@ -30,17 +30,12 @@ class ElkapodLegPublisher: public rclcpp::Node
         
     private:
         void topicCallback(std_msgs::msg::Float64MultiArray::SharedPtr msg);
-        void timerCallback();
 
         rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr my_subscription_;
         rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr my_publisher_;
         rclcpp::TimerBase::SharedPtr timer_;
         std::shared_ptr<KinematicsSolver> solver;
         std::string config_path_;
-        double height;
-        double sign;
-
-    
 };
 
 

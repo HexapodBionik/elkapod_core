@@ -2,10 +2,16 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>elkapod_gait_gen_cpp</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="piotrpatek17@gmail.com">vistek</maintainer>
+  <version>1.0.0</version>
+  <description>Gait generator for Elkapod walking robot</description>
+  <maintainer email="piotrpatek17@gmail.com">Piotr Patek</maintainer>
   <license>MIT</license>
+
+  <depend>rclcpp</depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

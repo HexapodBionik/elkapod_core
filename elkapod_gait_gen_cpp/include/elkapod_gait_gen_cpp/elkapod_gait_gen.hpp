@@ -74,12 +74,17 @@ class ElkapodGaitGen : public rclcpp::Node {
         // Variables
         State state_ = State::DISABLED;
         GaitType gait_type_ = GaitType::TRIPOID;
-        double trajectory_frequency_, min_cycle_time_;
+        double trajectory_freq_hz, min_swing_time_sec_;
         double leg_spacing_, step_length_, step_height_, phase_lag_;
-        double base_height_, set_base_height_, cycle_time_, swing_percentage_;
+        double set_base_height_, cycle_time_, swing_percentage_;
+        double current_vel_scalar_, current_angular_velocity_, current_base_direction_;
+
+        double base_height_;
+        double base_height_min_;
+        double base_height_max_;
+
         rclcpp::Time init_time_;
         Eigen::Vector3d current_vel_;
-        double current_vel_scalar_, current_angular_velocity_, current_base_direction_;
         std::vector<Eigen::Vector2d> current_velocity_;
         std::vector<Eigen::Vector3d> last_leg_position_;
         std::vector<double> phase_offset_, leg_phase_shift_;

@@ -1,4 +1,5 @@
 #include "../include/elkapod_gait_gen_cpp/elkapod_gait_gen.hpp"
+#include <format>
 
 static bool is_close(double a, double b, double atol = 1e-8, double rtol = 1e-5) {
     return std::abs(a - b) <= (atol + rtol * std::abs(b));
@@ -14,12 +15,19 @@ static Eigen::Matrix3d rotZ(double theta){
 
 ElkapodGaitGen::ElkapodGaitGen(): Node("elkapod_gait")
 {
-    trajectory_frequency_ = this->declare_parameter<double>("trajectory_frequency", 50.0);
-    min_cycle_time_ = this->declare_parameter<double>("min_cycle_time", 0.5);
+    trajectory_freq_hz = this->declare_parameter<double>("trajectory.frequency_hz", 50.0);
+    min_swing_time_sec_ = this->declare_parameter<double>("gait.min_swing_time_sec", 0.42);
+    phase_lag_ = this->declare_parameter<double>("gait.default_phase_lag_sec", 0.03);
+
     leg_spacing_ = this->declare_parameter<double>("leg_spacing", 0.175);
-    step_length_ = this->declare_parameter<double>("step_length", 0.2);
-    step_height_ = this->declare_parameter<double>("step_height", 0.1);
-    phase_lag_ = this->declare_parameter<double>("phase_lag", 0.03);
+
+    step_length_ = this->declare_parameter<double>("gait.step.length.default", 0.2);
+    step_height_ = this->declare_parameter<double>("gait.step.height.default", 0.05);
+
+    base_height_ = this->declare_parameter<double>("../common.base_height.default", 0.17);
+    base_height_min_ = this->declare_parameter<double>("../common.base_height.min", 0.12);
+    base_height_max_ = this->declare_parameter<double>("../common.base_height.man", 0.22);
+    set_base_height_ = this->declare_parameter<double>("../common.base_height.defaul", 0.17);
 
     // Subscriptions
     velocity_sub_ = this->create_subscription<VelCmd>(
@@ -33,7 +41,7 @@ ElkapodGaitGen::ElkapodGaitGen(): Node("elkapod_gait")
 
     // Publishers
     leg_signal_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("/elkapod_leg_positions", 10);
-    leg_phase_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("leg_phase_signal", 10);
+    leg_phase_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("/leg_phase_signal", 10);
 
     // Services
     enable_srv_ = this->create_service<ServiceTriggerSrv>(
@@ -41,9 +49,8 @@ ElkapodGaitGen::ElkapodGaitGen(): Node("elkapod_gait")
     disable_srv_ = this->create_service<ServiceTriggerSrv>(
         "/gait_gen_disable", std::bind(&ElkapodGaitGen::disableServiceCallback, this, std::placeholders::_1, std::placeholders::_2));
 
-    // Timer (not started yet)
     leg_clock_timer_ = this->create_wall_timer(
-        std::chrono::duration<double>(1.0 / trajectory_frequency_),
+        std::chrono::duration<double>(1.0 / trajectory_freq_hz),
         std::bind(&ElkapodGaitGen::legClockCallback, this));
     leg_clock_timer_->cancel();
     base_traj_ = std::make_unique<ElkapodLegPath>(step_length_, step_height_);
@@ -51,11 +58,10 @@ ElkapodGaitGen::ElkapodGaitGen(): Node("elkapod_gait")
     base_link_rotations_ = {0.63973287, -0.63973287, M_PI/2., -M_PI/2., 2.38414364, -2.38414364};
     base_link_translations_ = {{0.17841, 0.13276, -0.03}, {0.17841, -0.13276, -0.03}, {0.0138, 0.1643, -0.03}, {0.0138, -0.1643, -0.03}, {-0.15903, 0.15038, -0.03}, {-0.15903, -0.15038, -0.03}};
     
-    base_height_ = 0.17;
-    set_base_height_ = 0.17;
     leg_clock_ = std::vector<double>(6, 0.);
     leg_phase_ = std::vector<int>(6, 0);
     leg_phase_shift_ = std::vector<double>(6, 0.);
+    phase_offset_ = std::vector<double>(6, 0.);
 
     current_vel_ = Eigen::Vector3d::Zero();
     current_vel_scalar_ = 0.;
@@ -64,6 +70,7 @@ ElkapodGaitGen::ElkapodGaitGen(): Node("elkapod_gait")
 
     current_velocity_ = std::vector<Eigen::Vector2d>(6, {0.0, 0.0});
     last_leg_position_ = std::vector<Eigen::Vector3d>(6, {0.0, 0.0, 0.0});
+
     
 
     RCLCPP_INFO(this->get_logger(), "Elkapod gait generator initialized. Use service to activate.");
@@ -85,7 +92,7 @@ void ElkapodGaitGen::deinit()
     state_ = State::DISABLED;
 }
 
-void ElkapodGaitGen::enableServiceCallback(ServiceTriggerSrv_Req request, ServiceTriggerSrv_Resp response)
+void ElkapodGaitGen::enableServiceCallback([[maybe_unused]] ServiceTriggerSrv_Req request, ServiceTriggerSrv_Resp response)
 {
     if (state_ == State::DISABLED) {
         init();
@@ -95,7 +102,7 @@ void ElkapodGaitGen::enableServiceCallback(ServiceTriggerSrv_Req request, Servic
     response->message = "Already enabled.";
 }
 
-void ElkapodGaitGen::disableServiceCallback(ServiceTriggerSrv_Req request, ServiceTriggerSrv_Resp response)
+void ElkapodGaitGen::disableServiceCallback([[maybe_unused]] ServiceTriggerSrv_Req request, ServiceTriggerSrv_Resp response)
 {
     if (state_ == State::DISABLED) {
         response->success = false;
@@ -114,7 +121,7 @@ void ElkapodGaitGen::gaitTypeCallback(const IntMsg::SharedPtr msg){
         if(msg->data == 0){
             gait_type_ = GaitType::WAVE;
             changeGait(gait_type_);
-            RCLCPP_INFO(this->get_logger(), "Gait set to TRIPOD");
+            RCLCPP_INFO(this->get_logger(), "Gait set to WAVE");
         }
         else if(msg->data == 1){
             gait_type_ = GaitType::TRIPOID;
@@ -125,7 +132,7 @@ void ElkapodGaitGen::gaitTypeCallback(const IntMsg::SharedPtr msg){
 }
 
 void ElkapodGaitGen::paramCallback(const FloatMsg::SharedPtr msg){
-    if(msg->data > 0.1 && msg->data < 0.2){
+    if(msg->data > base_height_min_ && msg->data < base_height_max_){
         set_base_height_ = msg->data;
     }
     else{
@@ -142,9 +149,11 @@ void ElkapodGaitGen::velocityCallback(const VelCmd::SharedPtr msg){
     const double direction = atan2(msg->linear.y, msg->linear.x);
 
     if(vel != 0.0 && (vel != current_vel_scalar_ || direction != current_base_direction_)){
-        const double T = step_length_ / vel;
-        if(min_cycle_time_ >= T){
+        const double T = step_length_ / vel / (1. - swing_percentage_);
+
+        if(T * swing_percentage_ < min_swing_time_sec_){
             RCLCPP_WARN(this->get_logger(), "Provided velocity command exceeds maximum velocity!");
+            return;
         }
         else{
             RCLCPP_INFO(this->get_logger(), "New velocity command received!");
@@ -169,7 +178,7 @@ void ElkapodGaitGen::velocityCallback(const VelCmd::SharedPtr msg){
 
         // TODO remove this mysterious 0.22 value and replace it with variable with descriptive name
         const double R = leg_spacing_ + 0.22;
-        cycle_time_ = step_length_ / (0.5 * R * fabs(msg->angular.z));
+        cycle_time_ = step_length_ / ((1. - swing_percentage_) * R * fabs(msg->angular.z));
         std::fill(leg_phase_shift_.begin(), leg_phase_shift_.end(), 0.);
         changeGait(gait_type_);
     }
@@ -198,7 +207,6 @@ void ElkapodGaitGen::changeGait(GaitType gait_type){
         
         std::transform(phase_offset_.begin(), phase_offset_.end(), phase_offset_.begin(),
                [i = 0, this](double) mutable { return i++ * cycle_time_ / 6.0;});
-
     }
 }
 
@@ -229,7 +237,6 @@ void ElkapodGaitGen::clockFunction(double t, double T, double phase_shift, int l
 }
 
 void ElkapodGaitGen::legClockCallback(){
-
     auto msg_phase = FloatArrayMsg();
     msg_phase.data.resize(6, 0.0);
 
@@ -261,7 +268,6 @@ void ElkapodGaitGen::legClockCallback(){
         else
             base_height_ -= 0.005;
     }
-
 
 
     for (int leg_nb = 0; leg_nb < 6; ++leg_nb) {

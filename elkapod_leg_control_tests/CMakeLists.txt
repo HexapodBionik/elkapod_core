@@ -7,6 +7,7 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(Eigen3 REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(yaml-cpp REQUIRED)
@@ -24,7 +25,7 @@ target_include_directories(elkapod_control PUBLIC
         $<INSTALL_INTERFACE:include>)
 
 
-target_compile_features(elkapod_control PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(elkapod_control PUBLIC c_std_99 cxx_std_20)  # Require C99 and C++17
 ament_target_dependencies(
         elkapod_control
         "rclcpp"
