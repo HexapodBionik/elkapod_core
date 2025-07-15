@@ -18,18 +18,24 @@ def generate_launch_description():
         parameters=[{
             "config_path": leg_config
         }],
+        output='screen',
+        emulate_tty=True
     )
 
     gait_node = Node(
         package="elkapod_gait_gen_cpp",
         executable="elkapod_gait",
-        parameters=[config_path]
+        parameters=[config_path],
+        output='screen',
+        emulate_tty=True
     )
 
     motion_manager = Node(
-            package="elkapod_motion_manager",
-            executable="elkapod_motion_manager",
-            parameters=[config_path]
+        package="elkapod_motion_manager",
+        executable="elkapod_motion_manager",
+        parameters=[config_path],
+        output='screen',
+        emulate_tty=True
     )
 
     return LaunchDescription([

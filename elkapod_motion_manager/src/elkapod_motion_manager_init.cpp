@@ -7,8 +7,11 @@ int main(int argc, char * argv[])
 
   auto my_node = std::make_shared<ElkapodMotionManager>();
   my_node->initNode();
-
-  rclcpp::spin(my_node);
+  
+  rclcpp::executors::MultiThreadedExecutor executor(rclcpp::ExecutorOptions(), 4);
+  executor.add_node(my_node);
+  executor.spin();
+  
   rclcpp::shutdown();
   return 0;
 }

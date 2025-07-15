@@ -21,7 +21,7 @@ ElkapodGaitGen::ElkapodGaitGen(): Node("elkapod_gait")
 
     leg_spacing_ = this->declare_parameter<double>("leg_spacing", 0.175);
 
-    step_length_ = this->declare_parameter<double>("gait.step.length.default", 0.2);
+    step_length_ = this->declare_parameter<double>("gait.step.length.default", 0.15);
     step_height_ = this->declare_parameter<double>("gait.step.height.default", 0.05);
 
     base_height_ = this->declare_parameter<double>("../common.base_height.default", 0.17);
@@ -97,9 +97,12 @@ void ElkapodGaitGen::enableServiceCallback([[maybe_unused]] ServiceTriggerSrv_Re
     if (state_ == State::DISABLED) {
         init();
         response->success = true;
+        response->message = "Gait enabled.";
     }
-    response->success = false;
-    response->message = "Already enabled.";
+    else{
+        response->success = false;
+        response->message = "Already enabled.";
+    }
 }
 
 void ElkapodGaitGen::disableServiceCallback([[maybe_unused]] ServiceTriggerSrv_Req request, ServiceTriggerSrv_Resp response)
@@ -113,6 +116,7 @@ void ElkapodGaitGen::disableServiceCallback([[maybe_unused]] ServiceTriggerSrv_R
     } else {
         deinit();
         response->success = true;
+        response->message = "Gait disabled.";
     }
 }
 
