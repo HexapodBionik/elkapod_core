@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 from scipy.spatial.transform import Rotation as R
 from geometry_msgs.msg import Twist

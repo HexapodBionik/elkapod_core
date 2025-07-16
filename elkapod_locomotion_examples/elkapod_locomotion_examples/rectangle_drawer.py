@@ -7,8 +7,6 @@ from scipy.spatial.transform import Rotation as R
 import threading
 import time
 import math
-import numpy as np
-import os
 
 
 def quaternion_to_yaw(qx, qy, qz, qw):
