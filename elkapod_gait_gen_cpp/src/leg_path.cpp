@@ -13,11 +13,11 @@ void ElkapodLegPath::init() {
   }
 
   x_func_stance_ = [this](double s) { return step_length_ / 2.0 - step_length_ * s; };
-  y_func_stance_ = [](double s) { return 0.0; };
-  z_func_stance_ = [](double s) { return 0.0; };
+  y_func_stance_ = []([[maybe_unused]] double s) { return 0.0; };
+  z_func_stance_ = []([[maybe_unused]] double s) { return 0.0; };
 
   x_func_swing_ = [this](double s) { return -step_length_ / 2.0 + step_length_ * s; };
-  y_func_swing_ = [](double s) { return 0.0; };
+  y_func_swing_ = []([[maybe_unused]] double s) { return 0.0; };
   z_func_swing_ = [R](double s) { return R * std::sin(M_PI * s); };
 }
 

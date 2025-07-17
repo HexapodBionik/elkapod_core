@@ -23,8 +23,6 @@
 #include "elkapod_msgs/action/motion_manager_trigger.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 
-using namespace std::chrono_literals;
-
 typedef enum { INIT, IDLE_LOWERED, IDLE, WALKING } State;
 
 class ElkapodMotionManager : public rclcpp::Node {
@@ -65,7 +63,6 @@ class ElkapodMotionManager : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr timer_;
   State state_;
   State next_state_;
-  bool is_transitioning_ = false;
   std::function<void()> planning_method_;
   std::binary_semaphore semaphore_{0};
 

@@ -74,17 +74,14 @@ rclcpp_action::GoalResponse ElkapodMotionManager::transition_action_handle_goal(
     RCLCPP_INFO(this->get_logger(), "Init goal accepted!");
     planning_method_ = std::bind(&ElkapodMotionManager::initPlanning, this);
     next_state_ = State::IDLE_LOWERED;
-    is_transitioning_ = true;
   } else if (goal->transition == "stand_up" && state_ == State::IDLE_LOWERED) {
     RCLCPP_INFO(this->get_logger(), "Stand up goal accepted!");
     planning_method_ = std::bind(&ElkapodMotionManager::standUpPlanning, this);
     next_state_ = State::IDLE;
-    is_transitioning_ = true;
   } else if (goal->transition == "lower" && state_ == State::IDLE) {
     RCLCPP_INFO(this->get_logger(), "Lower goal accepted!");
     planning_method_ = std::bind(&ElkapodMotionManager::lowerDownPlanning, this);
     next_state_ = State::IDLE_LOWERED;
-    is_transitioning_ = true;
   } else {  // Reject the goal
     RCLCPP_INFO(this->get_logger(), "Goal rejected!");
     return rclcpp_action::GoalResponse::REJECT;
@@ -300,11 +297,10 @@ void ElkapodMotionManager::legControlCallback() {
     for (const auto& leg : step) {
       for (double coordinate : leg) {
         output_msg.data[index++] = coordinate;
-        this->leg_positions_pub_->publish(output_msg);
       }
     }
+    this->leg_positions_pub_->publish(output_msg);
   } else if (executor_enable_ && !executor_.hasNext() && trajs.size() <= 0) {
-    is_transitioning_ = false;
     executor_enable_ = false;
     semaphore_.release();
   }

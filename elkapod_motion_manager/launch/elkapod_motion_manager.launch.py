@@ -13,8 +13,8 @@ def generate_launch_description():
 
 
     control_node = Node(
-        package="elkapod_leg_control_tests",
-        executable="elkapod_control",
+        package="elkapod_kinematics",
+        executable="elkapod_ik",
         parameters=[{
             "config_path": leg_config
         }],
