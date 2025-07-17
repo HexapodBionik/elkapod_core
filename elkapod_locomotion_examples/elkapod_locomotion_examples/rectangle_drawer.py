@@ -72,7 +72,7 @@ class RectangleDrawer(Node):
                 self._publisher.publish(Twist())
                 break
 
-            msg.angular.z = -self._rotation_speed if error > 0 else self._rotation_speed
+            msg.angular.z = self._rotation_speed if error > 0 else -self._rotation_speed
             self._publisher.publish(msg)
             time.sleep(0.01)
         self._publisher.publish(Twist())

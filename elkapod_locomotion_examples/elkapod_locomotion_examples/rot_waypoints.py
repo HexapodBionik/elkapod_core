@@ -52,7 +52,7 @@ class RotationWaypointsFollower(Node):
                 break
 
             angular_speed = 0.025
-            msg.angular.z = -angular_speed if error > 0 else angular_speed
+            msg.angular.z = angular_speed if error > 0 else -angular_speed
             self._velocity_pub.publish(msg)
             time.sleep(0.01)
 

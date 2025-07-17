@@ -272,7 +272,7 @@ class ElkapodGait(Node):
                 p = self._base_traj(self._leg_clock[leg_nb], self._leg_phase[leg_nb])
 
                 omega = self._current_angular_velocity
-                angular_part = omega * np.array([-self._last_leg_position[leg_nb][1], self._last_leg_position[leg_nb][0]])
+                angular_part = -omega * np.array([-self._last_leg_position[leg_nb][1], self._last_leg_position[leg_nb][0]])
 
                 vel = self._current_velocity[leg_nb] + angular_part   
 

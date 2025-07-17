@@ -272,7 +272,7 @@ void ElkapodGaitGen::legClockCallback() {
 
       const double omega = current_angular_velocity_;
       Eigen::Vector2d last_leg_xy(last_leg_position_[leg_nb][0], last_leg_position_[leg_nb][1]);
-      Eigen::Vector2d angular_part = omega * Eigen::Vector2d(-last_leg_xy[1], last_leg_xy[0]);
+      Eigen::Vector2d angular_part = -omega * Eigen::Vector2d(-last_leg_xy[1], last_leg_xy[0]);
 
       Eigen::Vector2d vel2D = current_velocity_[leg_nb] + angular_part;
 
