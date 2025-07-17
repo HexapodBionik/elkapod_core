@@ -5,7 +5,7 @@
 // Elkapod Bionik, Warsaw University of Technology. All rights reserved.
 //
 
-#include "../include/elkapod_leg_control_tests/elkapod_leg_controller.hpp"
+#include "../include/elkapod_kinematics/elkapod_leg_controller.hpp"
 
 #include <math.h>
 #include <yaml-cpp/yaml.h>
@@ -17,7 +17,7 @@ using std::placeholders::_1;
 
 static inline float deg2rad(float deg) { return deg / 180.f * M_PI; }
 
-ElkapodLegPublisher::ElkapodLegPublisher() : Node("elkapod_leg_publisher") {
+ElkapodLegPublisher::ElkapodLegPublisher() : Node("elkapod_ik") {
   this->declare_parameter("config_path", "");
 
   this->get_parameter("config_path", config_path_);
@@ -69,14 +69,19 @@ void ElkapodLegPublisher::topicCallback(std_msgs::msg::Float64MultiArray::Shared
     RCLCPP_DEBUG(this->get_logger(), msg.c_str());
 
     Eigen::Vector3d anglesDeg = this->solver->inverse(input);
-    output_msg.data[i * 3] = deg2rad(anglesDeg[0]);
-    output_msg.data[i * 3 + 1] = deg2rad(anglesDeg[1]);
-    output_msg.data[i * 3 + 2] = deg2rad(anglesDeg[2]);
+    if (anglesDeg.array().isNaN().any()) {
+      RCLCPP_ERROR(this->get_logger(), "Inverse kinematics error while processing input for leg %d",
+                   i + 1);
+    } else {
+      output_msg.data[i * 3] = deg2rad(anglesDeg[0]);
+      output_msg.data[i * 3 + 1] = deg2rad(anglesDeg[1]);
+      output_msg.data[i * 3 + 2] = deg2rad(anglesDeg[2]);
 
-    std::string msg2 =
-        std::format("Angles for leg {} theta0: {:.3f} theta1: {:.3f} theta2: {:.3f}", i + 1,
-                    output_msg.data[i * 3], output_msg.data[i * 3 + 1], output_msg.data[i * 3 + 2]);
-    RCLCPP_DEBUG(this->get_logger(), msg2.c_str());
+      std::string msg2 = std::format(
+          "Angles for leg {} theta0: {:.3f} theta1: {:.3f} theta2: {:.3f}", i + 1,
+          output_msg.data[i * 3], output_msg.data[i * 3 + 1], output_msg.data[i * 3 + 2]);
+      RCLCPP_DEBUG(this->get_logger(), msg2.c_str());
+    }
   }
   this->my_publisher_->publish(output_msg);
 }

@@ -7,7 +7,7 @@
 // Elkapod Bionik, Warsaw University of Technology. All rights reserved.
 //
 
-#include "../include/elkapod_leg_control_tests/elkapod_leg_inverse_kinematics.hpp"
+#include "../include/elkapod_kinematics/elkapod_leg_inverse_kinematics.hpp"
 
 #include <math.h>
 

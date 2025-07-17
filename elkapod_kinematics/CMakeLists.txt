@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(elkapod_leg_control_tests)
+project(elkapod_kinematics)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -12,31 +12,31 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(yaml-cpp REQUIRED)
 include_directories(include)
-FILE(GLOB_RECURSE INCLUDE_FILES "include/elkapod_leg_control_tests/*.hpp")
+FILE(GLOB_RECURSE INCLUDE_FILES "include/elkapod_kinematics/*.hpp")
 
-add_executable(elkapod_control src/elkapod_control.cpp src/elkapod_leg_controller.cpp src/elkapod_leg_inverse_kinematics.cpp)
+add_executable(elkapod_ik src/elkapod_control.cpp src/elkapod_leg_controller.cpp src/elkapod_leg_inverse_kinematics.cpp)
 
-target_sources(elkapod_control PRIVATE ${INCLUDE_FILES})
+target_sources(elkapod_ik PRIVATE ${INCLUDE_FILES})
 
-target_include_directories(elkapod_control PUBLIC
+target_include_directories(elkapod_ik PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/elkapod_leg_control_tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/elkapod_kinematics
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>)
 
 
-target_compile_features(elkapod_control PUBLIC c_std_99 cxx_std_20)  # Require C99 and C++17
+target_compile_features(elkapod_ik PUBLIC c_std_99 cxx_std_20)  # Require C99 and C++17
 ament_target_dependencies(
-        elkapod_control
+        elkapod_ik
         "rclcpp"
         "geometry_msgs"
         "yaml-cpp"
 )
 
-target_link_libraries(elkapod_control yaml-cpp)
+target_link_libraries(elkapod_ik yaml-cpp)
 
 # Install the executable
-install(TARGETS elkapod_control
+install(TARGETS elkapod_ik
         DESTINATION lib/${PROJECT_NAME}
 )
 

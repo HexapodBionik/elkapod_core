@@ -1,6 +1,6 @@
 #include <cstdio>
 
-#include "../include/elkapod_leg_control_tests/elkapod_leg_controller.hpp"
+#include "../include/elkapod_kinematics/elkapod_leg_controller.hpp"
 
 int main(int argc, char* argv[]) {
   rclcpp::init(argc, argv);
