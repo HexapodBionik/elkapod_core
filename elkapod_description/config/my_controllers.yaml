@@ -1,6 +1,6 @@
 controller_manager:
   ros__parameters:
-    update_rate: 50  
+    update_rate: 100  
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
@@ -10,7 +10,7 @@ controller_manager:
 
 joint_position_controller:
   ros__parameters:
-    publish_rate: 50
+    publish_rate: 100
     type: position_controllers/JointGroupPositionController
     joints:
       - leg1_J1

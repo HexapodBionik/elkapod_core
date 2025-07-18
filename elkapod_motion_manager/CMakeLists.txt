@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(elkapod_leg_control_tests)
+project(elkapod_motion_manager)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -7,35 +7,41 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(elkapod_msgs REQUIRED)
+find_package(rclcpp_action REQUIRED)
+find_package(Eigen3 REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(yaml-cpp REQUIRED)
+find_package(std_srvs REQUIRED)
+find_package(std_msgs REQUIRED)
 include_directories(include)
-FILE(GLOB_RECURSE INCLUDE_FILES "include/elkapod_leg_control_tests/*.hpp")
+FILE(GLOB_RECURSE INCLUDE_FILES "include/elkapod_motion_manager/*.hpp")
 
-add_executable(elkapod_control src/elkapod_control.cpp src/elkapod_leg_controller.cpp src/elkapod_leg_inverse_kinematics.cpp)
+add_executable(elkapod_motion_manager src/elkapod_motion_manager_init.cpp src/elkapod_motion_manager.cpp src/elkapod_leg_trajectory.cpp)
+target_sources(elkapod_motion_manager PRIVATE ${INCLUDE_FILES})
 
-target_sources(elkapod_control PRIVATE ${INCLUDE_FILES})
-
-target_include_directories(elkapod_control PUBLIC
+target_include_directories(elkapod_motion_manager PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/elkapod_leg_control_tests
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/elkapod_motion_manager
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>)
-
-
-target_compile_features(elkapod_control PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(elkapod_motion_manager PUBLIC c_std_99 cxx_std_20)  # Require C99 and C++17
 ament_target_dependencies(
-        elkapod_control
+        elkapod_motion_manager
         "rclcpp"
         "geometry_msgs"
-        "yaml-cpp"
+        "elkapod_msgs"
+        "rclcpp_action"
+        "std_srvs"
+        "std_msgs"
 )
 
-target_link_libraries(elkapod_control yaml-cpp)
+install(TARGETS elkapod_motion_manager
+  DESTINATION lib/${PROJECT_NAME})
+
 
 # Install the executable
-install(TARGETS elkapod_control
+install(TARGETS elkapod_motion_manager
         DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -43,6 +49,11 @@ install(TARGETS elkapod_control
 install(DIRECTORY include/
         DESTINATION include/${PROJECT_NAME}
 )
+
+install(DIRECTORY config launch
+    DESTINATION share/${PROJECT_NAME}
+)
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
