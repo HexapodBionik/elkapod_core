@@ -40,7 +40,8 @@ std::vector<hardware_interface::StateInterface> ElkapodLegsSystemHardware::expor
   std::vector<hardware_interface::StateInterface> state_interfaces;
 
   for (size_t i = 0; i < positions_.size(); ++i) {
-    std::string joint_name = std::format("leg{}_J{}", i / 3 + 1, i % 3);
+    std::string joint_name = std::format("leg{}_J{}", i / 3 + 1, i % 3 + 1);
+    RCLCPP_INFO(rclcpp::get_logger("ElkapodLegsSystemHardware"), "Exporting state interface: %s", joint_name.c_str());
     state_interfaces.emplace_back(hardware_interface::StateInterface(joint_name, hardware_interface::HW_IF_POSITION, &positions_[i]));
   }
 
@@ -52,7 +53,8 @@ std::vector<hardware_interface::CommandInterface> ElkapodLegsSystemHardware::exp
   std::vector<hardware_interface::CommandInterface> command_interfaces;
 
   for (size_t i = 0; i < cmd_positions_.size(); ++i) {
-    std::string joint_name = std::format("leg{}_J{}", i / 3 + 1, i % 3);
+    std::string joint_name = std::format("leg{}_J{}", i / 3 + 1, i % 3 + 1);
+    RCLCPP_INFO(rclcpp::get_logger("ElkapodLegsSystemHardware"), "Exporting command interface: %s", joint_name.c_str());
     command_interfaces.emplace_back(hardware_interface::CommandInterface(joint_name, hardware_interface::HW_IF_POSITION, &cmd_positions_[i]));
   }
 
@@ -70,15 +72,7 @@ hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_configure(
 
   
 
-  // reset values always when configuring hardware
-  for (const auto & [name, descr] : joint_state_interfaces_)
-  {
-    set_state(name, 0.0);
-  }
-  for (const auto & [name, descr] : joint_command_interfaces_)
-  {
-    set_command(name, 0.0);
-  }
+
   RCLCPP_INFO(get_logger(), "Successfully configured!");
 
   return hardware_interface::CallbackReturn::SUCCESS;
@@ -131,16 +125,35 @@ hardware_interface::return_type ElkapodLegsSystemHardware::read(
 hardware_interface::return_type ElkapodLegsSystemHardware::write(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
-
   std::array<float, 18> cmd_positions_float;
 
   std::transform(
     cmd_positions_.begin(), cmd_positions_.end(),
     cmd_positions_float.begin(),
-    [](double val) { return static_cast<float>(val); });
+    [i = 0](double val) mutable {
+      float degrees = static_cast<float>(val * 180.0 / M_PI);  // rad -> deg
 
-  this->comm_->sendAngles(cmd_positions_float.data());
+      if (i % 3 == 0 || i % 3 == 1){
+        degrees = std::max(std::min(degrees, 90.0f), -90.0f);
+        degrees += 90.0f;
+      }
+      else if (i % 3 == 2){
+        degrees = std::max(std::min(degrees, 0.0f), -180.0f);
+        degrees *= -1.0f;
+      }
 
+      if(i % 3 == 1 || i % 3 == 2){
+        degrees = 180.0f - degrees;
+      }
+
+      return i++, degrees;
+    });
+  int status = this->comm_->sendAngles(cmd_positions_float.data());
+  if(status != 0x8A){
+      RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 500, "Timeout / error - status: %02x", status);
+  }
+
+  return hardware_interface::return_type::OK;
 }
 
 }  // namespace elkapod_legs_system
