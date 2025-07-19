@@ -66,7 +66,7 @@ hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_configure(
 {
 
   RCLCPP_INFO(get_logger(), "Configuring ...please wait...");
-  const LibSerial::BaudRate baudrate = LibSerial::BaudRate::BAUD_115200;
+  const LibSerial::BaudRate baudrate = LibSerial::BaudRate::BAUD_1152000;
   constexpr const char* const SERIAL_PORT_1 = "/dev/ttyAMA1";
   this->comm_->connect(SERIAL_PORT_1, baudrate);
 

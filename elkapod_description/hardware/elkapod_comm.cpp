@@ -5,6 +5,7 @@
 void ElkapodComm::connect(const std::string address, const LibSerial::BaudRate baudrate){
     serial_comm.Open(address);
     serial_comm.SetBaudRate(baudrate);
+    serial_comm.SetCharacterSize(LibSerial::CharacterSize::CHAR_SIZE_8);
     serial_comm.SetFlowControl(LibSerial::FlowControl::FLOW_CONTROL_NONE);
     serial_comm.SetParity(LibSerial::Parity::PARITY_NONE);
     serial_comm.SetStopBits(LibSerial::StopBits::STOP_BITS_2);
@@ -92,9 +93,13 @@ uint8_t ElkapodComm::sendAngles(float* angles){
     data[77] = 0x0f;
 
     serial_comm.FlushIOBuffers();
-    for(int i = 0; i < sizeof(data); ++i){
-        serial_comm.WriteByte(data[i]);
-    }
+    // for(int i = 0; i < sizeof(data); ++i){
+    //     serial_comm.WriteByte(data[i]);
+    // }
+
+    LibSerial::DataBuffer buff;
+    buff.insert(buff.end(), data, data + 78);
+    serial_comm.Write(buff);
 
     // LibSerial::DataBuffer writebuffer;
     // writebuffer.reserve(77);
