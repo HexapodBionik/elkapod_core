@@ -65,9 +65,6 @@
             <robot_base_frame>base_link</robot_base_frame>
             <odom_publish_frequency>50</odom_publish_frequency>
         </plugin>
-
     </gazebo>
-
-
 
 </robot>

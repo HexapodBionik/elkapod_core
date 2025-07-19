@@ -31,6 +31,6 @@
   <xacro:include filename="$(find elkapod_description)/urdf/imu.xacro" />
 
   <!-- ros2_control -->
-  <xacro:include filename="$(find elkapod_description)/urdf/ros2_control.xacro" />
+  <xacro:include filename="$(find elkapod_description)/ros2_control/sim_system.ros2_control.xacro" />
 
 </robot>

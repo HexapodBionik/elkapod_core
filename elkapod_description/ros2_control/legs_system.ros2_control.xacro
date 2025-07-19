@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="joint_interface" params="name">
+    <joint name="${name}">
+        <command_interface name="position">
+        </command_interface>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="legs_system_ros2_control" params="name prefix use_mock_hardware">
+
+    <ros2_control name="${name}" type="system">
+      <hardware>
+          <plugin>elkapod_description/ElkapodLegsSystemHardware</plugin>
+          <param name="device">/dev/ttyAMA1</param>
+          <param name="baud_rate">115200</param>
+          <param name="timeout_ms">1000</param>
+      </hardware> 
+
+      <xacro:joint_interface name="leg1_J1"/>
+      <xacro:joint_interface name="leg1_J2"/>
+      <xacro:joint_interface name="leg1_J3"/>
+      
+      <xacro:joint_interface name="leg3_J1"/>
+      <xacro:joint_interface name="leg3_J2"/>
+      <xacro:joint_interface name="leg3_J3"/>
+      
+      <xacro:joint_interface name="leg5_J1"/>
+      <xacro:joint_interface name="leg5_J2"/>
+      <xacro:joint_interface name="leg5_J3"/>
+      
+      
+      <xacro:joint_interface name="leg2_J1"/>
+      <xacro:joint_interface name="leg2_J2"/>
+      <xacro:joint_interface name="leg2_J3"/>
+      
+      <xacro:joint_interface name="leg4_J1"/>
+      <xacro:joint_interface name="leg4_J2"/>
+      <xacro:joint_interface name="leg4_J3"/>
+      
+      <xacro:joint_interface name="leg6_J1"/>
+      <xacro:joint_interface name="leg6_J2"/>
+      <xacro:joint_interface name="leg6_J3"/>
+    </ros2_control>
+
+  </xacro:macro>
+
+</robot>
