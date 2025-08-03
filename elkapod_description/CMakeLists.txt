@@ -32,6 +32,7 @@ add_library(
   SHARED
   hardware/elkapod_legs_system.cpp
   hardware/elkapod_comm.cpp
+  hardware/spidev.cpp
 )
 
 target_compile_features(elkapod_legs_control_comm PUBLIC cxx_std_20)

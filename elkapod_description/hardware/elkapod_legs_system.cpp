@@ -14,6 +14,8 @@
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+//#define ELKAPOD_4LEGS_TESTS
+
 namespace elkapod_legs_system
 {
 hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_init(
@@ -26,8 +28,15 @@ hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_init(
     return hardware_interface::CallbackReturn::ERROR;
   }
 
+  std::unique_ptr<elkapod_comm::UARTDevice> uart = std::make_unique<elkapod_comm::UARTDevice>();
+  std::unique_ptr<elkapod_comm::SpiDevice> spi = std::make_unique<elkapod_comm::SpiDevice>(0, 0);
+
+  spi->setMode(SPI_MODE_2);
+  spi->setSpeed(1000000);
+  spi->setBitsPerWord(8);
+
   // TODO - change this hardcoded setup start
-  this->comm_ = std::make_unique<ElkapodComm>();
+  this->comm_ = std::make_unique<elkapod_comm::ElkapodComm>(std::move(uart), std::move(spi));
   // change this hardcoded setup end
 
   // TODO check interfaces config
@@ -68,7 +77,7 @@ hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_configure(
   RCLCPP_INFO(get_logger(), "Configuring ...please wait...");
   const LibSerial::BaudRate baudrate = LibSerial::BaudRate::BAUD_1152000;
   constexpr const char* const SERIAL_PORT_1 = "/dev/ttyAMA1";
-  this->comm_->connect(SERIAL_PORT_1, baudrate);
+  this->comm_->connect();
 
   
 
@@ -142,16 +151,39 @@ hardware_interface::return_type ElkapodLegsSystemHardware::write(
         degrees *= -1.0f;
       }
 
-      if(i % 3 == 1 || i % 3 == 2){
+      if(i % 6 == 4 || i % 6 == 5){
         degrees = 180.0f - degrees;
       }
 
-      return i++, degrees;
-    });
-  int status = this->comm_->sendAngles(cmd_positions_float.data());
-  if(status != 0x8A){
-      RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 500, "Timeout / error - status: %02x", status);
-  }
+    return i++, degrees;
+  });
+
+  #ifdef ELKAPOD_4LEGS_TESTS
+    cmd_positions_float[6] = cmd_positions_float[12];
+    cmd_positions_float[7] = cmd_positions_float[13];
+    cmd_positions_float[8] = cmd_positions_float[14];
+    cmd_positions_float[9] = cmd_positions_float[15];
+    cmd_positions_float[10] = cmd_positions_float[16];
+    cmd_positions_float[11] = cmd_positions_float[17];
+  #endif
+
+    std::string msg;
+    for(size_t i = 0; i < 12; ++i){
+      msg += std::format("{:.2f} ", cmd_positions_float[i]);
+    }
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 500, msg.c_str());
+  
+  elkapod_comm::SpiTransmissionRequest request = {
+    .angles = cmd_positions_float
+  };
+
+  elkapod_comm::SpiTransmissionResponse response = comm_->transfer(request);
+
+
+  //int status = this->comm_->sendAngles(cmd_positions_float.data());
+  // if(status != 0x8A){
+  //     RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 500, "Timeout / error - status: %02x", status);
+  // }
 
   return hardware_interface::return_type::OK;
 }

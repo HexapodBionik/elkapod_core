@@ -2,7 +2,36 @@
 #include <memory>
 #include <cstring>
 
-void ElkapodComm::connect(const std::string address, const LibSerial::BaudRate baudrate){
+using namespace elkapod_comm;
+
+ElkapodComm::ElkapodComm(std::unique_ptr<UARTDevice> uart, std::unique_ptr<SpiDevice> spi): uart_(std::move(uart)), spi_(std::move(spi)){
+
+}
+
+SpiTransmissionResponse ElkapodComm::transfer(const SpiTransmissionRequest& request){
+    std::vector<uint8_t> bytes(0, 80);
+    bytes[0] = 0x7E;
+    bytes[79] = 0x0F;
+
+    for (const float& f : request.angles) {
+        uint8_t buff[sizeof(float)];
+        std::memcpy(buff, &f, sizeof(float));  
+        bytes.insert(bytes.end(), buff, buff + sizeof(float));
+    }
+
+    std::vector<uint8_t> result = this->spi_->transfer(bytes);
+} 
+
+void ElkapodComm::connect(){
+    this->spi_->open();
+}
+
+
+void ElkapodComm::disconnect(){
+    this->spi_->close();
+}
+
+void UARTDevice::connect(const std::string address, const LibSerial::BaudRate baudrate){
     serial_comm.Open(address);
     serial_comm.SetBaudRate(baudrate);
     serial_comm.SetCharacterSize(LibSerial::CharacterSize::CHAR_SIZE_8);
@@ -11,11 +40,11 @@ void ElkapodComm::connect(const std::string address, const LibSerial::BaudRate b
     serial_comm.SetStopBits(LibSerial::StopBits::STOP_BITS_2);
 }
 
-void ElkapodComm::disconnect(){
+void UARTDevice::disconnect(){
     serial_comm.Close();
 }
 
-uint8_t ElkapodComm::writeLED(uint8_t led_number, uint8_t state){
+uint8_t UARTDevice::writeLED(uint8_t led_number, uint8_t state){
     char data[7];
 
     data[0] = 0x7E;
@@ -48,7 +77,7 @@ uint8_t ElkapodComm::writeLED(uint8_t led_number, uint8_t state){
     return buffer[0];
 }
 
-uint8_t ElkapodComm::sendAngle(float angle){
+uint8_t UARTDevice::sendAngle(float angle){
     char data[9];
 
     data[0] = 0x7E;
@@ -81,7 +110,7 @@ uint8_t ElkapodComm::sendAngle(float angle){
     return buffer[0];
 }
 
-uint8_t ElkapodComm::sendAngles(float* angles){
+uint8_t UARTDevice::sendAngles(float* angles){
     char data[78];
     data[0] = 0x7E;
     data[1] = 78;

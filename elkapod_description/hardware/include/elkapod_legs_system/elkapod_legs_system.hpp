@@ -55,7 +55,7 @@ private:
   std::array<double, kJointsNum> positions_{};
   std::array<double, kJointsNum> cmd_positions_{};
 
-  std::unique_ptr<ElkapodComm> comm_;
+  std::unique_ptr<elkapod_comm::ElkapodComm> comm_;
 };
 
 }  // namespace elkapod_legs_system
