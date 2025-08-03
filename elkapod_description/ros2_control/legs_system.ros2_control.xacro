@@ -11,9 +11,14 @@
   <ros2_control name="ElkapodLegsSystemHardware" type="system">
       <hardware>
           <plugin>elkapod_description/ElkapodLegsSystemHardware</plugin>
-          <param name="device">/dev/ttyAMA1</param>
-          <param name="baud_rate">115200</param>
-          <param name="timeout_ms">1000</param>
+          <param name="uart_device">/dev/ttyAMA1</param>
+          <param name="uart_baudrate">1152000</param>
+          <param name="uart_timeout_ms">100</param>
+
+          <param name="spi_bus">0</param>
+          <param name="spi_cs">0</param>
+          <param name="spi_mode">2</param>
+          <param name="spi_speed_hz">1000000</param>
       </hardware> 
 
       <xacro:joint_interface name="leg1_J1"/>
@@ -40,6 +45,11 @@
       <xacro:joint_interface name="leg6_J1"/>
       <xacro:joint_interface name="leg6_J2"/>
       <xacro:joint_interface name="leg6_J3"/>
+
+      <!-- Sensors -->
+      <sensor name="control_module_temp">
+        <state_interface name="temperature"/>
+      </sensor>
   </ros2_control>
 
 </robot>

@@ -10,7 +10,7 @@
 
 namespace elkapod_comm{
     typedef struct{
-
+        float temp;
     } SpiTransmissionResponse;
 
     typedef struct{
@@ -20,29 +20,35 @@ namespace elkapod_comm{
 
     class UARTDevice{
         public:
-            UARTDevice() = default;
+            UARTDevice(const std::string device_path = "/dev/ttyAMA1", const uint32_t baudrate=115200, const int timeout_ms=100);
             ~UARTDevice();
 
-            void connect(const std::string address = "/dev/ttyAMA1", const LibSerial::BaudRate baudrate = LibSerial::BaudRate::BAUD_2000000);
+            void connect();
             void disconnect();
             
-            uint8_t writeLED(uint8_t led_number, uint8_t state);
-            uint8_t sendAngle(float angle);
+            void sendSystemStartCommand();
+            void sendSystemShutdownCommand();
+
             uint8_t sendAngles(float* angles);
 
-            LibSerial::SerialPort serial_comm;
-
         private:
-            uint8_t timeout_ms=100;
+            LibSerial::SerialPort serial_comm_;
+
+            const std::string device_path_;
+            const uint32_t baudrate_;
+            const int timeout_ms_;
     };
 
     class ElkapodComm{
         public:
             ElkapodComm(std::unique_ptr<UARTDevice> uart, std::unique_ptr<SpiDevice> spi);
 
-            SpiTransmissionResponse transfer(const SpiTransmissionRequest& request);
             void connect();
             void disconnect();
+
+            void sendSystemStartCommand();
+            void sendSystemShutdownCommand();
+            SpiTransmissionResponse transfer(const SpiTransmissionRequest& request);
 
         private:
             std::unique_ptr<UARTDevice> uart_;

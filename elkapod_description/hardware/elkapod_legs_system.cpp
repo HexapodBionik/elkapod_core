@@ -28,18 +28,44 @@ hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_init(
     return hardware_interface::CallbackReturn::ERROR;
   }
 
-  std::unique_ptr<elkapod_comm::UARTDevice> uart = std::make_unique<elkapod_comm::UARTDevice>();
-  std::unique_ptr<elkapod_comm::SpiDevice> spi = std::make_unique<elkapod_comm::SpiDevice>(0, 0);
+  // UART
+  const std::string uart_device = info_.hardware_parameters["uart_device"];
+  const uint32_t uart_baudrate = static_cast<uint32_t>(std::stoul(info_.hardware_parameters["uart_baudrate"]));
+  const int uart_timeout_ms = std::stoi(info_.hardware_parameters["uart_timeout_ms"]);
 
-  spi->setMode(SPI_MODE_2);
-  spi->setSpeed(1000000);
-  spi->setBitsPerWord(8);
+  // SPI
+  const int spi_bus = std::stoi(info_.hardware_parameters["spi_bus"]);
+  const int spi_cs = std::stoi(info_.hardware_parameters["spi_cs"]);
+  const int spi_mode = std::stoi(info_.hardware_parameters["spi_mode"]);
+  const uint32_t spi_speed_hz = static_cast<uint32_t>(std::stoul(info_.hardware_parameters["spi_speed_hz"]));
+  constexpr int spi_bits = 8;
 
-  // TODO - change this hardcoded setup start
+  std::unique_ptr<elkapod_comm::UARTDevice> uart;
+  try{
+    uart = std::make_unique<elkapod_comm::UARTDevice>(uart_device, uart_baudrate, uart_timeout_ms);
+  } catch(const std::runtime_error& error){
+    RCLCPP_FATAL(
+        get_logger(), error.what());
+    return hardware_interface::CallbackReturn::ERROR;
+  }
+
+  std::unique_ptr<elkapod_comm::SpiDevice> spi;
+  try{
+    spi = std::make_unique<elkapod_comm::SpiDevice>(spi_bus, spi_cs);
+
+    spi->setMode(spi_mode);
+    spi->setSpeed(spi_speed_hz);
+    spi->setBitsPerWord(spi_bits);
+
+  } catch(const std::runtime_error& error){
+    RCLCPP_FATAL(
+        get_logger(), error.what());
+    return hardware_interface::CallbackReturn::ERROR;
+  }
+
   this->comm_ = std::make_unique<elkapod_comm::ElkapodComm>(std::move(uart), std::move(spi));
-  // change this hardcoded setup end
 
-  // TODO check interfaces config
+  // TODO check joint interfaces and sensor interfaces config
 
   return hardware_interface::CallbackReturn::SUCCESS;
 }
@@ -50,9 +76,11 @@ std::vector<hardware_interface::StateInterface> ElkapodLegsSystemHardware::expor
 
   for (size_t i = 0; i < positions_.size(); ++i) {
     std::string joint_name = std::format("leg{}_J{}", i / 3 + 1, i % 3 + 1);
-    RCLCPP_INFO(rclcpp::get_logger("ElkapodLegsSystemHardware"), "Exporting state interface: %s", joint_name.c_str());
     state_interfaces.emplace_back(hardware_interface::StateInterface(joint_name, hardware_interface::HW_IF_POSITION, &positions_[i]));
   }
+
+  // Temperature
+  state_interfaces.emplace_back(hardware_interface::StateInterface("control_module_temp", hardware_interface::HW_IF_TEMPERATURE, &temperature_));
 
   return state_interfaces;
 }
@@ -63,7 +91,6 @@ std::vector<hardware_interface::CommandInterface> ElkapodLegsSystemHardware::exp
 
   for (size_t i = 0; i < cmd_positions_.size(); ++i) {
     std::string joint_name = std::format("leg{}_J{}", i / 3 + 1, i % 3 + 1);
-    RCLCPP_INFO(rclcpp::get_logger("ElkapodLegsSystemHardware"), "Exporting command interface: %s", joint_name.c_str());
     command_interfaces.emplace_back(hardware_interface::CommandInterface(joint_name, hardware_interface::HW_IF_POSITION, &cmd_positions_[i]));
   }
 
@@ -75,13 +102,7 @@ hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_configure(
 {
 
   RCLCPP_INFO(get_logger(), "Configuring ...please wait...");
-  const LibSerial::BaudRate baudrate = LibSerial::BaudRate::BAUD_1152000;
-  constexpr const char* const SERIAL_PORT_1 = "/dev/ttyAMA1";
-  this->comm_->connect();
-
-  
-
-
+  comm_->connect();
   RCLCPP_INFO(get_logger(), "Successfully configured!");
 
   return hardware_interface::CallbackReturn::SUCCESS;
@@ -101,9 +122,7 @@ hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_activate(
 {
 
   RCLCPP_INFO(get_logger(), "Activating ...please wait...");
-
-
-
+  comm_->sendSystemStartCommand();
   RCLCPP_INFO(get_logger(), "Successfully activated!");
 
   return hardware_interface::CallbackReturn::SUCCESS;
@@ -114,8 +133,7 @@ hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_deactivate(
 {
 
   RCLCPP_INFO(get_logger(), "Deactivating ...please wait...");
-
-
+  comm_->sendSystemShutdownCommand();
   RCLCPP_INFO(get_logger(), "Successfully deactivated!");
 
   return hardware_interface::CallbackReturn::SUCCESS;
@@ -166,25 +184,15 @@ hardware_interface::return_type ElkapodLegsSystemHardware::write(
     cmd_positions_float[10] = cmd_positions_float[16];
     cmd_positions_float[11] = cmd_positions_float[17];
   #endif
-
-    std::string msg;
-    for(size_t i = 0; i < 12; ++i){
-      msg += std::format("{:.2f} ", cmd_positions_float[i]);
-    }
-    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 500, msg.c_str());
   
   elkapod_comm::SpiTransmissionRequest request = {
     .angles = cmd_positions_float
   };
 
   elkapod_comm::SpiTransmissionResponse response = comm_->transfer(request);
+  RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Temperature: %2.2f*C", response.temp);
 
-
-  //int status = this->comm_->sendAngles(cmd_positions_float.data());
-  // if(status != 0x8A){
-  //     RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 500, "Timeout / error - status: %02x", status);
-  // }
-
+  temperature_ = response.temp;
   return hardware_interface::return_type::OK;
 }
 

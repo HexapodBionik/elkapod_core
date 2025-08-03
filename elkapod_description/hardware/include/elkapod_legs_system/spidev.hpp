@@ -7,13 +7,15 @@
 #include <linux/spi/spidev.h>
 
 namespace elkapod_comm{
+    inline bool isCharacterDevice(const std::string& path);
+
     class SpiDevice {
         public:
             SpiDevice(uint8_t bus, uint8_t cs);
             ~SpiDevice();
 
-            void open();
-            void close();
+            void connect();
+            void disconnect();
 
             void setMode(uint8_t mode);         
             void setSpeed(uint32_t hz);         
@@ -25,15 +27,15 @@ namespace elkapod_comm{
             std::vector<uint8_t> transfer(const std::vector<uint8_t>& tx_bytes);
 
         private:
-            std::string devicePath;
-            int fd = -1;
+            std::string device_path_;
+            int fd_ = -1;
 
-            uint8_t mode = SPI_MODE_0;
-            uint32_t speed = 500000;
-            uint8_t bits = 8;
+            uint8_t mode_ = SPI_MODE_0;
+            uint32_t speed_ = 500000;
+            uint8_t bits_ = 8;
 
-            uint8_t bus;
-            uint8_t cs;
+            uint8_t bus_;
+            uint8_t cs_;
         };
 };
 

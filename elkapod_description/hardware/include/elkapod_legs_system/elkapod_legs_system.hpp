@@ -55,6 +55,8 @@ private:
   std::array<double, kJointsNum> positions_{};
   std::array<double, kJointsNum> cmd_positions_{};
 
+  double temperature_;
+
   std::unique_ptr<elkapod_comm::ElkapodComm> comm_;
 };
 
