@@ -17,6 +17,8 @@
 #include "rclcpp/time.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
+#include "sensor_msgs/msg/temperature.hpp"
+#include "sensor_msgs/msg/battery_state.hpp"
 
 namespace elkapod_legs_system
 {
@@ -51,13 +53,21 @@ public:
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
 private:
+  bool on_init_validate_interfaces(const hardware_interface::HardwareInfo& info);
+
   inline static constexpr size_t kJointsNum = 18;
   std::array<double, kJointsNum> positions_{};
   std::array<double, kJointsNum> cmd_positions_{};
 
-  double temperature_;
+  std::array<double, 4> temperatures_;
+  double battery_percentage_;
+  double battery_voltage_;
+  bool battery_present_;
 
   std::unique_ptr<elkapod_comm::ElkapodComm> comm_;
+  rclcpp::Publisher<sensor_msgs::msg::Temperature>::SharedPtr temperature_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::BatteryState>::SharedPtr battery_pub_;
+  rclcpp::TimerBase::SharedPtr timer_;
 };
 
 }  // namespace elkapod_legs_system

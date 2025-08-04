@@ -10,7 +10,11 @@
 
 namespace elkapod_comm{
     typedef struct{
-        float temp;
+        std::array<float, 4> temperatures;
+        std::array<float, 4> imu_quaterion;
+        float battery_voltage;
+        float battery_percentage;
+        bool battery_present;
     } SpiTransmissionResponse;
 
     typedef struct{
@@ -51,6 +55,7 @@ namespace elkapod_comm{
             SpiTransmissionResponse transfer(const SpiTransmissionRequest& request);
 
         private:
+            SpiTransmissionResponse parseSpiTransferBytesResponse(const std::vector<uint8_t> bytes_response);
             std::unique_ptr<UARTDevice> uart_;
             std::unique_ptr<SpiDevice> spi_;
 

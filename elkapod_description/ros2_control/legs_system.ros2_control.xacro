@@ -3,8 +3,8 @@
 
   <xacro:macro name="joint_interface" params="name">
     <joint name="${name}">
-        <command_interface name="position">
-        </command_interface>
+        <command_interface name="position"/>
+        <state_interface name="position"/>
     </joint>
   </xacro:macro>
 
@@ -46,10 +46,6 @@
       <xacro:joint_interface name="leg6_J2"/>
       <xacro:joint_interface name="leg6_J3"/>
 
-      <!-- Sensors -->
-      <sensor name="control_module_temp">
-        <state_interface name="temperature"/>
-      </sensor>
   </ros2_control>
 
 </robot>

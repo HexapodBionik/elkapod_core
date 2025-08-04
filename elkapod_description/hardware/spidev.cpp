@@ -7,18 +7,10 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/ioctl.h>
-#include <sys/stat.h>
 #include <string.h>
 #include <stdexcept>
 
 #include <linux/spi/spidev.h>
-
-inline bool elkapod_comm::isCharacterDevice(const std::string& path) {
-    struct stat st;
-    if (stat(path.c_str(), &st) != 0)
-        return false;
-    return S_ISCHR(st.st_mode);  
-}
 
 
 elkapod_comm::SpiDevice::SpiDevice(uint8_t bus, uint8_t cs){

@@ -4,10 +4,17 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
+#include <sys/stat.h>
 #include <linux/spi/spidev.h>
 
 namespace elkapod_comm{
-    inline bool isCharacterDevice(const std::string& path);
+    inline bool isCharacterDevice(const std::string& path) {
+        struct stat st;
+        if (stat(path.c_str(), &st) != 0)
+            return false;
+        return S_ISCHR(st.st_mode);  
+    }
+
 
     class SpiDevice {
         public:

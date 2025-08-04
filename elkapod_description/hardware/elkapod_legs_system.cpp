@@ -18,8 +18,50 @@
 
 namespace elkapod_legs_system
 {
+  bool ElkapodLegsSystemHardware::on_init_validate_interfaces(const hardware_interface::HardwareInfo& info){
+    for (const hardware_interface::ComponentInfo& joint : info.joints){
+
+      if (joint.command_interfaces.size() != 1)
+      {
+        RCLCPP_FATAL(
+          rclcpp::get_logger("ElkapodLegsSystemHardware"),
+          "Joint '%s' has %zu command interfaces found. 1 expected.", joint.name.c_str(),
+          joint.command_interfaces.size());
+        return false;
+      }
+
+      if (joint.command_interfaces[0].name != hardware_interface::HW_IF_POSITION)
+      {
+        RCLCPP_FATAL(
+          rclcpp::get_logger("ElkapodLegsSystemHardware"),
+          "Joint '%s' have %s command interfaces found. '%s' expected.", joint.name.c_str(),
+          joint.command_interfaces[0].name.c_str(), hardware_interface::HW_IF_POSITION);
+        return false;
+      }
+
+      if (joint.state_interfaces.size() != 1)
+      {
+        RCLCPP_FATAL(
+          rclcpp::get_logger("ElkapodLegsSystemHardware"),
+          "Joint '%s' has %zu state interface. 1 expected.", joint.name.c_str(),
+          joint.state_interfaces.size());
+        return false;
+      }
+
+      if (joint.state_interfaces[0].name != hardware_interface::HW_IF_POSITION)
+      {
+        RCLCPP_FATAL(
+          rclcpp::get_logger("ElkapodLegsSystemHardware"),
+          "Joint '%s' have '%s' state interfaces. '%s' expected.", joint.name.c_str(),
+          joint.state_interfaces[0].name.c_str(), hardware_interface::HW_IF_POSITION);
+        return false;
+      }
+    }
+    return true;
+  }
+
 hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_init(
-  const hardware_interface::HardwareInfo & info)
+  const hardware_interface::HardwareInfo& info)
 {
   if (
     hardware_interface::SystemInterface::on_init(info) !=
@@ -44,8 +86,7 @@ hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_init(
   try{
     uart = std::make_unique<elkapod_comm::UARTDevice>(uart_device, uart_baudrate, uart_timeout_ms);
   } catch(const std::runtime_error& error){
-    RCLCPP_FATAL(
-        get_logger(), error.what());
+    RCLCPP_FATAL(rclcpp::get_logger("ElkapodLegsSystemHardware"), error.what());
     return hardware_interface::CallbackReturn::ERROR;
   }
 
@@ -58,14 +99,17 @@ hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_init(
     spi->setBitsPerWord(spi_bits);
 
   } catch(const std::runtime_error& error){
-    RCLCPP_FATAL(
-        get_logger(), error.what());
+    RCLCPP_FATAL(rclcpp::get_logger("ElkapodLegsSystemHardware"), error.what());
     return hardware_interface::CallbackReturn::ERROR;
   }
 
   this->comm_ = std::make_unique<elkapod_comm::ElkapodComm>(std::move(uart), std::move(spi));
 
   // TODO check joint interfaces and sensor interfaces config
+
+  if(!on_init_validate_interfaces(info_)){
+    return hardware_interface::CallbackReturn::ERROR;
+  }
 
   return hardware_interface::CallbackReturn::SUCCESS;
 }
@@ -78,10 +122,6 @@ std::vector<hardware_interface::StateInterface> ElkapodLegsSystemHardware::expor
     std::string joint_name = std::format("leg{}_J{}", i / 3 + 1, i % 3 + 1);
     state_interfaces.emplace_back(hardware_interface::StateInterface(joint_name, hardware_interface::HW_IF_POSITION, &positions_[i]));
   }
-
-  // Temperature
-  state_interfaces.emplace_back(hardware_interface::StateInterface("control_module_temp", hardware_interface::HW_IF_TEMPERATURE, &temperature_));
-
   return state_interfaces;
 }
 
@@ -101,18 +141,40 @@ hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_configure(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
 
-  RCLCPP_INFO(get_logger(), "Configuring ...please wait...");
+  RCLCPP_INFO(rclcpp::get_logger("ElkapodLegsSystemHardware"), "Configuring ...please wait...");
   comm_->connect();
-  RCLCPP_INFO(get_logger(), "Successfully configured!");
 
+    // Temperature publisher setup
+  if(get_node()){
+    temperature_pub_ = get_node()->create_publisher<sensor_msgs::msg::Temperature>("/temperature", 10);
+    battery_pub_ = get_node()->create_publisher<sensor_msgs::msg::BatteryState>("/battery", 10);
+
+    using namespace std::chrono_literals;
+    timer_ = get_node()->create_wall_timer(1s, [this]() {
+        sensor_msgs::msg::Temperature msg;
+        msg.temperature = temperatures_[0];
+        msg.header.stamp = get_clock()->now();
+        temperature_pub_->publish(msg);
+
+        sensor_msgs::msg::BatteryState battery_msg;
+        battery_msg.header.stamp = get_clock()->now();
+        battery_msg.percentage = battery_percentage_;
+        battery_msg.voltage = battery_voltage_;
+        battery_msg.present = battery_present_;
+        battery_pub_->publish(battery_msg);
+    });
+  }
+
+  RCLCPP_INFO(rclcpp::get_logger("ElkapodLegsSystemHardware"), "Successfully configured!");
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
 hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_cleanup(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
-  this->comm_->disconnect();
-
+  RCLCPP_INFO(rclcpp::get_logger("ElkapodLegsSystemHardware"), "Cleaning up ...please wait...");
+  comm_->disconnect();
+  RCLCPP_INFO(rclcpp::get_logger("ElkapodLegsSystemHardware"), "Successfully cleaned up!");
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
@@ -121,9 +183,9 @@ hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_activate(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
 
-  RCLCPP_INFO(get_logger(), "Activating ...please wait...");
+  RCLCPP_INFO(rclcpp::get_logger("ElkapodLegsSystemHardware"), "Activating ...please wait...");
   comm_->sendSystemStartCommand();
-  RCLCPP_INFO(get_logger(), "Successfully activated!");
+  RCLCPP_INFO(rclcpp::get_logger("ElkapodLegsSystemHardware"), "Successfully activated!");
 
   return hardware_interface::CallbackReturn::SUCCESS;
 }
@@ -132,15 +194,15 @@ hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_deactivate(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
 
-  RCLCPP_INFO(get_logger(), "Deactivating ...please wait...");
+  RCLCPP_INFO(rclcpp::get_logger("ElkapodLegsSystemHardware"), "Deactivating ...please wait...");
   comm_->sendSystemShutdownCommand();
-  RCLCPP_INFO(get_logger(), "Successfully deactivated!");
+  RCLCPP_INFO(rclcpp::get_logger("ElkapodLegsSystemHardware"), "Successfully deactivated!");
 
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
 hardware_interface::return_type ElkapodLegsSystemHardware::read(
-  const rclcpp::Time & /*time*/, const rclcpp::Duration & period)
+  const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
   for (size_t i = 0; i < cmd_positions_.size(); ++i) {
     positions_[i] = cmd_positions_[i];
@@ -190,9 +252,11 @@ hardware_interface::return_type ElkapodLegsSystemHardware::write(
   };
 
   elkapod_comm::SpiTransmissionResponse response = comm_->transfer(request);
-  RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Temperature: %2.2f*C", response.temp);
-
-  temperature_ = response.temp;
+  std::copy(response.temperatures.begin(), response.temperatures.end(), temperatures_.begin());
+  battery_percentage_ = response.battery_percentage;
+  battery_voltage_ = response.battery_voltage;
+  battery_present_ = response.battery_present;
+  
   return hardware_interface::return_type::OK;
 }
 

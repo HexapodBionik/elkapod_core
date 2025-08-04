@@ -41,6 +41,35 @@ void ElkapodComm::disconnect(){
     uart_->disconnect();
 }
 
+SpiTransmissionResponse ElkapodComm::parseSpiTransferBytesResponse(const std::vector<uint8_t> bytes_response){
+    std::array<float, 4> temperatures;
+    std::vector<uint8_t> bytes_buff(16, 0);
+
+    std::copy_n(bytes_response.begin(), 16, bytes_buff.begin());
+    std::memcpy(temperatures.data(), bytes_buff.data(), 16);
+
+    std::array<float, 4> imu_quaterion;
+    std::copy_n(bytes_response.begin() + 16, 16, bytes_buff.begin()); 
+    std::memcpy(imu_quaterion.data(), bytes_buff.data(), 16);
+
+    float battery_voltage;
+    float battery_percentage;
+    bool battery_present;
+
+    std::memcpy(&battery_voltage, bytes_response.data() + 32, sizeof(float));
+    std::memcpy(&battery_percentage, bytes_response.data() + 36, sizeof(float));
+    std::memcpy(&battery_present, bytes_response.data() + 40, sizeof(bool));
+
+    SpiTransmissionResponse response{
+        .temperatures = temperatures,
+        .imu_quaterion = imu_quaterion,
+        .battery_voltage = battery_voltage,
+        .battery_percentage = battery_percentage,
+        .battery_present = battery_present
+    };
+    return response; 
+}
+
 SpiTransmissionResponse ElkapodComm::transfer(const SpiTransmissionRequest& request){
     std::vector<uint8_t> bytes(80, 0);
     bytes[0] = 0x7E;
@@ -53,16 +82,8 @@ SpiTransmissionResponse ElkapodComm::transfer(const SpiTransmissionRequest& requ
     }
 
     std::vector<uint8_t> result = spi_->transfer(bytes);
-
-    std::vector<uint8_t> temp_bytes(4, 0);
-    std::copy_n(result.begin(), 4, temp_bytes.begin());
-    float temperature;
-
-    std::memcpy(&temperature, temp_bytes.data(), sizeof(float));
-
-    SpiTransmissionResponse response{
-        .temp = temperature
-    };     
+    SpiTransmissionResponse response = parseSpiTransferBytesResponse(result);
+    
     return response;
 } 
 
@@ -81,7 +102,9 @@ UARTDevice::UARTDevice(const std::string device_path, const uint32_t baudrate, c
 }
 
 UARTDevice::~UARTDevice(){
-    serial_comm_.Close();
+    if(serial_comm_.IsOpen()){
+      serial_comm_.Close();
+    }
 }
 
 void UARTDevice::connect(){
@@ -108,7 +131,7 @@ void UARTDevice::sendSystemStartCommand() {
     // 0x21 0x87 -> system start command
 
     serial_comm_.FlushIOBuffers();
-    for(int i = 0; i < sizeof(data); ++i){
+    for(size_t i = 0; i < sizeof(data); ++i){
         serial_comm_.WriteByte(data[i]);
     }
     serial_comm_.DrainWriteBuffer();
@@ -124,7 +147,7 @@ void UARTDevice::sendSystemShutdownCommand() {
 
     // 0x11 0x38 -> system shutdown command
     serial_comm_.FlushIOBuffers();
-    for(int i = 0; i < sizeof(data); ++i){
+    for(size_t i = 0; i < sizeof(data); ++i){
         serial_comm_.WriteByte(data[i]);
     }
     serial_comm_.DrainWriteBuffer();
