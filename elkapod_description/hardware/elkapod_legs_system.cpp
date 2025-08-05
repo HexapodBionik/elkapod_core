@@ -19,10 +19,9 @@
 namespace elkapod_legs_system
 {
   bool ElkapodLegsSystemHardware::on_init_validate_interfaces(const hardware_interface::HardwareInfo& info){
-    for (const hardware_interface::ComponentInfo& joint : info.joints){
+    for(const hardware_interface::ComponentInfo& joint : info.joints){
 
-      if (joint.command_interfaces.size() != 1)
-      {
+      if (joint.command_interfaces.size() != 1){
         RCLCPP_FATAL(
           rclcpp::get_logger("ElkapodLegsSystemHardware"),
           "Joint '%s' has %zu command interfaces found. 1 expected.", joint.name.c_str(),
@@ -30,8 +29,7 @@ namespace elkapod_legs_system
         return false;
       }
 
-      if (joint.command_interfaces[0].name != hardware_interface::HW_IF_POSITION)
-      {
+      if (joint.command_interfaces[0].name != hardware_interface::HW_IF_POSITION){
         RCLCPP_FATAL(
           rclcpp::get_logger("ElkapodLegsSystemHardware"),
           "Joint '%s' have %s command interfaces found. '%s' expected.", joint.name.c_str(),
@@ -39,8 +37,7 @@ namespace elkapod_legs_system
         return false;
       }
 
-      if (joint.state_interfaces.size() != 1)
-      {
+      if (joint.state_interfaces.size() != 1){
         RCLCPP_FATAL(
           rclcpp::get_logger("ElkapodLegsSystemHardware"),
           "Joint '%s' has %zu state interface. 1 expected.", joint.name.c_str(),
@@ -48,15 +45,22 @@ namespace elkapod_legs_system
         return false;
       }
 
-      if (joint.state_interfaces[0].name != hardware_interface::HW_IF_POSITION)
-      {
+      if (joint.state_interfaces[0].name != hardware_interface::HW_IF_POSITION){
         RCLCPP_FATAL(
           rclcpp::get_logger("ElkapodLegsSystemHardware"),
-          "Joint '%s' have '%s' state interfaces. '%s' expected.", joint.name.c_str(),
+          "Joint '%s' has '%s' state interfaces. '%s' expected.", joint.name.c_str(),
           joint.state_interfaces[0].name.c_str(), hardware_interface::HW_IF_POSITION);
         return false;
       }
     }
+
+    if(info.sensors.size() != 1){
+        RCLCPP_FATAL(
+          rclcpp::get_logger("ElkapodLegsSystemHardware"),
+          "Interface has '%zu' sensors. 1 expected.", info.sensors.size());
+        return false;
+    }
+
     return true;
   }
 
@@ -122,6 +126,21 @@ std::vector<hardware_interface::StateInterface> ElkapodLegsSystemHardware::expor
     std::string joint_name = std::format("leg{}_J{}", i / 3 + 1, i % 3 + 1);
     state_interfaces.emplace_back(hardware_interface::StateInterface(joint_name, hardware_interface::HW_IF_POSITION, &positions_[i]));
   }
+
+  // IMU
+  state_interfaces.emplace_back(hardware_interface::StateInterface("imu_sensor", "orientation.x", &imu_data_[1]));
+  state_interfaces.emplace_back(hardware_interface::StateInterface("imu_sensor", "orientation.y", &imu_data_[2]));
+  state_interfaces.emplace_back(hardware_interface::StateInterface("imu_sensor", "orientation.z", &imu_data_[3]));
+  state_interfaces.emplace_back(hardware_interface::StateInterface("imu_sensor", "orientation.w", &imu_data_[0]));
+
+  state_interfaces.emplace_back(hardware_interface::StateInterface("imu_sensor", "angular_velocity.x", &imu_data_[4]));
+  state_interfaces.emplace_back(hardware_interface::StateInterface("imu_sensor", "angular_velocity.y", &imu_data_[5]));
+  state_interfaces.emplace_back(hardware_interface::StateInterface("imu_sensor", "angular_velocity.z", &imu_data_[6]));
+
+  state_interfaces.emplace_back(hardware_interface::StateInterface("imu_sensor", "linear_acceleration.x", &imu_data_[7]));
+  state_interfaces.emplace_back(hardware_interface::StateInterface("imu_sensor", "linear_acceleration.y", &imu_data_[8]));
+  state_interfaces.emplace_back(hardware_interface::StateInterface("imu_sensor", "linear_acceleration.z", &imu_data_[9]));
+
   return state_interfaces;
 }
 
@@ -253,6 +272,8 @@ hardware_interface::return_type ElkapodLegsSystemHardware::write(
 
   elkapod_comm::SpiTransmissionResponse response = comm_->transfer(request);
   std::copy(response.temperatures.begin(), response.temperatures.end(), temperatures_.begin());
+  std::copy(response.imu_data.begin(), response.imu_data.end(), imu_data_.begin());
+
   battery_percentage_ = response.battery_percentage;
   battery_voltage_ = response.battery_voltage;
   battery_present_ = response.battery_present;

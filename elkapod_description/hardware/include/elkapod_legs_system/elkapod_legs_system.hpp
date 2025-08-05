@@ -60,6 +60,8 @@ private:
   std::array<double, kJointsNum> cmd_positions_{};
 
   std::array<double, 4> temperatures_;
+  std::array<double, 10> imu_data_;
+
   double battery_percentage_;
   double battery_voltage_;
   bool battery_present_;

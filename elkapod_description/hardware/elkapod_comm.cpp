@@ -48,21 +48,23 @@ SpiTransmissionResponse ElkapodComm::parseSpiTransferBytesResponse(const std::ve
     std::copy_n(bytes_response.begin(), 16, bytes_buff.begin());
     std::memcpy(temperatures.data(), bytes_buff.data(), 16);
 
-    std::array<float, 4> imu_quaterion;
-    std::copy_n(bytes_response.begin() + 16, 16, bytes_buff.begin()); 
-    std::memcpy(imu_quaterion.data(), bytes_buff.data(), 16);
+    std::array<float, 10> imu_data;
+    bytes_buff.resize(40);
+    
+    std::copy_n(bytes_response.begin() + 16, 40, bytes_buff.begin()); 
+    std::memcpy(imu_data.data(), bytes_buff.data(), 40);
 
     float battery_voltage;
     float battery_percentage;
     bool battery_present;
 
-    std::memcpy(&battery_voltage, bytes_response.data() + 32, sizeof(float));
-    std::memcpy(&battery_percentage, bytes_response.data() + 36, sizeof(float));
-    std::memcpy(&battery_present, bytes_response.data() + 40, sizeof(bool));
+    std::memcpy(&battery_voltage, bytes_response.data() + 56, sizeof(float));
+    std::memcpy(&battery_percentage, bytes_response.data() + 60, sizeof(float));
+    std::memcpy(&battery_present, bytes_response.data() + 64, sizeof(bool));
 
     SpiTransmissionResponse response{
         .temperatures = temperatures,
-        .imu_quaterion = imu_quaterion,
+        .imu_data = imu_data,
         .battery_voltage = battery_voltage,
         .battery_percentage = battery_percentage,
         .battery_present = battery_present

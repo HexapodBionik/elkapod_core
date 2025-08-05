@@ -11,7 +11,7 @@
 namespace elkapod_comm{
     typedef struct{
         std::array<float, 4> temperatures;
-        std::array<float, 4> imu_quaterion;
+        std::array<float, 10> imu_data;
         float battery_voltage;
         float battery_percentage;
         bool battery_present;

@@ -79,11 +79,20 @@ def generate_launch_description():
         emulate_tty=True
     )])
 
+    imu_broad_spawner = TimerAction(period=5.0, actions=[Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["imu_broadcaster"],
+        output='screen',
+        emulate_tty=True
+    )])
+
 
     return LaunchDescription([
         rsp,
         control_node,
         joint_position_controller_spawner,
         joint_broad_spawner,
+        imu_broad_spawner,
         delayed_actions
     ])
