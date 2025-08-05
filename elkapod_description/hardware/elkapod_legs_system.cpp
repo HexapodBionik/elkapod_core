@@ -14,6 +14,7 @@
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+using namespace std::literals::chrono_literals;
 //#define ELKAPOD_4LEGS_TESTS
 
 namespace elkapod_legs_system
@@ -163,7 +164,7 @@ hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_configure(
   RCLCPP_INFO(rclcpp::get_logger("ElkapodLegsSystemHardware"), "Configuring ...please wait...");
   comm_->connect();
 
-    // Temperature publisher setup
+    // Temperature and battery publisher setup
   if(get_node()){
     temperature_pub_ = get_node()->create_publisher<sensor_msgs::msg::Temperature>("/temperature", 10);
     battery_pub_ = get_node()->create_publisher<sensor_msgs::msg::BatteryState>("/battery", 10);
@@ -220,11 +221,46 @@ hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_deactivate(
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
+hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_error(
+  const rclcpp_lifecycle::State & /*previous_state*/)
+{
+
+  RCLCPP_FATAL(rclcpp::get_logger("ElkapodLegsSystemHardware"), "Critical error happend! Closing all ports...");
+  comm_->disconnect();
+
+  return hardware_interface::CallbackReturn::SUCCESS;
+}
+
 hardware_interface::return_type ElkapodLegsSystemHardware::read(
-  const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
+  const rclcpp::Time & /*time*/, const rclcpp::Duration & period)
 {
   for (size_t i = 0; i < cmd_positions_.size(); ++i) {
     positions_[i] = cmd_positions_[i];
+  }
+
+
+  bool status = comm_->checkConnection();
+  if(!status){
+    if(watchdog_time_counter_ >= 100000000){
+      RCLCPP_WARN(rclcpp::get_logger("ElkapodLegsSystemHardware"),
+      "Hardware Controller presence check failed! Trying to restart hardware... Attempt %03d/%03d",
+        kWatchdogRestartAttemps-watchdog_counter_, kWatchdogRestartAttemps);
+      watchdog_time_counter_ = 0;
+      watchdog_counter_--;
+    }
+    else{
+      watchdog_time_counter_ += period.nanoseconds();
+    }
+  }
+  else{
+    watchdog_counter_ = kWatchdogRestartAttemps;
+    watchdog_time_counter_ = 0;
+  }
+
+  if(watchdog_counter_ <= 0){
+    RCLCPP_ERROR(rclcpp::get_logger("ElkapodLegsSystemHardware"),
+     "Hardware Controller presence check failed after %d attemps!", kWatchdogRestartAttemps);
+    return hardware_interface::return_type::ERROR;
   }
 
   return hardware_interface::return_type::OK;

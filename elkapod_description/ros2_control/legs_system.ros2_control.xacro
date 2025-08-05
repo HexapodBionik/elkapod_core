@@ -13,7 +13,7 @@
           <plugin>elkapod_description/ElkapodLegsSystemHardware</plugin>
           <param name="uart_device">/dev/ttyAMA1</param>
           <param name="uart_baudrate">1152000</param>
-          <param name="uart_timeout_ms">100</param>
+          <param name="uart_timeout_ms">10</param>
 
           <param name="spi_bus">0</param>
           <param name="spi_cs">0</param>

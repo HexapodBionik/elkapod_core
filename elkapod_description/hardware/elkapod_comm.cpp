@@ -97,6 +97,10 @@ void ElkapodComm::sendSystemShutdownCommand(){
     uart_->sendSystemShutdownCommand();
 }
 
+bool ElkapodComm::checkConnection(){
+    return uart_->checkConnection();
+}
+
 UARTDevice::UARTDevice(const std::string device_path, const uint32_t baudrate, const int timeout_ms): device_path_(device_path), baudrate_(baudrate), timeout_ms_(timeout_ms){
     if(!isCharacterDevice(device_path)){
         throw std::runtime_error("Provided device path does not exits or device is not valid!");
@@ -153,6 +157,26 @@ void UARTDevice::sendSystemShutdownCommand() {
         serial_comm_.WriteByte(data[i]);
     }
     serial_comm_.DrainWriteBuffer();
+}
+
+bool UARTDevice::checkConnection(){
+    if(serial_comm_.IsOpen()){
+        serial_comm_.FlushInputBuffer();
+        LibSerial::DataBuffer buffer;
+        buffer.resize(20);
+
+        try{
+            serial_comm_.Read(buffer, buffer.size(), timeout_ms_);
+        }
+        catch (const LibSerial::ReadTimeout&){
+            return false;
+        }
+
+        if(buffer[0] == 0x7E && buffer[1] == 0xAA && buffer[18] == 0xFF && buffer[19] == 0x0F){
+            return true;
+        }
+    }
+    return false;
 }
 
 uint8_t UARTDevice::sendAngles(float* angles){

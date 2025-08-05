@@ -46,6 +46,9 @@ public:
   hardware_interface::CallbackReturn on_deactivate(
     const rclcpp_lifecycle::State & previous_state) override;
 
+  hardware_interface::CallbackReturn on_error(
+  const rclcpp_lifecycle::State & previous_state) override;
+
   hardware_interface::return_type read(
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
@@ -56,6 +59,8 @@ private:
   bool on_init_validate_interfaces(const hardware_interface::HardwareInfo& info);
 
   inline static constexpr size_t kJointsNum = 18;
+  inline static constexpr int kWatchdogRestartAttemps = 10;
+
   std::array<double, kJointsNum> positions_{};
   std::array<double, kJointsNum> cmd_positions_{};
 
@@ -65,6 +70,9 @@ private:
   double battery_percentage_;
   double battery_voltage_;
   bool battery_present_;
+
+  int watchdog_counter_ = kWatchdogRestartAttemps;
+  rcl_duration_value_t watchdog_time_counter_ = 0;
 
   std::unique_ptr<elkapod_comm::ElkapodComm> comm_;
   rclcpp::Publisher<sensor_msgs::msg::Temperature>::SharedPtr temperature_pub_;

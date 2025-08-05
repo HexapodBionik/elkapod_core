@@ -29,6 +29,8 @@ namespace elkapod_comm{
 
             void connect();
             void disconnect();
+
+            bool checkConnection();
             
             void sendSystemStartCommand();
             void sendSystemShutdownCommand();
@@ -49,6 +51,8 @@ namespace elkapod_comm{
 
             void connect();
             void disconnect();
+
+            bool checkConnection();
 
             void sendSystemStartCommand();
             void sendSystemShutdownCommand();
