@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "elkapod_comm.hpp"
-
 #include "hardware_interface/handle.hpp"
 #include "hardware_interface/hardware_info.hpp"
 #include "hardware_interface/system_interface.hpp"
@@ -17,45 +16,42 @@
 #include "rclcpp/time.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
-#include "sensor_msgs/msg/temperature.hpp"
 #include "sensor_msgs/msg/battery_state.hpp"
+#include "sensor_msgs/msg/temperature.hpp"
 
-namespace elkapod_legs_system
-{
-class ElkapodLegsSystemHardware : public hardware_interface::SystemInterface
-{
-public:
+namespace elkapod_legs_system {
+class ElkapodLegsSystemHardware : public hardware_interface::SystemInterface {
+ public:
   RCLCPP_SHARED_PTR_DEFINITIONS(ElkapodLegsSystemHardware)
 
-  hardware_interface::CallbackReturn on_init(
-    const hardware_interface::HardwareInfo & info) override;
+  hardware_interface::CallbackReturn on_init(const hardware_interface::HardwareInfo& info) override;
 
   std::vector<hardware_interface::StateInterface> export_state_interfaces() override;
 
   std::vector<hardware_interface::CommandInterface> export_command_interfaces() override;
 
   hardware_interface::CallbackReturn on_configure(
-    const rclcpp_lifecycle::State & previous_state) override;
+      const rclcpp_lifecycle::State& previous_state) override;
 
   hardware_interface::CallbackReturn on_cleanup(
-    const rclcpp_lifecycle::State & previous_state) override;
+      const rclcpp_lifecycle::State& previous_state) override;
 
   hardware_interface::CallbackReturn on_activate(
-    const rclcpp_lifecycle::State & previous_state) override;
+      const rclcpp_lifecycle::State& previous_state) override;
 
   hardware_interface::CallbackReturn on_deactivate(
-    const rclcpp_lifecycle::State & previous_state) override;
+      const rclcpp_lifecycle::State& previous_state) override;
 
   hardware_interface::CallbackReturn on_error(
-  const rclcpp_lifecycle::State & previous_state) override;
+      const rclcpp_lifecycle::State& previous_state) override;
 
-  hardware_interface::return_type read(
-    const rclcpp::Time & time, const rclcpp::Duration & period) override;
+  hardware_interface::return_type read(const rclcpp::Time& time,
+                                       const rclcpp::Duration& period) override;
 
-  hardware_interface::return_type write(
-    const rclcpp::Time & time, const rclcpp::Duration & period) override;
+  hardware_interface::return_type write(const rclcpp::Time& time,
+                                        const rclcpp::Duration& period) override;
 
-private:
+ private:
   bool on_init_validate_interfaces(const hardware_interface::HardwareInfo& info);
 
   inline static constexpr size_t kJointsNum = 18;
