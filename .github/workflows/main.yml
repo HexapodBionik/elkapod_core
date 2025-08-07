@@ -1,5 +1,4 @@
 name: elkapod
-
 on:
   push:
   pull_request:
@@ -25,8 +24,6 @@ jobs:
           echo $(pwd)
           ruff check . --select C4 --select SIM --select TCH
 
-
-
   build:
     # Create a container of the latest Ubuntu, other values could be
     # ubuntu-latest, ubuntu-22.04, etc.
@@ -34,13 +31,12 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      
       # Install some system pacakges
-      - name: Install ROS 2 Jazzy packages
+      - name: Install ROS 2 Jazzy packages && dependencies
         run: |
           sudo apt update
-          sudo apt install -y software-properties-common
-          sudo add-apt-repository universe
+          sudo apt install -y software-properties-common libserial-dev
+          sudo add-apt-repository -y universe
           sudo apt update && sudo apt install -y curl
           sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
@@ -49,9 +45,24 @@ jobs:
           sudo apt install -y lcov
           sudo apt install -y python3-vcstool
 
-      - name: Setup Workspace
+      - name: Build ros2_control_ws
         run: |
           source /opt/ros/jazzy/setup.bash
+          mkdir -p ws_ros2_control/src/
+          git clone https://github.com/ros-controls/ros2_control.git ws_ros2_control/src/
+          cd ws_ros2_control/src/
+          git checkout tags/5.5.0
+          cd ../../
+          sudo rosdep init
+          rosdep update --rosdistro=jazzy
+          sudo apt-get update
+          cd ws_ros2_control/
+          rosdep install --from-paths src --ignore-src -r -y
+          colcon build --symlink-install
+          source install/setup.bash
+
+      - name: Setup Workspace
+        run: |
           mkdir -p ros_ws/src
 
       # We want to use GitHub CI checkout version 3 for checking out the branch
@@ -68,9 +79,9 @@ jobs:
       - name: Configure CMake flags and build exectables
         run: |
           source /opt/ros/jazzy/setup.bash
+          source ws_ros2_control/install/setup.bash 
           sudo apt install python3-rosdep
-          sudo rosdep init
-          rosdep update --include-eol-distros
+          rosdep update --rosdistro=jazzy
           cd ros_ws
           rosdep install --from-paths src -y --ignore-src
           colcon build
