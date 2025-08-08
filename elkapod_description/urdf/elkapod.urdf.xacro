@@ -2,13 +2,9 @@
 <robot xmlns:xacro="http://ros.org/wiki/xacro" name="elkapod">
 
   <!-- Execution env config -->
-  <xacro:arg name="use_sim_time" default="false"/>
-
-  <!-- Execution env configuration -->
-  <xacro:property name="use_sim_time" default="$(arg use_sim_time)"/>
+  <xacro:arg name="sim_mode" default="false"/>
 
   <!-- INCLUDES -->
-
   <!-- Colors -->
   <xacro:include filename="$(find elkapod_description)/urdf/colors.urdf.xacro" />
 
@@ -28,9 +24,8 @@
   <xacro:leg_right leg_name="leg4" parent="base_link" pos_x="0.0138" pos_y="-0.1643" pos_z="-0.03" roll="0" pitch="0" yaw="-1.57"/>
   <xacro:leg_right leg_name="leg6" parent="base_link" pos_x="-0.15903" pos_y="-0.15038" pos_z="-0.03" roll="0" pitch="0" yaw="-2.384143643587"/>
 
-  <xacro:include filename="$(find elkapod_description)/urdf/imu.xacro" />
-
   <!-- ros2_control -->
-  <xacro:include filename="$(find elkapod_description)/urdf/ros2_control.xacro" />
+  <xacro:include filename="$(find elkapod_description)/ros2_control/elkapod.ros2_control.xacro" />
+  <xacro:elkapod_ros2_control sim_mode="$(arg sim_mode)"/>
 
 </robot>
