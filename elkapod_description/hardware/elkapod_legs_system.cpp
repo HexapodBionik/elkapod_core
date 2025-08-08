@@ -61,8 +61,9 @@ bool ElkapodLegsSystemHardware::on_init_validate_interfaces(
 }
 
 hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_init(
-    const hardware_interface::HardwareInfo& info) {
-  if (hardware_interface::SystemInterface::on_init(info) !=
+    const hardware_interface::HardwareComponentInterfaceParams& params) {
+
+  if (hardware_interface::SystemInterface::on_init(params) !=
       hardware_interface::CallbackReturn::SUCCESS) {
     return hardware_interface::CallbackReturn::ERROR;
   }

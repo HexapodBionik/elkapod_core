@@ -59,19 +59,20 @@ void elkapod_comm::SpiDevice::applySettings() {
 std::vector<uint8_t> elkapod_comm::SpiDevice::readBytes(uint32_t length) {
   std::vector<uint8_t> rxBuff;
   rxBuff.reserve(length);
-  uint8_t rxBuff_raw[length];
 
   struct spi_ioc_transfer spi_message[1];
   memset(spi_message, 0, sizeof(spi_message));
 
-  spi_message[0].rx_buf = (unsigned long)rxBuff_raw;
+  spi_message[0].rx_buf = (unsigned long)rxBuff.data();
   spi_message[0].len = length;
   spi_message[0].speed_hz = speed_;
   spi_message[0].bits_per_word = bits_;
 
-  uint8_t status = ioctl(fd_, SPI_IOC_MESSAGE(1), spi_message);
+  int status = ioctl(fd_, SPI_IOC_MESSAGE(1), spi_message);
+  if (status < 0) {
+    perror("SPI read failed");
+  }
 
-  std::copy(rxBuff_raw, rxBuff_raw + length, std::back_inserter(rxBuff));
   return rxBuff;
 }
 

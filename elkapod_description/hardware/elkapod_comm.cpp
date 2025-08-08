@@ -128,7 +128,7 @@ void UARTDevice::connect() {
 void UARTDevice::disconnect() { serial_comm_.Close(); }
 
 void UARTDevice::sendSystemStartCommand() {
-  char data[10] = {0};
+  unsigned char data[10] = {0};
   data[0] = 0x7E;
   data[1] = 0x21;
   data[2] = 0x87;
@@ -145,7 +145,7 @@ void UARTDevice::sendSystemStartCommand() {
 }
 
 void UARTDevice::sendSystemShutdownCommand() {
-  char data[10] = {0};
+  unsigned char data[10] = {0};
   data[0] = 0x7E;
   data[1] = 0x11;
   data[2] = 0x38;
@@ -180,7 +180,7 @@ bool UARTDevice::checkConnection() {
 }
 
 uint8_t UARTDevice::sendAngles(float* angles) {
-  char data[78];
+  unsigned char data[78];
   data[0] = 0x7E;
   data[1] = 78;
   data[2] = 0x03;

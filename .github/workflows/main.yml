@@ -84,5 +84,4 @@ jobs:
           rosdep update --rosdistro=jazzy
           cd ros_ws
           rosdep install --from-paths src -y --ignore-src
-          colcon build
-          
+          colcon build --cmake-args -DCMAKE_CXX_FLAGS="-Werror"
