@@ -7,15 +7,14 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    use_sim_time = LaunchConfiguration('use_sim_time')
-    use_ros2_control = LaunchConfiguration('use_ros2_control')
+    sim_mode = LaunchConfiguration('sim_mode')
 
     # Process the URDF file
     pkg_path = os.path.join(get_package_share_directory('elkapod_description'))
     xacro_file = os.path.join(pkg_path, 'urdf','elkapod.urdf.xacro')
-    robot_description_config = Command(['xacro ', xacro_file, ' use_ros2_control:=', use_ros2_control, ' sim_mode:=', use_sim_time])
+    robot_description_config = Command(['xacro ', xacro_file, ' sim_mode:=', sim_mode])
 
-    params = {'robot_description': robot_description_config, 'use_sim_time': use_sim_time}
+    params = {'robot_description': robot_description_config, 'sim_mode': sim_mode}
     node_robot_state_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
@@ -25,13 +24,8 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument(
-            'use_sim_time',
+            'sim_mode',
             default_value='false',
             description='Use sim time if true'),
-        DeclareLaunchArgument(
-            'use_ros2_control',
-            default_value='true',
-            description='Use ros2_control if true'),
-
         node_robot_state_publisher
     ])

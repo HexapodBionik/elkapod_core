@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+
+    <!-- Sim mode joint definition -->
+    <xacro:macro name="sim_joint_interface" params="name min_pos_rad max_pos_rad initial_angle_rad">
+        <joint name="${name}">
+            <command_interface name="position">
+            <param name="min">${min_pos_rad}</param>
+            <param name="max">${max_pos_rad}</param>
+            </command_interface>
+
+            <state_interface name="position">
+                <param name="initial_value">${initial_angle_rad}</param>
+            </state_interface>
+            
+            <state_interface name="velocity"/>
+            <state_interface name="effort"/> 
+        </joint>
+    </xacro:macro>
+
+    <!-- Real world joint definition -->
+    <xacro:macro name="joint_interface" params="name">
+        <joint name="${name}">
+            <command_interface name="position"/>
+            <state_interface name="position"/>
+        </joint>
+    </xacro:macro>
+
+    <xacro:macro name="elkapod_ros2_control" params="sim_mode:=^|false">
+        <!-- IMU link && joint -->
+        <link name="imu_link"/>
+        <joint name="imu_joint" type="fixed">
+            <parent link="base_link"/>
+            <child link="imu_link"/>
+        </joint>
+
+        <xacro:if value="${sim_mode}">
+            <!-- Plugins loading -->
+            <gazebo>
+                <plugin name="gz_ros2_control::GazeboSimROS2ControlPlugin" filename="libgz_ros2_control-system.so">
+                    <parameters>$(find elkapod_description)/config/my_controllers.yaml</parameters>
+                    <parameters>$(find elkapod_description)/config/gaz_ros2_ctl_use_sim.yaml</parameters>
+                </plugin>
+
+                <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+                    <odom_frame>base_link</odom_frame>
+                    <robot_base_frame>base_link</robot_base_frame>
+                    <odom_publish_frequency>50</odom_publish_frequency>
+                </plugin>
+            </gazebo>
+
+            <!-- Joints setup -->
+            <ros2_control name="GazeboSystem" type="system">
+                <hardware>
+                    <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+                </hardware>
+                
+                
+                <xacro:sim_joint_interface name="leg1_J1" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+                <xacro:sim_joint_interface name="leg1_J2" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+                <xacro:sim_joint_interface name="leg1_J3" min_pos_rad="-3.14" max_pos_rad="0.0" initial_angle_rad="0.0"/>
+                
+                <xacro:sim_joint_interface name="leg3_J1" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+                <xacro:sim_joint_interface name="leg3_J2" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+                <xacro:sim_joint_interface name="leg3_J3" min_pos_rad="-3.14" max_pos_rad="0.0" initial_angle_rad="0.0"/>
+                
+                <xacro:sim_joint_interface name="leg5_J1" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+                <xacro:sim_joint_interface name="leg5_J2" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+                <xacro:sim_joint_interface name="leg5_J3" min_pos_rad="-3.14" max_pos_rad="0.0" initial_angle_rad="0.0"/>
+                
+                
+                <xacro:sim_joint_interface name="leg2_J1" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+                <xacro:sim_joint_interface name="leg2_J2" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+                <xacro:sim_joint_interface name="leg2_J3" min_pos_rad="-3.14" max_pos_rad="0.0" initial_angle_rad="0.0"/>
+                
+                <xacro:sim_joint_interface name="leg4_J1" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+                <xacro:sim_joint_interface name="leg4_J2" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+                <xacro:sim_joint_interface name="leg4_J3" min_pos_rad="-3.14" max_pos_rad="0.0" initial_angle_rad="0.0"/>
+                
+                <xacro:sim_joint_interface name="leg6_J1" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+                <xacro:sim_joint_interface name="leg6_J2" min_pos_rad="-1.57" max_pos_rad="1.57" initial_angle_rad="0.0"/>
+                <xacro:sim_joint_interface name="leg6_J3" min_pos_rad="-3.14" max_pos_rad="0.0" initial_angle_rad="0.0"/>
+            </ros2_control>
+
+            <!-- IMU simulation setup -->
+            <gazebo reference="imu_link">
+                <sensor name="imu_sensor" type="imu">
+                    <plugin filename="libgz-sim-imu-system.so" name="gz::sim::systems::Imu">
+                        <ros>
+                            <namespace>/demo</namespace>
+                            <remapping>~/out:=imu</remapping>
+                        </ros>
+                        <initial_orientation_as_reference>false</initial_orientation_as_reference>
+
+                    </plugin>
+                    <always_on>true</always_on>
+                    <update_rate>100</update_rate>
+                    <visualize>true</visualize>
+                    <topic>imu</topic>
+                    <imu>
+                        <angular_velocity>
+                            <x>
+                                <noise type="gaussian">
+                                    <mean>0.0</mean>
+                                    <stddev>2e-4</stddev>
+                                    <bias_mean>0.0000075</bias_mean>
+                                    <bias_stddev>0.0000008</bias_stddev>
+                                </noise>
+                            </x>
+                            <y>
+                                <noise type="gaussian">
+                                    <mean>0.0</mean>
+                                    <stddev>2e-4</stddev>
+                                    <bias_mean>0.0000075</bias_mean>
+                                    <bias_stddev>0.0000008</bias_stddev>
+                                </noise>
+                            </y>
+                            <z>
+                                <noise type="gaussian">
+                                    <mean>0.0</mean>
+                                    <stddev>2e-4</stddev>
+                                    <bias_mean>0.0000075</bias_mean>
+                                    <bias_stddev>0.0000008</bias_stddev>
+                                </noise>
+                            </z>
+                        </angular_velocity>
+                        <linear_acceleration>
+                            <x>
+                                <noise type="gaussian">
+                                    <mean>0.0</mean>
+                                    <stddev>1.7e-2</stddev>
+                                    <bias_mean>0.1</bias_mean>
+                                    <bias_stddev>0.001</bias_stddev>
+                                </noise>
+                            </x>
+                            <y>
+                                <noise type="gaussian">
+                                    <mean>0.0</mean>
+                                    <stddev>1.7e-2</stddev>
+                                    <bias_mean>0.1</bias_mean>
+                                    <bias_stddev>0.001</bias_stddev>
+                                </noise>
+                            </y>
+                            <z>
+                                <noise type="gaussian">
+                                    <mean>0.0</mean>
+                                    <stddev>1.7e-2</stddev>
+                                    <bias_mean>0.1</bias_mean>
+                                    <bias_stddev>0.001</bias_stddev>
+                                </noise>
+                            </z>
+                        </linear_acceleration>
+                    </imu>
+                </sensor>
+            </gazebo>
+        </xacro:if>
+
+        <xacro:unless value="${sim_mode}">
+            <ros2_control name="ElkapodLegsSystemHardware" type="system">
+                <hardware>
+                    <plugin>elkapod_description/ElkapodLegsSystemHardware</plugin>
+                    <param name="uart_device">/dev/ttyAMA1</param>
+                    <param name="uart_baudrate">1152000</param>
+                    <param name="uart_timeout_ms">10</param>
+
+                    <param name="spi_bus">0</param>
+                    <param name="spi_cs">0</param>
+                    <param name="spi_mode">2</param>
+                    <param name="spi_speed_hz">1000000</param>
+                </hardware> 
+
+                <xacro:joint_interface name="leg1_J1"/>
+                <xacro:joint_interface name="leg1_J2"/>
+                <xacro:joint_interface name="leg1_J3"/>
+                
+                <xacro:joint_interface name="leg3_J1"/>
+                <xacro:joint_interface name="leg3_J2"/>
+                <xacro:joint_interface name="leg3_J3"/>
+                
+                <xacro:joint_interface name="leg5_J1"/>
+                <xacro:joint_interface name="leg5_J2"/>
+                <xacro:joint_interface name="leg5_J3"/>
+                
+                
+                <xacro:joint_interface name="leg2_J1"/>
+                <xacro:joint_interface name="leg2_J2"/>
+                <xacro:joint_interface name="leg2_J3"/>
+                
+                <xacro:joint_interface name="leg4_J1"/>
+                <xacro:joint_interface name="leg4_J2"/>
+                <xacro:joint_interface name="leg4_J3"/>
+                
+                <xacro:joint_interface name="leg6_J1"/>
+                <xacro:joint_interface name="leg6_J2"/>
+                <xacro:joint_interface name="leg6_J3"/>
+
+                <!-- Sensors -->
+                <sensor name="imu_sensor" type="imu">
+                    <param name="frame_id">imu_link</param>
+                    <param name="update_rate">50.0</param>
+                    <state_interface name="orientation.x"/>
+                    <state_interface name="orientation.y"/>
+                    <state_interface name="orientation.z"/>
+                    <state_interface name="orientation.w"/>
+                    <state_interface name="angular_velocity.x"/>
+                    <state_interface name="angular_velocity.y"/>
+                    <state_interface name="angular_velocity.z"/>
+                    <state_interface name="linear_acceleration.x"/>
+                    <state_interface name="linear_acceleration.y"/>
+                    <state_interface name="linear_acceleration.z"/>
+                </sensor>
+
+            </ros2_control>
+        </xacro:unless>
+    </xacro:macro>
+</robot>
