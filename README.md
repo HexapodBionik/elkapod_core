@@ -21,7 +21,7 @@ For installation and workspace setup please follow the steps from the [elkapod_s
 After building and sourcing run the following command
 
 ```bash
-ros2 launch elkapod_core_bringup elkapod_core_bringup.launch.py
+ros2 launch elkapod_core_bringup elkapod_core_bringup_sim.launch.py
 ```
 
 then when you see that the entire motion stack has successfully started like this
