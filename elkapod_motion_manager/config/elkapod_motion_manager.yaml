@@ -35,5 +35,5 @@ elkapod_motion_manager:
       leg_spacing_waypoint: 0.25
 
     trajectory:
-      frequency_hz: 20.0
+      frequency_hz: 100.0
     

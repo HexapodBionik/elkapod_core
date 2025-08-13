@@ -46,8 +46,12 @@ ElkapodMotionManager::ElkapodMotionManager() : Node("elkapod_motion_manager") {
 
   this->leg_positions_pub_ =
       this->create_publisher<std_msgs::msg::Float64MultiArray>("/elkapod_leg_positions", 10);
+
+   std::chrono::duration<float> period_s{1.0f / trajectory_freq_hz};
+    auto period_ms = duration_cast<std::chrono::milliseconds>(period_s);
+
   this->timer_ =
-      this->create_wall_timer(50ms, std::bind(&ElkapodMotionManager::legControlCallback, this));
+      this->create_wall_timer(period_ms, std::bind(&ElkapodMotionManager::legControlCallback, this));
   this->state_ = State::INIT;
 
   this->planner = LinearLegPlanner();
