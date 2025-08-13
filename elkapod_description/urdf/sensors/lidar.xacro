@@ -29,17 +29,25 @@
         <axis xyz="0 0 0" />
     </joint>
 
+    <link name="lidar_optical"></link>
 
-    <gazebo reference="lidar_base_footprint">
-        <sensor name="lidar" type="gpu_lidar">lea
+    <joint name="lidar_base_optical_fixed" type="fixed">
+        <origin xyz="0 0 0.04534" rpy="0 0 0" />
+        <parent link="lidar_base_footprint" />
+        <child link="lidar_optical" />
+        <axis xyz="0 0 0" />
+    </joint>
+
+    <gazebo reference="lidar_optical">
+        <sensor name="lidar" type="gpu_lidar">
             <always_on>true</always_on>
-            <update_rate>5</update_rate>
+            <update_rate>2</update_rate>
             <visualize>true</visualize>
             <topic>lidar_data</topic>
             <lidar>
                 <scan>
                     <horizontal>
-                        <samples>90</samples>
+                        <samples>45</samples>
                         <resolution>1</resolution>
                         <min_angle>-3.14</min_angle>
                         <max_angle>3.14</max_angle>
@@ -57,6 +65,7 @@
                     <resolution>0.005</resolution>
                 </range>
             </lidar>
+            <gz_frame_id>lidar_optical</gz_frame_id>
         </sensor>
     </gazebo>
 </robot>
