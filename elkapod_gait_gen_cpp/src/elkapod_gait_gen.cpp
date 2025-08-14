@@ -24,8 +24,8 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
 
   base_height_ = this->declare_parameter<double>("../common.base_height.default", 0.17);
   base_height_min_ = this->declare_parameter<double>("../common.base_height.min", 0.12);
-  base_height_max_ = this->declare_parameter<double>("../common.base_height.man", 0.22);
-  set_base_height_ = this->declare_parameter<double>("../common.base_height.defaul", 0.17);
+  base_height_max_ = this->declare_parameter<double>("../common.base_height.max", 0.22);
+  set_base_height_ = base_height_;
 
   // Subscriptions
   velocity_sub_ = this->create_subscription<VelCmd>(
@@ -54,7 +54,7 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
                                      std::placeholders::_1, std::placeholders::_2));
 
   leg_clock_timer_ =
-      this->create_wall_timer(std::chrono::duration<double>(1.0 / trajectory_freq_hz),
+      this->create_timer(std::chrono::duration<double>(1.0 / trajectory_freq_hz),
                               std::bind(&ElkapodGaitGen::legClockCallback, this));
   leg_clock_timer_->cancel();
   base_traj_ = std::make_unique<ElkapodLegPath>(step_length_, step_height_);
