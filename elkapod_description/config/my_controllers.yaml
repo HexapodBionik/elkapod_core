@@ -5,6 +5,8 @@ controller_manager:
     hardware_components_initial_state:
       shutdown_on_initial_state_failure: true
 
+    enforce_command_limits: true
+
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
 
