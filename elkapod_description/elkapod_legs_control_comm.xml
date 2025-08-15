@@ -1,0 +1,9 @@
+<library path="elkapod_legs_control_comm">
+  <class name="elkapod_description/ElkapodLegsSystemHardware"
+         type="elkapod_legs_system::ElkapodLegsSystemHardware"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      TODO Complete the description
+    </description>
+  </class>
+</library>
