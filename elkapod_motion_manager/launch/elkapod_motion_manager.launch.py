@@ -15,13 +15,13 @@ def generate_launch_description():
 
 
 
-    control_node = Node(
-        package="elkapod_kinematics",
-        executable="elkapod_ik",
-        parameters=[{"config_path": leg_config}, {'use_sim_time': use_sim_time}],
-        output='screen',
-        emulate_tty=True
-    )
+    # control_node = Node(
+    #     package="elkapod_kinematics",
+    #     executable="elkapod_ik",
+    #     parameters=[{"config_path": leg_config}, {'use_sim_time': use_sim_time}],
+    #     output='screen',
+    #     emulate_tty=True
+    # )
 
     gait_node = Node(
         package="elkapod_gait_gen_cpp",
@@ -40,7 +40,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        control_node,
+        # control_node,
         gait_node,
         motion_manager
 

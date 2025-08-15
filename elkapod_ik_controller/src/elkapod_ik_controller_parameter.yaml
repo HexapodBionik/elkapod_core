@@ -1,0 +1,9 @@
+elkapod_ik_controller:
+  joints: {
+    type: string_array,
+    default_value: [],
+    description: "",
+    validation: {
+      not_empty<>: []
+    }
+  }

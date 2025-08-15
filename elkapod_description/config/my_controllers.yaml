@@ -10,39 +10,58 @@ controller_manager:
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
 
-    joint_position_controller:
-      type: position_controllers/JointGroupPositionController
+    elkapod_ik_controller:
+      type: elkapod_ik_controller/ElkapodIKController
+
+    passthrough_controller:          
+      type: passthrough_controller/PassthroughController
 
     imu_broadcaster:
       type: imu_sensor_broadcaster/IMUSensorBroadcaster
 
-joint_position_controller:
+elkapod_ik_controller:
   ros__parameters:
-    publish_rate: 50
-    type: position_controllers/JointGroupPositionController
     joints:
-      - leg1_J1
-      - leg1_J2
-      - leg1_J3
-      - leg2_J1
-      - leg2_J2
-      - leg2_J3
-      - leg3_J1
-      - leg3_J2
-      - leg3_J3
-      - leg4_J1
-      - leg4_J2
-      - leg4_J3
-      - leg5_J1
-      - leg5_J2
-      - leg5_J3
-      - leg6_J1
-      - leg6_J2
-      - leg6_J3
-    command_interfaces:
-      - position
-    state_interfaces:
-      - position
+      - passthrough_controller/leg1_J1
+      - passthrough_controller/leg1_J2
+      - passthrough_controller/leg1_J3
+      - passthrough_controller/leg2_J1
+      - passthrough_controller/leg2_J2
+      - passthrough_controller/leg2_J3
+      - passthrough_controller/leg3_J1
+      - passthrough_controller/leg3_J2
+      - passthrough_controller/leg3_J3
+      - passthrough_controller/leg4_J1
+      - passthrough_controller/leg4_J2
+      - passthrough_controller/leg4_J3
+      - passthrough_controller/leg5_J1
+      - passthrough_controller/leg5_J2
+      - passthrough_controller/leg5_J3
+      - passthrough_controller/leg6_J1
+      - passthrough_controller/leg6_J2
+      - passthrough_controller/leg6_J3
+
+passthrough_controller:
+  ros__parameters:
+    interfaces:
+      - leg1_J1/position
+      - leg1_J2/position
+      - leg1_J3/position
+      - leg2_J1/position
+      - leg2_J2/position
+      - leg2_J3/position
+      - leg3_J1/position
+      - leg3_J2/position
+      - leg3_J3/position
+      - leg4_J1/position
+      - leg4_J2/position
+      - leg4_J3/position
+      - leg5_J1/position
+      - leg5_J2/position
+      - leg5_J3/position
+      - leg6_J1/position
+      - leg6_J2/position
+      - leg6_J3/position
 
 imu_broadcaster:
   ros__parameters:

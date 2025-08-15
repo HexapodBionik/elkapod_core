@@ -1,0 +1,9 @@
+<library path="elkapod_ik_controller">
+  <class name="elkapod_ik_controller/ElkapodIKController"
+         type="elkapod_ik_controller::ElkapodIKController"
+         base_class_type="controller_interface::ChainableControllerInterface">
+    <description>
+      TODO Complete the description
+    </description>
+  </class>
+</library>

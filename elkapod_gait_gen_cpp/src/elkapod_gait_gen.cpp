@@ -41,7 +41,7 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
 
   // Publishers
   leg_signal_pub_ =
-      this->create_publisher<std_msgs::msg::Float64MultiArray>("/elkapod_leg_positions", 10);
+      this->create_publisher<std_msgs::msg::Float64MultiArray>("/elkapod_ik_controller/elkapod_leg_positions", 10);
   leg_phase_pub_ =
       this->create_publisher<std_msgs::msg::Float64MultiArray>("/leg_phase_signal", 10);
 
@@ -263,6 +263,12 @@ void ElkapodGaitGen::legClockCallback() {
     else
       base_height_ -= 0.005;
   }
+
+    std::string output = std::format("Cycle time: {:.3f}s Offsets:", cycle_time_);
+    for (size_t i = 0; i < leg_phase_shift_.size(); ++i) {
+        output += std::format(" {:.3f}/{:.3f}\t", leg_phase_shift_[i], phase_offset_[i]);
+    }
+    RCLCPP_INFO(get_logger(), output.c_str());
 
   for (int leg_nb = 0; leg_nb < 6; ++leg_nb) {
     Eigen::Vector3d p;
