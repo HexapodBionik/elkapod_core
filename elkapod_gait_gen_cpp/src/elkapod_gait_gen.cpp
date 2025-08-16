@@ -148,10 +148,6 @@ void ElkapodGaitGen::paramCallback(const FloatMsg::SharedPtr msg) {
 
 // Used only for setting new velocity commands
 void ElkapodGaitGen::velocityCallback(const VelCmd::SharedPtr msg) {
-  current_vel_[0] = msg->linear.x;
-  current_vel_[1] = msg->linear.y;
-  current_vel_[2] = msg->angular.z;
-
   received_vel_command_ = *msg;
 }
 
@@ -171,7 +167,7 @@ void ElkapodGaitGen::velocityClamp(Eigen::Vector2d& vel, double angular_vel){
     // TODO Informuj, że prędkość została przycięta
   }
 
-  // TODO angular velocity clamping
+  // TODO angular velocity clamping. This quite important cause now without clamping with angular vel > approx. 0.9 rad/s kinematics crashes.
 
 }
 void ElkapodGaitGen::updateVelocityCommand(){
@@ -191,25 +187,33 @@ void ElkapodGaitGen::updateVelocityCommand(){
 
     // TODO remove this mysterious 0.22 value and replace it with variable with
     // descriptive name
+    // TODO Validate step_length calculation and whether robot achieves given angular velocity from this step_length
+    // TODO Add EMA filter for angular velocity. This slow, smooth transistion working for linear part should also be implemented for angular part
     const double R = leg_spacing_ + 0.22;
-    cycle_time_ = step_length_ / ((1. - swing_percentage_) * R * fabs(angular_vel));
-    std::fill(leg_phase_shift_.begin(), leg_phase_shift_.end(), 0.);
-    changeGait(gait_type_);
+    step_length_ = cycle_time_ * ((1. - swing_percentage_) * R * fabs(angular_vel));
   }
   else{
     // EMA filter
     current_vel_command_ = current_vel_command_ + ema_filter_alfa_*(vel_command - current_vel_command_);
     current_base_direction_ = atan2(current_vel_command_[1], current_vel_command_[0]);
 
+    // TODO Angular velocity should be slowly decreased to zero when given zero angular velocity command, not rapidly
+    current_angular_velocity_ = 0;
+
     for (size_t i = 0; i < 6; ++i) {
       current_velocity_[i] = current_vel_command_;
     }
 
     current_vel_scalar_ = current_vel_command_.norm();
-    changeGait(gait_type_);
+    step_length_ = cycle_time_ * current_vel_scalar_ * (1 - swing_percentage_);
   }
 
-  if (is_close(current_vel_scalar_, 0.0, 1e-3) && state_ == State::WALKING) {
+  current_vel_[0] = current_vel_command_[0];
+  current_vel_[1] = current_vel_command_[1];
+  current_vel_[2] = angular_vel;
+
+  // TODO Going to IDLE state from walking takes too long. It should transition when velocity is less than deadzone.
+  if (current_vel_.isZero() && state_ == State::WALKING) {
     RCLCPP_INFO(this->get_logger(), "Going to IDLE state");
     state_ = State::IDLE;
   } else if (!current_vel_.isZero() && state_ == State::IDLE) {
@@ -218,7 +222,6 @@ void ElkapodGaitGen::updateVelocityCommand(){
     state_ = State::WALKING;
     std::fill(leg_phase_shift_.begin(), leg_phase_shift_.end(), 0.);
   }
-
 }
 
 void ElkapodGaitGen::changeGait(GaitType gait_type) {
@@ -260,7 +263,7 @@ void ElkapodGaitGen::clockFunction(double t, double T, double phase_shift, int l
 void ElkapodGaitGen::updateAndWriteCommands() {
   updateVelocityCommand();
 
-  step_length_ = cycle_time_ * current_vel_scalar_ * (1 - swing_percentage_);
+
   base_traj_->step_length_ = step_length_;
   base_traj_->init();
 
@@ -282,7 +285,7 @@ void ElkapodGaitGen::updateAndWriteCommands() {
     }
   }
 
-  RCLCPP_INFO(get_logger(), std::format("Current velocity: {:.4f} m/s", current_vel_scalar_).c_str());
+  RCLCPP_INFO(get_logger(), std::format("Current velocity: {:.4f} m/s\tAngular: {:.4f} rad/s", current_vel_scalar_, current_angular_velocity_).c_str());
 
   leg_phase_pub_->publish(msg_phase);
 
