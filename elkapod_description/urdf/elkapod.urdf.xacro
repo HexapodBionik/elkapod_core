@@ -24,6 +24,13 @@
   <xacro:leg_right leg_name="leg4" parent="base_link" pos_x="0.0138" pos_y="-0.1643" pos_z="-0.03" roll="0" pitch="0" yaw="-1.57"/>
   <xacro:leg_right leg_name="leg6" parent="base_link" pos_x="-0.15903" pos_y="-0.15038" pos_z="-0.03" roll="0" pitch="0" yaw="-2.384143643587"/>
 
+  <!-- Sensors -->
+  <xacro:include filename="$(find elkapod_description)/urdf/sensors/lidar.xacro" />
+  <xacro:include filename="$(find elkapod_description)/urdf/sensors/depth_camera.xacro" />
+
+  <xacro:elkapod_sensors_lidar sim_mode="$(arg sim_mode)"/>
+  <xacro:elkapod_sensors_fron_camera sim_mode="$(arg sim_mode)"/>
+  
   <!-- ros2_control -->
   <xacro:include filename="$(find elkapod_description)/ros2_control/elkapod.ros2_control.xacro" />
   <xacro:elkapod_ros2_control sim_mode="$(arg sim_mode)"/>

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <link name="lidar_base_footprint">
+        <inertial>
+            <origin xyz="-0.0001901 6.2469E-07 0.027552" rpy="0 0 0" />
+            <mass value="0.3" />
+            <inertia ixx="4.5255E-05" ixy="1.0003E-10" ixz="-1.6838E-08" iyy="4.5067E-05"
+                iyz="1.7462E-09" izz="6.1715E-05" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="package://elkapod_description/meshes/body/lidar_base_footprint.STL" />
+            </geometry>
+            <material name="lidar_black" />
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="package://elkapod_description/meshes/body/lidar_base_footprint.STL" />
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="lidar_base_footprint_fixed" type="fixed">
+        <origin xyz="0.042 0.080917 -0.014678" rpy="0 -1.309 -1.5708" />
+        <parent link="control_module" />
+        <child link="lidar_base_footprint" />
+        <axis xyz="0 0 0" />
+    </joint>
+
+    <link name="lidar_optical"></link>
+
+    <joint name="lidar_base_optical_fixed" type="fixed">
+        <origin xyz="0 0 0.04534" rpy="0 0 0" />
+        <parent link="lidar_base_footprint" />
+        <child link="lidar_optical" />
+        <axis xyz="0 0 0" />
+    </joint>
+
+    <xacro:macro name="elkapod_sensors_lidar" params="sim_mode:=^|false">
+        <xacro:if value="${sim_mode}">
+            <gazebo reference="lidar_optical">
+                <sensor name="lidar" type="gpu_lidar">
+                    <always_on>true</always_on>
+                    <!-- Downgraded values, so your GPU doesn't melt -->
+                    <!-- <update_rate>10</update_rate> -->
+                    <update_rate>3</update_rate>
+
+                    <visualize>true</visualize>
+                    <topic>lidar_data</topic>
+                    <lidar>
+                        <scan>
+                            <horizontal>
+                                <!-- Downgraded values, so your GPU doesn't melt -->
+                                <!-- <samples>900</samples> -->
+                                <samples>90</samples>
+
+                                <resolution>1</resolution>
+                                <min_angle>-3.14</min_angle>
+                                <max_angle>3.14</max_angle>
+                            </horizontal>
+                            <vertical>
+                                <!-- Downgraded values, so your GPU doesn't melt -->
+                                <samples>25</samples>
+                                <!-- <samples>95</samples> -->
+
+                                <resolution>1</resolution>
+                                <min_angle>0</min_angle>
+                                <max_angle>1.57079633</max_angle>
+                            </vertical>
+                        </scan>
+                        <range>
+                            <min>0.1</min>
+                            <max>30</max>
+                            <resolution>0.01</resolution>
+                        </range>
+                    </lidar>
+                    <gz_frame_id>lidar_optical</gz_frame_id>
+                </sensor>
+            </gazebo>
+        </xacro:if>
+    </xacro:macro>
+</robot>
