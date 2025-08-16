@@ -50,11 +50,15 @@ class ElkapodGaitGen : public rclcpp::Node {
   void paramCallback(const FloatMsg::SharedPtr msg);
   void gaitTypeCallback(const IntMsg::SharedPtr msg);
   void velocityCallback(const VelCmd::SharedPtr msg);
-  void legClockCallback();
 
   // Gait logic
   void changeGait(GaitType gait_type);
   void clockFunction(double t, double T, double phase_shift, int leg_nb);
+  void updateVelocityCommand();
+  void updateAndWriteCommands();
+
+  void velocityDeadzone(Eigen::Vector2d& linear_vel, double angular_vel);
+  void velocityClamp(Eigen::Vector2d& linear_vel, double angular_vel);
 
   // ROS interfaces
   rclcpp::TimerBase::SharedPtr leg_clock_timer_;
@@ -72,9 +76,20 @@ class ElkapodGaitGen : public rclcpp::Node {
   double set_base_height_, cycle_time_, swing_percentage_;
   double current_vel_scalar_, current_angular_velocity_, current_base_direction_;
 
+
   double base_height_;
   double base_height_min_;
   double base_height_max_;
+
+  VelCmd received_vel_command_;
+  Eigen::Vector2d current_vel_command_;
+
+  // Temporary parameters
+  const double deadzone_radial_d_ = 0.03;
+  const double max_vel_ = 0.4;
+  const double ema_filter_tau_ = 0.15;
+  const double ema_filter_dt_ = 0.02;
+  double ema_filter_alfa_ = 0.0;
 
   rclcpp::Time init_time_;
   Eigen::Vector3d current_vel_;

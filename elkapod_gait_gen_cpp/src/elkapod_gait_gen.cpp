@@ -55,9 +55,9 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
 
   leg_clock_timer_ =
       this->create_timer(std::chrono::duration<double>(1.0 / trajectory_freq_hz),
-                              std::bind(&ElkapodGaitGen::legClockCallback, this));
+                              std::bind(&ElkapodGaitGen::updateAndWriteCommands, this));
   leg_clock_timer_->cancel();
-  base_traj_ = std::make_unique<ElkapodLegPath>(step_length_, step_height_);
+  base_traj_ = std::make_unique<ElkapodLegPath>(step_length_, 0.02);
 
   base_link_rotations_ = {0.63973287, -0.63973287, M_PI / 2., -M_PI / 2., 2.38414364, -2.38414364};
   base_link_translations_ = {{0.17841, 0.13276, -0.03},  {0.17841, -0.13276, -0.03},
@@ -73,6 +73,8 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   current_vel_scalar_ = 0.;
   current_angular_velocity_ = 0.;
   current_base_direction_ = 0.;
+  cycle_time_ = 1.0;
+  ema_filter_alfa_ = 1. - std::exp(-ema_filter_dt_/ema_filter_tau_);
 
   current_velocity_ = std::vector<Eigen::Vector2d>(6, {0.0, 0.0});
   last_leg_position_ = std::vector<Eigen::Vector3d>(6, {0.0, 0.0, 0.0});
@@ -144,48 +146,70 @@ void ElkapodGaitGen::paramCallback(const FloatMsg::SharedPtr msg) {
   }
 }
 
+// Used only for setting new velocity commands
 void ElkapodGaitGen::velocityCallback(const VelCmd::SharedPtr msg) {
   current_vel_[0] = msg->linear.x;
   current_vel_[1] = msg->linear.y;
   current_vel_[2] = msg->angular.z;
 
-  const double vel = Eigen::Vector2d({msg->linear.x, msg->linear.y}).norm();
-  const double direction = atan2(msg->linear.y, msg->linear.x);
+  received_vel_command_ = *msg;
+}
 
-  if (vel != 0.0 && (vel != current_vel_scalar_ || direction != current_base_direction_)) {
-    const double T = step_length_ / vel / (1. - swing_percentage_);
+void ElkapodGaitGen::velocityDeadzone(Eigen::Vector2d& vel, double angular_vel){
+  const double linear_vel = vel.norm();
+  if(linear_vel < deadzone_radial_d_){
+    vel.setZero();
+  }
 
-    if (T * swing_percentage_ < min_swing_time_sec_) {
-      RCLCPP_WARN(this->get_logger(), "Provided velocity command exceeds maximum velocity!");
-      return;
-    } else {
-      RCLCPP_INFO(this->get_logger(), "New velocity command received!");
-      current_base_direction_ = direction;
-      for (size_t i = 0; i < 6; ++i) {
-        current_velocity_[i] = {msg->linear.x, msg->linear.y};
-      }
-      current_vel_scalar_ = vel;
-      current_angular_velocity_ = 0.;
-      cycle_time_ = T;
-      std::fill(leg_phase_shift_.begin(), leg_phase_shift_.end(), 0.);
-      changeGait(gait_type_);
-    }
-  } else if (msg->angular.z != 0.0 && !is_close(current_angular_velocity_, msg->angular.z)) {
+  // TODO angular velocity deadzone
+}
+
+void ElkapodGaitGen::velocityClamp(Eigen::Vector2d& vel, double angular_vel){
+  const double linear_vel = vel.norm();
+  if(linear_vel > max_vel_){
+    vel *= max_vel_ / linear_vel;
+    // TODO Informuj, że prędkość została przycięta
+  }
+
+  // TODO angular velocity clamping
+
+}
+void ElkapodGaitGen::updateVelocityCommand(){
+  Eigen::Vector2d vel_command = Eigen::Vector2d({received_vel_command_.linear.x, received_vel_command_.linear.y});
+  double angular_vel = received_vel_command_.angular.z;
+
+  velocityDeadzone(vel_command, angular_vel);
+  velocityClamp(vel_command, angular_vel);
+
+
+  if(!is_close(angular_vel, 0.0, 1e-3)){
     for (size_t i = 0; i < 6; ++i) {
       current_velocity_[i] = {0., 0.};
     }
-    current_vel_scalar_ = vel;
-    current_angular_velocity_ = msg->angular.z;
+
+    current_angular_velocity_ = angular_vel;
 
     // TODO remove this mysterious 0.22 value and replace it with variable with
     // descriptive name
     const double R = leg_spacing_ + 0.22;
-    cycle_time_ = step_length_ / ((1. - swing_percentage_) * R * fabs(msg->angular.z));
+    cycle_time_ = step_length_ / ((1. - swing_percentage_) * R * fabs(angular_vel));
     std::fill(leg_phase_shift_.begin(), leg_phase_shift_.end(), 0.);
     changeGait(gait_type_);
   }
+  else{
+    // EMA filter
+    current_vel_command_ = current_vel_command_ + ema_filter_alfa_*(vel_command - current_vel_command_);
+    current_base_direction_ = atan2(current_vel_command_[1], current_vel_command_[0]);
 
-  if (current_vel_.isZero() && state_ == State::WALKING) {
+    for (size_t i = 0; i < 6; ++i) {
+      current_velocity_[i] = current_vel_command_;
+    }
+
+    current_vel_scalar_ = current_vel_command_.norm();
+    changeGait(gait_type_);
+  }
+
+  if (is_close(current_vel_scalar_, 0.0, 1e-3) && state_ == State::WALKING) {
     RCLCPP_INFO(this->get_logger(), "Going to IDLE state");
     state_ = State::IDLE;
   } else if (!current_vel_.isZero() && state_ == State::IDLE) {
@@ -194,6 +218,7 @@ void ElkapodGaitGen::velocityCallback(const VelCmd::SharedPtr msg) {
     state_ = State::WALKING;
     std::fill(leg_phase_shift_.begin(), leg_phase_shift_.end(), 0.);
   }
+
 }
 
 void ElkapodGaitGen::changeGait(GaitType gait_type) {
@@ -232,7 +257,13 @@ void ElkapodGaitGen::clockFunction(double t, double T, double phase_shift, int l
   }
 }
 
-void ElkapodGaitGen::legClockCallback() {
+void ElkapodGaitGen::updateAndWriteCommands() {
+  updateVelocityCommand();
+
+  step_length_ = cycle_time_ * current_vel_scalar_ * (1 - swing_percentage_);
+  base_traj_->step_length_ = step_length_;
+  base_traj_->init();
+
   auto msg_phase = FloatArrayMsg();
   msg_phase.data.resize(6, 0.0);
 
@@ -251,24 +282,20 @@ void ElkapodGaitGen::legClockCallback() {
     }
   }
 
+  RCLCPP_INFO(get_logger(), std::format("Current velocity: {:.4f} m/s", current_vel_scalar_).c_str());
+
   leg_phase_pub_->publish(msg_phase);
 
   auto msg3 = FloatArrayMsg();
   msg3.data.resize(18, 0.0);
 
-  // Base height smoothing
-  if (!is_close(base_height_, set_base_height_, 1e-3)) {
-    if (base_height_ < set_base_height_)
-      base_height_ += 0.005;
-    else
-      base_height_ -= 0.005;
-  }
-
-    std::string output = std::format("Cycle time: {:.3f}s Offsets:", cycle_time_);
-    for (size_t i = 0; i < leg_phase_shift_.size(); ++i) {
-        output += std::format(" {:.3f}/{:.3f}\t", leg_phase_shift_[i], phase_offset_[i]);
-    }
-    RCLCPP_INFO(get_logger(), output.c_str());
+  // TODO Base height regulation commented for now, to be fixed
+  // if (!is_close(base_height_, set_base_height_, 1e-3)) {
+  //   if (base_height_ < set_base_height_)
+  //     base_height_ += 0.005;
+  //   else
+  //     base_height_ -= 0.005;
+  // }
 
   for (int leg_nb = 0; leg_nb < 6; ++leg_nb) {
     Eigen::Vector3d p;
