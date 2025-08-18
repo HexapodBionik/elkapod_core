@@ -20,10 +20,10 @@ void ElkapodLegPath::init() {
   x_func_swing_ = [this](double s) { return -step_length_ / 2.0 + step_length_ * s; };
   y_func_swing_ = []([[maybe_unused]] double s) { return 0.0; };
 
-  z_func_swing_ = [this, a](double s) { 
-              const double x = -step_length_ / 2.0 + step_length_ * s;
-              return a*(x - step_length_/2)*(x + step_length_ / 2);
-            };
+  z_func_swing_ = [this, a](double s) {
+    const double x = -step_length_ / 2.0 + step_length_ * s;
+    return a * (x - step_length_ / 2) * (x + step_length_ / 2);
+  };
 }
 
 Eigen::Vector3d ElkapodLegPath::operator()(double s, double phase) const {

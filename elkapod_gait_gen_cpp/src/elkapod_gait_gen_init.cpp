@@ -5,7 +5,7 @@
 int main(int argc, char* argv[]) {
   rclcpp::init(argc, argv);
 
-  auto my_node = std::make_shared<ElkapodGaitGen>();
+  auto my_node = std::make_shared<elkapod_gait_gen::ElkapodGaitGen>();
 
   rclcpp::spin(my_node);
   rclcpp::shutdown();

@@ -10,7 +10,6 @@
 
 #include <chrono>
 #include <eigen3/Eigen/Eigen>
-#include <functional>
 #include <geometry_msgs/msg/twist.hpp>
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
@@ -19,16 +18,11 @@
 #include <std_msgs/msg/int32.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <string>
-#include <mutex>
+#include <unordered_map>
+
 #include "leg_path.hpp"
 
-using namespace std::chrono_literals;
-
-enum class State { IDLE = 0, WALKING = 1, DISABLED = 2 };
-
-enum class GaitType { WAVE = 0, TRIPOID = 1 };
-
-using namespace std::chrono_literals;
+namespace elkapod_gait_gen {
 using ServiceTriggerSrv = std_srvs::srv::Trigger;
 using ServiceTriggerSrv_Req = std::shared_ptr<std_srvs::srv::Trigger_Request>;
 using ServiceTriggerSrv_Resp = std::shared_ptr<std_srvs::srv::Trigger_Response>;
@@ -42,6 +36,11 @@ class ElkapodGaitGen : public rclcpp::Node {
   ElkapodGaitGen();
 
  private:
+  enum class State { IDLE = 0, WALKING = 1, DISABLED = 2 };
+  enum class GaitType { WAVE = 0, TRIPOID = 1 };
+  inline static constexpr size_t kLegsNb = 6;
+  inline static constexpr size_t kJointsNum = 18;
+
   void init(), deinit();
 
   // Callbacks
@@ -52,13 +51,13 @@ class ElkapodGaitGen : public rclcpp::Node {
   void velocityCallback(const VelCmd::SharedPtr msg);
 
   // Gait logic
-  void changeGait(GaitType gait_type);
+  void changeGait();
   void clockFunction(double t, double T, double phase_shift, int leg_nb);
   void updateVelocityCommand();
   void updateAndWriteCommands();
 
-  void velocityDeadzone(Eigen::Vector2d& linear_vel, double angular_vel);
-  void velocityClamp(Eigen::Vector2d& linear_vel, double angular_vel);
+  void velocityDeadzone(Eigen::Vector2d& linear_vel, double& angular_vel);
+  void velocityClamp(Eigen::Vector2d& linear_vel, double& angular_vel);
 
   // ROS interfaces
   rclcpp::TimerBase::SharedPtr leg_clock_timer_;
@@ -73,9 +72,8 @@ class ElkapodGaitGen : public rclcpp::Node {
   GaitType gait_type_ = GaitType::TRIPOID;
   double trajectory_freq_hz, min_swing_time_sec_;
   double leg_spacing_, step_length_, step_height_, phase_lag_;
-  double set_base_height_, cycle_time_, swing_percentage_;
-  double current_vel_scalar_, current_angular_velocity_, current_base_direction_;
-
+  double set_base_height_, cycle_time_, duty_factor_;
+  double current_vel_scalar_, current_angular_velocity_;
 
   double base_height_;
   double base_height_min_;
@@ -84,23 +82,33 @@ class ElkapodGaitGen : public rclcpp::Node {
   VelCmd received_vel_command_;
   Eigen::Vector2d current_vel_command_;
 
+  std::unordered_map<GaitType, double> max_vel_dict_ = {{GaitType::TRIPOID, 0.4},
+                                                        {GaitType::WAVE, 0.05}};
+
+  // TODO to be validated later
+  std::unordered_map<GaitType, double> max_angular_vel_dict_ = {{GaitType::TRIPOID, 0.9},
+                                                                {GaitType::WAVE, 0.9}};
+
+  std::unordered_map<GaitType, double> cycle_time_dict_ = {{GaitType::TRIPOID, 1.2},
+                                                                {GaitType::WAVE, 4.0}};                                                                
+
+  double max_vel_ = 0;
+  double max_angular_vel_ = 0;
+
   // Temporary parameters
-  const double deadzone_radial_d_ = 0.03;
-  const double max_vel_ = 0.4;
-  const double ema_filter_tau_ = 0.15;
-  const double ema_filter_dt_ = 0.02;
+  const double deadzone_d_ = 0.003;
   double ema_filter_alfa_ = 0.0;
 
   rclcpp::Time init_time_;
-  Eigen::Vector3d current_vel_;
   std::vector<Eigen::Vector2d> current_velocity_;
   std::vector<Eigen::Vector3d> last_leg_position_;
   std::vector<double> phase_offset_, leg_phase_shift_;
   std::vector<int> leg_phase_;
   std::vector<double> leg_clock_;
-  std::array<double, 6> base_link_rotations_;
+  std::array<double, kLegsNb> base_link_rotations_;
   std::vector<Eigen::Vector3d> base_link_translations_;
   std::unique_ptr<ElkapodLegPath> base_traj_;
 };
+};  // namespace elkapod_gait_gen
 
 #endif  // ELKAPOD_GAIT_GEN_HPP

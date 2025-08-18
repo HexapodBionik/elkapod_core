@@ -44,11 +44,11 @@ ElkapodMotionManager::ElkapodMotionManager() : Node("elkapod_motion_manager") {
   this->gait_disable_publisher_ =
       this->create_client<std_srvs::srv::Trigger>("/gait_gen_disable", 10, my_group_);
 
-  this->leg_positions_pub_ =
-      this->create_publisher<std_msgs::msg::Float64MultiArray>("/elkapod_ik_controller/elkapod_leg_positions", 10);
+  this->leg_positions_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
+      "/elkapod_ik_controller/elkapod_leg_positions", 10);
 
-   std::chrono::duration<float> period_s{1.0f / trajectory_freq_hz};
-    auto period_ms = duration_cast<std::chrono::milliseconds>(period_s);
+  std::chrono::duration<float> period_s{1.0f / trajectory_freq_hz};
+  auto period_ms = duration_cast<std::chrono::milliseconds>(period_s);
 
   this->timer_ =
       this->create_timer(period_ms, std::bind(&ElkapodMotionManager::legControlCallback, this));
