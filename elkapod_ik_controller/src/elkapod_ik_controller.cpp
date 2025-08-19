@@ -52,7 +52,7 @@ InterfaceConfiguration ElkapodIKController::state_interface_configuration() cons
 }
 
 controller_interface::return_type ElkapodIKController::update_reference_from_subscribers(
-    const rclcpp::Time &time, const rclcpp::Duration & /*period*/) {
+    const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/) {
   auto logger = get_node()->get_logger();
 
   auto current_ref_op = received_position_msg_.try_get();
@@ -65,7 +65,7 @@ controller_interface::return_type ElkapodIKController::update_reference_from_sub
 }
 
 controller_interface::return_type ElkapodIKController::update_and_write_commands(
-    const rclcpp::Time &time, const rclcpp::Duration &period) {
+    const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/) {
   auto logger = get_node()->get_logger();
   if (command_msg_.data.size() < 18) {
     return controller_interface::return_type::OK;
@@ -89,7 +89,7 @@ controller_interface::return_type ElkapodIKController::update_and_write_commands
   //   reference_interfaces_.assign(18, 0.0);
   // }
   for (size_t i = 0; i < 18; ++i) {
-    command_interfaces_[i].set_value(output[i]);
+    (void)command_interfaces_[i].set_value(output[i]);
   }
 
   return controller_interface::return_type::OK;
@@ -147,7 +147,7 @@ controller_interface::CallbackReturn ElkapodIKController::on_error(
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-bool ElkapodIKController::reset() {}
+bool ElkapodIKController::reset() { return true; }
 
 void ElkapodIKController::reset_buffers() {}
 
