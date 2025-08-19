@@ -16,7 +16,7 @@ elkapog_gait_gen_cpp:
 
     gait:
       min_swing_time_sec: 0.42
-      default_phase_lag_sec: 0.03
+      default_phase_lag_sec: 0.09
 
       step:
         length:             # tutaj też min będzie można lepiej dobrać

@@ -194,9 +194,9 @@ void ElkapodMotionManager::initPlanning() {
   const double movement_time_s = 10;
 
   std::array<Trajectory, 6> step_trajs;
-  for (int i = 0; i < 6; ++i) {
-    auto traj = hop_planner.plan({max_reach_x, 0.0, 0.0}, {leg_spacing_waypoint, 0.0, 0.0},
-                                 movement_time_s, trajectory_freq_hz);
+  auto traj = hop_planner.plan({max_reach_x, 0.0, 0.0}, {leg_spacing_waypoint, 0.0, 0.0},
+                               movement_time_s, trajectory_freq_hz);
+  for (size_t i = 0; i < 6; ++i) {
     step_trajs[i] = traj;
   }
   trajs.push_back(step_trajs);
@@ -205,23 +205,28 @@ void ElkapodMotionManager::initPlanning() {
 void ElkapodMotionManager::standUpPlanning() {
   std::array<Trajectory, 6> step_trajs;
   // First step - lift up a little bit
-  for (int i = 0; i < 6; ++i) {
-    auto traj =
-        planner.plan({leg_spacing_waypoint, 0.0, 0.0},
-                     {leg_spacing_waypoint, 0.0, -base_height_waypoint}, 10, trajectory_freq_hz);
+  auto traj =
+      planner.plan({leg_spacing_waypoint, 0.0, 0.0},
+                   {leg_spacing_waypoint, 0.0, -base_height_waypoint}, 10, trajectory_freq_hz);
+  for (size_t i = 0; i < 6; ++i) {
     step_trajs[i] = traj;
   }
   trajs.push_back(step_trajs);
 
   // Second step - hop each leg one at a time
-  for (int i = 0; i < 6; ++i) {
-    for (int j = 0; j < 6; ++j) {
-      if (i == j) {
+  std::array<size_t, 6> legs_move_order = {0, 5, 2, 1, 4, 3};
+  std::array<bool, 6> leg_moved = {false};
+
+  for (size_t i = 0; i < 6; ++i) {
+    for (size_t j = 0; j < 6; ++j) {
+      if (legs_move_order[i] == j && !leg_moved[j]) {
         auto traj =
             hop_planner.plan({leg_spacing_waypoint, 0.0, -base_height_waypoint},
                              {leg_spacing, 0.0, -base_height_waypoint}, 2, trajectory_freq_hz);
+
         step_trajs[j] = traj;
-      } else if (j < i) {
+        leg_moved[j] = true;
+      } else if (legs_move_order[i] != j && leg_moved[j]) {
         auto traj = planner.plan({leg_spacing, 0.0, -base_height_waypoint},
                                  {leg_spacing, 0.0, -base_height_waypoint}, 2, trajectory_freq_hz);
         step_trajs[j] = traj;

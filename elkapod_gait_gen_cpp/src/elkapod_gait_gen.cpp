@@ -9,7 +9,6 @@ constexpr auto VEL_TOL = 1e-3;
 
 constexpr auto EMA_FILTER_TAU = 0.15;
 
-
 }  // namespace
 
 static bool is_close(double a, double b, double atol = 1e-8, double rtol = 1e-5) {
@@ -142,7 +141,11 @@ void ElkapodGaitGen::gaitTypeCallback(const IntMsg::SharedPtr msg) {
       changeGait();
       RCLCPP_INFO(this->get_logger(), "Gait set to WAVE");
     } else if (msg->data == 1) {
-      gait_type_ = GaitType::TRIPOID;
+      gait_type_ = GaitType::RIPPLE;
+      changeGait();
+      RCLCPP_INFO(this->get_logger(), "Gait set to RIPPLE");
+    } else if (msg->data == 2) {
+      gait_type_ = GaitType::TRIPOD;
       changeGait();
       RCLCPP_INFO(this->get_logger(), "Gait set to TRIPOD");
     }
@@ -249,15 +252,16 @@ void ElkapodGaitGen::changeGait() {
   max_angular_vel_ = max_angular_vel_dict_[gait_type_];
   cycle_time_ = cycle_time_dict_[gait_type_];
 
-  if (gait_type_ == GaitType::TRIPOID) {
-    duty_factor_ = 0.5;
-
+  if (gait_type_ == GaitType::TRIPOD) {
+    duty_factor_ = 1 / 2.;
     phase_offset_ = {0.0, cycle_time_ / 2., cycle_time_ / 2., 0.0, 0.0, cycle_time_ / 2.};
-  } else if (gait_type_ == GaitType::WAVE) {
-    duty_factor_ = 5 / 6.;
 
-    std::transform(phase_offset_.begin(), phase_offset_.end(), phase_offset_.begin(),
-                   [i = 0, this](double) mutable { return i++ * cycle_time_ / 6.0; });
+  } else if (gait_type_ == GaitType::RIPPLE || gait_type_ == GaitType::WAVE) {
+    phase_offset_.assign(6, 0.0);
+    std::array<int, 6> order = {0, 3, 4, 1, 2, 5};
+    for (size_t k = 0; k < 6; ++k) phase_offset_[order[k]] = k * cycle_time_ / 6.0;
+    if (gait_type_ == GaitType::WAVE) duty_factor_ = 5 / 6.;
+    if (gait_type_ == GaitType::RIPPLE) duty_factor_ = 4 / 6.;
   }
 }
 
