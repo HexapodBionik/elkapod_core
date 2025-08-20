@@ -153,13 +153,30 @@
       <mu2>10.0</mu2>
     </gazebo>
 
+    <gazebo reference="${leg_name}_FCP_joint">
+        <sensor name="${leg_name}_fsr" type="force_torque">
+          <always_on>true</always_on>
+          <update_rate>100</update_rate>
+          <visualize>true</visualize>
+          <topic>/legs/${leg_name}/fsr</topic>
+          <enable_metrics>true</enable_metrics>
+          <pose>0 0 0 0 0 0</pose>
+          <force_torque>
+            <frame>sensor</frame>
+            <measure_direction>child_to_parent</measure_direction>
+          </force_torque> 
+        </sensor>
+    </gazebo>
+
     
     <!-- Fixed Joint for FCP -->
-    <joint name="${leg_name}_FCP_joint" type="fixed">
+    <joint name="${leg_name}_FCP_joint" type="prismatic">
       <origin xyz="0.2135 0.0085747 0" rpy="0 0 -0.29403" />
       <parent link="${leg_name}_linkC" />
       <child link="${leg_name}_FCP" />
-      <axis xyz="0 0 0" />
+      <axis xyz="1 0 0" />
+      <limit effort="1000.0" lower="-0.0001" upper="0.0001" velocity="30"/>
+      <dynamics damping="10.0" friction="0.0"/>
     </joint>
   </xacro:macro>
 </robot>

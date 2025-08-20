@@ -305,7 +305,6 @@ void ElkapodGaitGen::updateAndWriteCommands() {
   } else {
     rclcpp::Time now = get_clock()->now();
     double elapsed_time_sec = (now - init_time_).nanoseconds() / 1e9;
-
     for (int leg_nb = 0; leg_nb < 6; ++leg_nb) {
       clockFunction(elapsed_time_sec, cycle_time_, phase_offset_[leg_nb], leg_nb);
       msg_phase.data[leg_nb] = leg_phase_[leg_nb];
@@ -328,11 +327,11 @@ void ElkapodGaitGen::updateAndWriteCommands() {
   //     base_height_ -= 0.005;
   // }
 
-  std::string output = std::format("Cycle time: {:.3f}s Offsets:", cycle_time_);
-  for (size_t i = 0; i < leg_phase_shift_.size(); ++i) {
-    output += std::format(" {:.3f}/{:.3f}\t", leg_phase_shift_[i], phase_offset_[i]);
-  }
-  RCLCPP_INFO(get_logger(), output.c_str());
+  // std::string output = std::format("Cycle time: {:.3f}s Offsets:", cycle_time_);
+  // for (size_t i = 0; i < leg_phase_shift_.size(); ++i) {
+  //   output += std::format(" {:.3f}/{:.3f}\t", leg_phase_shift_[i], phase_offset_[i]);
+  // }
+  // RCLCPP_INFO(get_logger(), output.c_str());
 
   for (size_t leg_nb = 0; leg_nb < kLegsNb; ++leg_nb) {
     Eigen::Vector3d p;
@@ -354,7 +353,7 @@ void ElkapodGaitGen::updateAndWriteCommands() {
 
     p = rotZ(-base_link_rotations_[leg_nb]) * p;
 
-    p += Eigen::Vector3d(leg_spacing_, 0.0, -base_height_);
+    p += Eigen::Vector3d(leg_spacing_, 0.0, -base_height_ - base_link_translations_[leg_nb][2]);
 
     double rot = base_link_rotations_[leg_nb];
     Eigen::Vector3d trans = base_link_translations_[leg_nb];

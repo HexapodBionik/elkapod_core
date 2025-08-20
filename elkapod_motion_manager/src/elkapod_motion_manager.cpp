@@ -260,6 +260,7 @@ void ElkapodMotionManager::lowerDownPlanning() {
   trajs.push_back(step_trajs);
 
   for (int i = 0; i < 6; ++i) {
+    // TODO modify lower down sequence the same way as stand up
     for (int j = 0; j < 6; ++j) {
       if (i == j) {
         auto traj = hop_planner.plan({leg_spacing, 0.0, -base_height_waypoint},

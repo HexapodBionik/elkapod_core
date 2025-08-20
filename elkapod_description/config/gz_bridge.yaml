@@ -15,3 +15,40 @@
   ros_type_name: "nav_msgs/msg/Odometry"
   gz_type_name: "gz.msgs.Odometry"
   direction: GZ_TO_ROS
+
+- ros_topic_name: "/legs/leg1/fsr"
+  gz_topic_name: "/legs/leg1/fsr"
+  ros_type_name: "geometry_msgs/msg/Wrench"
+  gz_type_name: "gz.msgs.Wrench"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/legs/leg2/fsr"
+  gz_topic_name: "/legs/leg2/fsr"
+  ros_type_name: "geometry_msgs/msg/Wrench"
+  gz_type_name: "gz.msgs.Wrench"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/legs/leg3/fsr"
+  gz_topic_name: "/legs/leg3/fsr"
+  ros_type_name: "geometry_msgs/msg/Wrench"
+  gz_type_name: "gz.msgs.Wrench"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/legs/leg4/fsr"
+  gz_topic_name: "/legs/leg4/fsr"
+  ros_type_name: "geometry_msgs/msg/Wrench"
+  gz_type_name: "gz.msgs.Wrench"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/legs/leg5/fsr"
+  gz_topic_name: "/legs/leg5/fsr"
+  ros_type_name: "geometry_msgs/msg/Wrench"
+  gz_type_name: "gz.msgs.Wrench"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/legs/leg6/fsr"
+  gz_topic_name: "/legs/leg6/fsr"
+  ros_type_name: "geometry_msgs/msg/Wrench"
+  gz_type_name: "gz.msgs.Wrench"
+  direction: GZ_TO_ROS
+
