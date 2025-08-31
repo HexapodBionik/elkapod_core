@@ -40,14 +40,6 @@ def generate_launch_description():
         emulate_tty=True
     )])
 
-    joint_passthrough_controller = TimerAction(period=5.0, actions=[Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=["passthrough_controller"],
-        output='screen',
-        emulate_tty=True
-    )])
-
     joint_broad_spawner = TimerAction(period=5.0, actions=[Node(
         package="controller_manager",
         executable="spawner",
@@ -86,7 +78,6 @@ def generate_launch_description():
     return LaunchDescription([
         rsp,
         control_node,
-        joint_passthrough_controller,
         joint_broad_spawner,
         imu_broad_spawner,
         elkapod_ik_controller_spawner,
