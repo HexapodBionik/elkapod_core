@@ -85,9 +85,6 @@ controller_interface::return_type ElkapodIKController::update_and_write_commands
     output[i * 3 + 2] = deg2rad(anglesDeg[2]);
   }
 
-  // if (reference_interfaces_.size() != 18) {
-  //   reference_interfaces_.assign(18, 0.0);
-  // }
   for (size_t i = 0; i < 18; ++i) {
     (void)command_interfaces_[i].set_value(output[i]);
   }

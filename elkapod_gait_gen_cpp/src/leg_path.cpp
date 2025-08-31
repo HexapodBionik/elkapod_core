@@ -47,13 +47,19 @@ void ElkapodLegPathBezier::init() {
   // }
   const double a = -(step_height_) / pow(step_length_ / 2, 2);
 
-  auto bezier = [](double s){return 10*std::pow(s, 3) - 15*std::pow(s, 4) + 6*std::pow(s, 5);};
+  auto bezier = [](double s) {
+    return 10 * std::pow(s, 3) - 15 * std::pow(s, 4) + 6 * std::pow(s, 5);
+  };
 
-  x_func_stance_ = [this, bezier](double s) { return step_length_ / 2.0 - step_length_ * bezier(s); };
+  x_func_stance_ = [this, bezier](double s) {
+    return step_length_ / 2.0 - step_length_ * bezier(s);
+  };
   y_func_stance_ = []([[maybe_unused]] double s) { return 0.0; };
   z_func_stance_ = []([[maybe_unused]] double s) { return 0.0; };
 
-  x_func_swing_ = [this, bezier](double s) { return -step_length_ / 2.0 + step_length_ * bezier(s); };
+  x_func_swing_ = [this, bezier](double s) {
+    return -step_length_ / 2.0 + step_length_ * bezier(s);
+  };
   y_func_swing_ = []([[maybe_unused]] double s) { return 0.0; };
 
   z_func_swing_ = [this, a, bezier](double s) {

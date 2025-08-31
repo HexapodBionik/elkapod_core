@@ -19,8 +19,9 @@
 #include <std_srvs/srv/trigger.hpp>
 #include <string>
 #include <unordered_map>
-#include "leg_path.hpp"
+
 #include "elkapod_leg_trajectory.hpp"
+#include "leg_path.hpp"
 
 namespace elkapod_gait_gen {
 using ServiceTriggerSrv = std_srvs::srv::Trigger;
@@ -37,7 +38,7 @@ class ElkapodGaitGen : public rclcpp::Node {
 
  private:
   enum class State { IDLE = 0, IDLE_SETTLE = 1, WALKING = 2, DISABLED = 3 };
-  enum class SettleStates {PLAN = 0, EXECUTE = 1};
+  enum class SettleStates { PLAN = 0, EXECUTE = 1 };
   enum class GaitType { WAVE = 0, RIPPLE = 1, TRIPOD = 2 };
   inline static constexpr size_t kLegsNb = 6;
   inline static constexpr size_t kJointsNum = 18;

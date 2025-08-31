@@ -25,18 +25,18 @@ namespace elkapod_gait_gen {
 using namespace std::chrono_literals;
 
 ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
-  trajectory_freq_hz = this->declare_parameter<double>("trajectory.frequency_hz", 50.0);
-  min_swing_time_sec_ = this->declare_parameter<double>("gait.min_swing_time_sec", 0.42);
-  phase_lag_ = this->declare_parameter<double>("gait.default_phase_lag_sec", 0.03);
+  trajectory_freq_hz = this->declare_parameter<double>("trajectory.frequency_hz");
+  min_swing_time_sec_ = this->declare_parameter<double>("gait.min_swing_time_sec");
+  phase_lag_ = this->declare_parameter<double>("gait.default_phase_lag_sec");
 
-  leg_spacing_ = this->declare_parameter<double>("leg_spacing", 0.175);
+  leg_spacing_ = this->declare_parameter<double>("leg_spacing.default");
 
-  step_length_ = this->declare_parameter<double>("gait.step.length.default", 0.15);
-  step_height_ = this->declare_parameter<double>("gait.step.height.default", 0.05);
+  step_length_ = this->declare_parameter<double>("gait.step.length.default");
+  step_height_ = this->declare_parameter<double>("gait.step.height.default");
 
-  base_height_ = this->declare_parameter<double>("../common.base_height.default", 0.17);
-  base_height_min_ = this->declare_parameter<double>("../common.base_height.min", 0.12);
-  base_height_max_ = this->declare_parameter<double>("../common.base_height.max", 0.22);
+  base_height_ = this->declare_parameter<double>("base_height.default");
+  base_height_min_ = this->declare_parameter<double>("base_height.min");
+  base_height_max_ = this->declare_parameter<double>("base_height.max");
   set_base_height_ = base_height_;
 
   // Subscriptions
@@ -273,11 +273,7 @@ void ElkapodGaitGen::changeGait() {
 
 void ElkapodGaitGen::clockFunction(double t, double T, double phase_shift, int leg_nb) {
   if (!is_close(leg_phase_shift_[leg_nb], phase_shift, 1e-3)) {
-    if (leg_phase_shift_[leg_nb] < phase_shift) {
-      leg_phase_shift_[leg_nb] += 0.05 * phase_shift;
-    } else {
-      leg_phase_shift_[leg_nb] -= 0.05 * phase_shift;
-    }
+    leg_phase_shift_[leg_nb] = phase_shift * std::fmod(t, T);
   }
 
   const double t_mod = std::fmod((t + 3 * T / 4. + leg_phase_shift_[leg_nb]), T);
@@ -326,23 +322,17 @@ void ElkapodGaitGen::updateAndWriteCommands() {
   msg3.data.resize(kJointsNum, 0.0);
 
   // TODO Base height regulation commented for now, to be fixed
-  // if (!is_close(base_height_, set_base_height_, 1e-3)) {
-  //   if (base_height_ < set_base_height_)
-  //     base_height_ += 0.005;
-  //   else
-  //     base_height_ -= 0.005;
-  // }
-
-  // std::string output = std::format("Cycle time: {:.3f}s Offsets:", cycle_time_);
-  // for (size_t i = 0; i < leg_phase_shift_.size(); ++i) {
-  //   output += std::format(" {:.3f}/{:.3f}\t", leg_phase_shift_[i], phase_offset_[i]);
-  // }
-  // RCLCPP_INFO(get_logger(), output.c_str());
+  if (!is_close(base_height_, set_base_height_, 1e-3)) {
+    if (base_height_ < set_base_height_)
+      base_height_ += 0.005;
+    else
+      base_height_ -= 0.005;
+  }
 
   for (size_t leg_nb = 0; leg_nb < kLegsNb; ++leg_nb) {
     Eigen::Vector3d p;
 
-    if(state_ == State::WALKING || state_ == State::IDLE){
+    if (state_ == State::WALKING || state_ == State::IDLE) {
       if (state_ == State::WALKING) {
         p = (*base_traj_)(leg_clock_[leg_nb], leg_phase_[leg_nb]);
 
@@ -358,41 +348,42 @@ void ElkapodGaitGen::updateAndWriteCommands() {
         p = Eigen::Vector3d::Zero();
       }
 
-    p = rotZ(-base_link_rotations_[leg_nb]) * p;
+      p = rotZ(-base_link_rotations_[leg_nb]) * p;
 
-    p += Eigen::Vector3d(leg_spacing_, 0.0, -base_height_ - base_link_translations_[leg_nb][2]);
-    last_leg_position_relative_[leg_nb] = p;
+      p += Eigen::Vector3d(leg_spacing_, 0.0, -base_height_ + base_link_translations_[leg_nb][2]);
+      last_leg_position_relative_[leg_nb] = p;
 
-    double rot = base_link_rotations_[leg_nb];
-    Eigen::Vector3d trans = base_link_translations_[leg_nb];
+      double rot = base_link_rotations_[leg_nb];
+      Eigen::Vector3d trans = base_link_translations_[leg_nb];
 
-    Eigen::Matrix4d L_B_H = Eigen::Matrix4d::Identity();
-    L_B_H(0, 0) = std::cos(rot);
-    L_B_H(0, 1) = -std::sin(rot);
-    L_B_H(1, 0) = std::sin(rot);
-    L_B_H(1, 1) = std::cos(rot);
-    L_B_H(0, 3) = -(std::cos(rot) * leg_spacing_ + trans[0]);
-    L_B_H(1, 3) = -(std::sin(rot) * leg_spacing_ + trans[1]);
-    L_B_H(2, 3) = base_height_;
+      Eigen::Matrix4d L_B_H = Eigen::Matrix4d::Identity();
+      L_B_H(0, 0) = std::cos(rot);
+      L_B_H(0, 1) = -std::sin(rot);
+      L_B_H(1, 0) = std::sin(rot);
+      L_B_H(1, 1) = std::cos(rot);
+      L_B_H(0, 3) = -(std::cos(rot) * leg_spacing_ + trans[0]);
+      L_B_H(1, 3) = -(std::sin(rot) * leg_spacing_ + trans[1]);
+      L_B_H(2, 3) = base_height_ - base_link_translations_[leg_nb][2];
 
-    Eigen::Vector4d p_homogeneous(p[0], p[1], p[2], 1.0);
-    Eigen::Vector4d p_base_homogeneous = L_B_H * p_homogeneous;
+      Eigen::Vector4d p_homogeneous(p[0], p[1], p[2], 1.0);
+      Eigen::Vector4d p_base_homogeneous = L_B_H * p_homogeneous;
 
-    last_leg_position_[leg_nb] = p_base_homogeneous.head<3>();
+      last_leg_position_[leg_nb] = p_base_homogeneous.head<3>();
 
-    msg3.data[leg_nb * 3 + 0] = p[0];
-    msg3.data[leg_nb * 3 + 1] = p[1];
-    msg3.data[leg_nb * 3 + 2] = p[2];
+      msg3.data[leg_nb * 3 + 0] = p[0];
+      msg3.data[leg_nb * 3 + 1] = p[1];
+      msg3.data[leg_nb * 3 + 2] = p[2];
     }
   }
 
-  if(state_ == State::IDLE_SETTLE){
-    if(settle_substate_ == SettleStates::PLAN){
+  if (state_ == State::IDLE_SETTLE) {
+    if (settle_substate_ == SettleStates::PLAN) {
       std::array<Trajectory, 6> step_trajs;
       for (size_t leg_nb = 0; leg_nb < kLegsNb; ++leg_nb) {
         auto goal = last_leg_position_relative_[leg_nb];
         goal[2] = -base_height_ - base_link_translations_[leg_nb][2];
-        auto traj = planner.plan(last_leg_position_relative_[leg_nb], goal, 0.5, trajectory_freq_hz);
+        auto traj =
+            planner.plan(last_leg_position_relative_[leg_nb], goal, 0.5, trajectory_freq_hz);
         step_trajs[leg_nb] = traj;
       }
       trajs.push_back(step_trajs);
@@ -400,8 +391,7 @@ void ElkapodGaitGen::updateAndWriteCommands() {
       executor_enable_ = true;
       settle_substate_ = SettleStates::EXECUTE;
 
-    }
-    else if(settle_substate_ == SettleStates::EXECUTE){
+    } else if (settle_substate_ == SettleStates::EXECUTE) {
       if (executor_enable_ && !executor_.hasNext() && trajs.size() > 0) {
         auto current_traj = trajs.front();
         trajs.erase(trajs.begin());
