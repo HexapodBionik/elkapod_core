@@ -60,33 +60,6 @@
     <axis xyz="0 0 0" />
   </joint>
 
-  <link name="lidar_base_footprint">
-    <inertial>
-      <origin xyz="-0.0001901 6.2469E-07 0.027552" rpy="0 0 0" />
-      <mass value="0.3" />
-      <inertia ixx="4.5255E-05" ixy="1.0003E-10" ixz="-1.6838E-08" iyy="4.5067E-05" iyz="1.7462E-09" izz="6.1715E-05" />
-    </inertial>
-    <visual>
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="package://elkapod_description/meshes/body/lidar_base_footprint.STL" />
-      </geometry>
-      <material name="lidar_black"/>
-    </visual>
-    <collision>
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="package://elkapod_description/meshes/body/lidar_base_footprint.STL" />
-      </geometry>
-    </collision>
-  </link>
-
-  <joint name="lidar_base_footprint_fixed" type="fixed">
-    <origin xyz="0.042 0.080917 -0.014678" rpy="0 -1.309 -1.5708" />
-    <parent link="control_module" />
-    <child link="lidar_base_footprint" />
-    <axis xyz="0 0 0" />
-  </joint>
 
   <link name="front_grille">
     <inertial>
@@ -116,33 +89,6 @@
     <axis xyz="0 0 0" />
   </joint>
 
-  <link name="front_camera_link">
-    <inertial>
-      <origin xyz="-0.0083255 0.00019292 0.00010122" rpy="0 0 0" />
-      <mass value="0.06" />
-      <inertia ixx="1.5167E-05" ixy="1.9821E-09" ixz="-4.6829E-09" iyy="1.558E-06" iyz="1.4555E-08" izz="1.3954E-05" />
-    </inertial>
-    <visual>
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="package://elkapod_description/meshes/body/front_camera_link.STL" />
-      </geometry>
-      <material name="pure_black"/>
-    </visual>
-    <collision>
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="package://elkapod_description/meshes/body/front_camera_link.STL" />
-      </geometry>
-    </collision>
-  </link>
-
-  <joint name="front_camera_link_fixed" type="fixed">
-    <origin xyz="0 0 0" rpy="1.5707963267949 -1.5707963267949 0" />
-    <parent link="front_grille" />
-    <child link="front_camera_link" />
-    <axis xyz="0 0 0" />
-  </joint>
 
   <link name="back_grilles">
     <inertial>
