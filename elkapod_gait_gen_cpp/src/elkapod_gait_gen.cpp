@@ -70,7 +70,7 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   leg_clock_timer_ = this->create_timer(std::chrono::duration<double>(write_loop_dt),
                                         std::bind(&ElkapodGaitGen::updateAndWriteCommands, this));
   leg_clock_timer_->cancel();
-  base_traj_ = std::make_unique<ElkapodLegPath>(step_length_, 0.04);
+  base_traj_ = std::make_unique<ElkapodLegPathBezier>(step_length_, 0.025);
 
   base_link_rotations_ = {0.63973287, -0.63973287, M_PI / 2., -M_PI / 2., 2.38414364, -2.38414364};
   base_link_translations_ = {{0.17841, 0.13276, -0.03},  {0.17841, -0.13276, -0.03},
@@ -89,6 +89,12 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
 
   current_velocity_ = std::vector<Eigen::Vector2d>(kLegsNb, {0.0, 0.0});
   last_leg_position_ = std::vector<Eigen::Vector3d>(kLegsNb, {0.0, 0.0, 0.0});
+  last_leg_position_relative_ = std::vector<Eigen::Vector3d>(kLegsNb, {0.0, 0.0, 0.0});
+
+  planner = LinearLegPlanner();
+  hop_planner = HopLegPlanner();
+  executor_ = TrajectoryExecutor();
+  executor_enable_ = false;
 
   RCLCPP_INFO(this->get_logger(), "Elkapod gait generator initialized. Use service to activate.");
 }
@@ -235,8 +241,8 @@ void ElkapodGaitGen::updateVelocityCommand() {
 
   if (is_close(current_vel_scalar_, 0.0, VEL_TOL) &&
       is_close(current_angular_velocity_, 0.0, VEL_TOL) && state_ == State::WALKING) {
-    RCLCPP_INFO(this->get_logger(), "Going to IDLE state");
-    state_ = State::IDLE;
+    RCLCPP_INFO(this->get_logger(), "Going to IDLE SETTLE state");
+    state_ = State::IDLE_SETTLE;
   } else if ((!is_close(current_vel_scalar_, 0.0, VEL_TOL) ||
               !is_close(current_angular_velocity_, 0.0, VEL_TOL)) &&
              state_ == State::IDLE) {
@@ -336,24 +342,26 @@ void ElkapodGaitGen::updateAndWriteCommands() {
   for (size_t leg_nb = 0; leg_nb < kLegsNb; ++leg_nb) {
     Eigen::Vector3d p;
 
-    if (state_ == State::WALKING) {
-      p = (*base_traj_)(leg_clock_[leg_nb], leg_phase_[leg_nb]);
+    if(state_ == State::WALKING || state_ == State::IDLE){
+      if (state_ == State::WALKING) {
+        p = (*base_traj_)(leg_clock_[leg_nb], leg_phase_[leg_nb]);
 
-      const double omega = current_angular_velocity_;
-      Eigen::Vector2d last_leg_xy(last_leg_position_[leg_nb][0], last_leg_position_[leg_nb][1]);
-      Eigen::Vector2d angular_part = -omega * Eigen::Vector2d(-last_leg_xy[1], last_leg_xy[0]);
+        const double omega = current_angular_velocity_;
+        Eigen::Vector2d last_leg_xy(last_leg_position_[leg_nb][0], last_leg_position_[leg_nb][1]);
+        Eigen::Vector2d angular_part = -omega * Eigen::Vector2d(-last_leg_xy[1], last_leg_xy[0]);
 
-      Eigen::Vector2d vel2D = current_velocity_[leg_nb] + angular_part;
+        Eigen::Vector2d vel2D = current_velocity_[leg_nb] + angular_part;
 
-      double angle = std::atan2(vel2D[1], vel2D[0]);
-      p = rotZ(angle) * p;
-    } else {
-      p = Eigen::Vector3d::Zero();
-    }
+        double angle = std::atan2(vel2D[1], vel2D[0]);
+        p = rotZ(angle) * p;
+      } else {
+        p = Eigen::Vector3d::Zero();
+      }
 
     p = rotZ(-base_link_rotations_[leg_nb]) * p;
 
     p += Eigen::Vector3d(leg_spacing_, 0.0, -base_height_ - base_link_translations_[leg_nb][2]);
+    last_leg_position_relative_[leg_nb] = p;
 
     double rot = base_link_rotations_[leg_nb];
     Eigen::Vector3d trans = base_link_translations_[leg_nb];
@@ -375,6 +383,46 @@ void ElkapodGaitGen::updateAndWriteCommands() {
     msg3.data[leg_nb * 3 + 0] = p[0];
     msg3.data[leg_nb * 3 + 1] = p[1];
     msg3.data[leg_nb * 3 + 2] = p[2];
+    }
+  }
+
+  if(state_ == State::IDLE_SETTLE){
+    if(settle_substate_ == SettleStates::PLAN){
+      std::array<Trajectory, 6> step_trajs;
+      for (size_t leg_nb = 0; leg_nb < kLegsNb; ++leg_nb) {
+        auto goal = last_leg_position_relative_[leg_nb];
+        goal[2] = -base_height_ - base_link_translations_[leg_nb][2];
+        auto traj = planner.plan(last_leg_position_relative_[leg_nb], goal, 0.5, trajectory_freq_hz);
+        step_trajs[leg_nb] = traj;
+      }
+      trajs.push_back(step_trajs);
+
+      executor_enable_ = true;
+      settle_substate_ = SettleStates::EXECUTE;
+
+    }
+    else if(settle_substate_ == SettleStates::EXECUTE){
+      if (executor_enable_ && !executor_.hasNext() && trajs.size() > 0) {
+        auto current_traj = trajs.front();
+        trajs.erase(trajs.begin());
+        executor_.setTrajectories(current_traj);
+      }
+
+      if (executor_enable_ && (executor_.hasNext() || trajs.size() > 0)) {
+        auto step = executor_.next();
+        size_t index = 0;
+        for (const auto& leg : step) {
+          for (double coordinate : leg) {
+            msg3.data[index++] = coordinate;
+          }
+        }
+      } else if (executor_enable_ && !executor_.hasNext() && trajs.size() <= 0) {
+        executor_enable_ = false;
+        settle_substate_ = SettleStates::PLAN;
+        state_ = State::IDLE;
+        RCLCPP_INFO(this->get_logger(), "Going to IDLE state");
+      }
+    }
   }
 
   leg_signal_pub_->publish(msg3);

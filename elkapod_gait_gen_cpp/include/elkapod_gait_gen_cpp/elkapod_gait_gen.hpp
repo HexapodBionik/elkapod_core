@@ -19,8 +19,8 @@
 #include <std_srvs/srv/trigger.hpp>
 #include <string>
 #include <unordered_map>
-
 #include "leg_path.hpp"
+#include "elkapod_leg_trajectory.hpp"
 
 namespace elkapod_gait_gen {
 using ServiceTriggerSrv = std_srvs::srv::Trigger;
@@ -36,7 +36,8 @@ class ElkapodGaitGen : public rclcpp::Node {
   ElkapodGaitGen();
 
  private:
-  enum class State { IDLE = 0, WALKING = 1, DISABLED = 2 };
+  enum class State { IDLE = 0, IDLE_SETTLE = 1, WALKING = 2, DISABLED = 3 };
+  enum class SettleStates {PLAN = 0, EXECUTE = 1};
   enum class GaitType { WAVE = 0, RIPPLE = 1, TRIPOD = 2 };
   inline static constexpr size_t kLegsNb = 6;
   inline static constexpr size_t kJointsNum = 18;
@@ -69,7 +70,8 @@ class ElkapodGaitGen : public rclcpp::Node {
 
   // Variables
   State state_ = State::DISABLED;
-  GaitType gait_type_ = GaitType::RIPPLE;
+  SettleStates settle_substate_ = SettleStates::PLAN;
+  GaitType gait_type_ = GaitType::TRIPOD;
   double trajectory_freq_hz, min_swing_time_sec_;
   double leg_spacing_, step_length_, step_height_, phase_lag_;
   double set_base_height_, cycle_time_, duty_factor_;
@@ -90,7 +92,7 @@ class ElkapodGaitGen : public rclcpp::Node {
       {GaitType::TRIPOD, 0.9}, {GaitType::RIPPLE, 0.9}, {GaitType::WAVE, 0.9}};
 
   std::unordered_map<GaitType, double> cycle_time_dict_ = {
-      {GaitType::TRIPOD, 1.2}, {GaitType::RIPPLE, 1.5}, {GaitType::WAVE, 4.0}};
+      {GaitType::TRIPOD, 1.2}, {GaitType::RIPPLE, 1.2}, {GaitType::WAVE, 2.0}};
 
   double max_vel_ = 0;
   double max_angular_vel_ = 0;
@@ -103,12 +105,19 @@ class ElkapodGaitGen : public rclcpp::Node {
   rclcpp::Time init_time_;
   std::vector<Eigen::Vector2d> current_velocity_;
   std::vector<Eigen::Vector3d> last_leg_position_;
+  std::vector<Eigen::Vector3d> last_leg_position_relative_;
   std::vector<double> phase_offset_, leg_phase_shift_;
   std::vector<int> leg_phase_;
   std::vector<double> leg_clock_;
   std::array<double, kLegsNb> base_link_rotations_;
   std::vector<Eigen::Vector3d> base_link_translations_;
-  std::unique_ptr<ElkapodLegPath> base_traj_;
+  std::unique_ptr<ElkapodLegPathBezier> base_traj_;
+
+  std::vector<std::array<Trajectory, 6>> trajs;
+  LinearLegPlanner planner;
+  HopLegPlanner hop_planner;
+  TrajectoryExecutor executor_;
+  bool executor_enable_;
 };
 };  // namespace elkapod_gait_gen
 

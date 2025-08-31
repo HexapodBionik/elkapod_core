@@ -40,6 +40,10 @@ elkapod_ik_controller:
       - passthrough_controller/leg6_J1
       - passthrough_controller/leg6_J2
       - passthrough_controller/leg6_J3
+    m1: [0.0, 0.0, 0.025]
+    a1: [0.0676, 0.0, 0.0]
+    a2: [0.09237, 0.0, 0.0]
+    a3: [0.22524, 0.0, 0.0]
 
 passthrough_controller:
   ros__parameters:

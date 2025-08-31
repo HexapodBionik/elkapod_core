@@ -15,7 +15,7 @@ find_package(std_msgs REQUIRED)
 include_directories(include)
 FILE(GLOB_RECURSE INCLUDE_FILES "include/elkapod_gait_gen_cpp/*.hpp")
 
-add_executable(elkapod_gait src/elkapod_gait_gen_init.cpp src/elkapod_gait_gen.cpp src/leg_path.cpp)
+add_executable(elkapod_gait src/elkapod_gait_gen_init.cpp src/elkapod_gait_gen.cpp src/leg_path.cpp src/elkapod_leg_trajectory.cpp)
 target_sources(elkapod_gait PRIVATE ${INCLUDE_FILES})
 
 target_include_directories(elkapod_gait PUBLIC

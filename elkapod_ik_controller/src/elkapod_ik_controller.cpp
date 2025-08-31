@@ -28,10 +28,10 @@ controller_interface::CallbackReturn ElkapodIKController::on_init() {
     return controller_interface::CallbackReturn::ERROR;
   }
 
-  Eigen::Vector3d m1(0.0, 0.0, 0.025);
-  Eigen::Vector3d a1(0.0676, 0.0, 0.0);
-  Eigen::Vector3d a2(0.09237, 0.0, 0.0);
-  Eigen::Vector3d a3(0.22524, 0.0, 0.0);
+  Eigen::Vector3d m1(params_.m1[0], params_.m1[1], params_.m1[2]);
+  Eigen::Vector3d a1(params_.a1[0], params_.a1[1], params_.a1[2]);
+  Eigen::Vector3d a2(params_.a2[0], params_.a2[1], params_.a2[2]);
+  Eigen::Vector3d a3(params_.a3[0], params_.a3[1], params_.a3[2]);
 
   const std::vector<Eigen::Vector3d> input = {m1, a1, a2, a3};
   solver_ = std::make_shared<KinematicsSolver>(input);

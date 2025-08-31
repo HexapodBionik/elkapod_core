@@ -7,3 +7,35 @@ elkapod_ik_controller:
       not_empty<>: []
     }
   }
+  m1: {
+    type: double_array,
+    default_value: [],
+    description: "",
+    validation: {
+      not_empty<>: []
+    }
+  }
+  a1: {
+    type: double_array,
+    default_value: [],
+    description: "",
+    validation: {
+      not_empty<>: []
+    }
+  }
+  a2: {
+    type: double_array,
+    default_value: [],
+    description: "",
+    validation: {
+      not_empty<>: []
+    }
+  }
+  a3: {
+    type: double_array,
+    default_value: [],
+    description: "",
+    validation: {
+      not_empty<>: []
+    }
+  }
