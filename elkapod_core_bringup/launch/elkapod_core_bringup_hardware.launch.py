@@ -32,12 +32,20 @@ def generate_launch_description():
         emulate_tty=True
     )
 
-    joint_position_controller_spawner = TimerAction(period=2.5, actions=[Node(
-            package="controller_manager",
-            executable="spawner",
-            arguments=["joint_position_controller"],
-            output='screen',
-            emulate_tty=True
+    elkapod_ik_controller_spawner = TimerAction(period=8.0, actions=[Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["elkapod_ik_controller"],
+        output='screen',
+        emulate_tty=True
+    )])
+
+    joint_passthrough_controller = TimerAction(period=5.0, actions=[Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["passthrough_controller"],
+        output='screen',
+        emulate_tty=True
     )])
 
     joint_broad_spawner = TimerAction(period=5.0, actions=[Node(
@@ -66,7 +74,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(motion_manager_launch_path)
     )
 
-    delayed_actions = TimerAction(
+    delayed_nodes = TimerAction(
         period=10.0,
         actions=[
             motion_manager_launch,
@@ -78,8 +86,9 @@ def generate_launch_description():
     return LaunchDescription([
         rsp,
         control_node,
-        joint_position_controller_spawner,
+        joint_passthrough_controller,
         joint_broad_spawner,
         imu_broad_spawner,
-        delayed_actions
+        elkapod_ik_controller_spawner,
+        delayed_nodes
     ])
