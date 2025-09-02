@@ -329,10 +329,10 @@ void ElkapodGaitGen::updateAndWriteCommands() {
       base_height_ -= 0.005;
   }
 
-  for (size_t leg_nb = 0; leg_nb < kLegsNb; ++leg_nb) {
-    Eigen::Vector3d p;
+  if (state_ == State::WALKING || state_ == State::IDLE) {
+    for (size_t leg_nb = 0; leg_nb < kLegsNb; ++leg_nb) {
+      Eigen::Vector3d p;
 
-    if (state_ == State::WALKING || state_ == State::IDLE) {
       if (state_ == State::WALKING) {
         p = (*base_traj_)(leg_clock_[leg_nb], leg_phase_[leg_nb]);
 
@@ -374,6 +374,7 @@ void ElkapodGaitGen::updateAndWriteCommands() {
       msg3.data[leg_nb * 3 + 1] = p[1];
       msg3.data[leg_nb * 3 + 2] = p[2];
     }
+    leg_signal_pub_->publish(msg3);
   }
 
   if (state_ == State::IDLE_SETTLE) {
@@ -381,7 +382,7 @@ void ElkapodGaitGen::updateAndWriteCommands() {
       std::array<Trajectory, 6> step_trajs;
       for (size_t leg_nb = 0; leg_nb < kLegsNb; ++leg_nb) {
         auto goal = last_leg_position_relative_[leg_nb];
-        goal[2] = -base_height_ - base_link_translations_[leg_nb][2];
+        goal[2] = -base_height_ + base_link_translations_[leg_nb][2];
         auto traj =
             planner.plan(last_leg_position_relative_[leg_nb], goal, 0.5, trajectory_freq_hz);
         step_trajs[leg_nb] = traj;
@@ -406,6 +407,7 @@ void ElkapodGaitGen::updateAndWriteCommands() {
             msg3.data[index++] = coordinate;
           }
         }
+        leg_signal_pub_->publish(msg3);
       } else if (executor_enable_ && !executor_.hasNext() && trajs.size() <= 0) {
         executor_enable_ = false;
         settle_substate_ = SettleStates::PLAN;
@@ -414,8 +416,6 @@ void ElkapodGaitGen::updateAndWriteCommands() {
       }
     }
   }
-
-  leg_signal_pub_->publish(msg3);
 }
 
 }  // namespace elkapod_gait_gen

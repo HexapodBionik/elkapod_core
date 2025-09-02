@@ -80,9 +80,21 @@ controller_interface::return_type ElkapodIKController::update_and_write_commands
     input[2] = command_msg_.data[i * 3 + 2];
 
     Eigen::Vector3d anglesDeg = solver_->inverse(input);
-    output[i * 3] = deg2rad(anglesDeg[0]);
-    output[i * 3 + 1] = deg2rad(anglesDeg[1]);
-    output[i * 3 + 2] = deg2rad(anglesDeg[2]);
+
+    if (anglesDeg.array().isNaN().any()) {
+      RCLCPP_ERROR(logger, "Inverse kinematics error while processing input for leg %d", i + 1);
+      RCLCPP_ERROR(
+          logger, std::format("Input: {:.3f} {:.3f} {:.3f}", input[0], input[1], input[2]).c_str());
+    } else {
+      output[i * 3] = deg2rad(anglesDeg[0]);
+      output[i * 3 + 1] = deg2rad(anglesDeg[1]);
+      output[i * 3 + 2] = deg2rad(anglesDeg[2]);
+
+      std::string msg2 =
+          std::format("Angles for leg {} theta0: {:.3f} theta1: {:.3f} theta2: {:.3f}", i + 1,
+                      output[i * 3], output[i * 3 + 1], output[i * 3 + 2]);
+      RCLCPP_DEBUG(logger, msg2.c_str());
+    }
   }
 
   for (size_t i = 0; i < 18; ++i) {
