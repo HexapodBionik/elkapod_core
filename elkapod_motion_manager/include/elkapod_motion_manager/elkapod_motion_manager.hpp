@@ -23,7 +23,7 @@
 #include "elkapod_msgs/action/motion_manager_trigger.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 
-typedef enum { INIT, IDLE_LOWERED, IDLE, WALKING } State;
+enum class State { INIT, IDLE_LOWERED, IDLE_4_LOWERED, IDLE_4, IDLE, WALKING };
 
 class ElkapodMotionManager : public rclcpp::Node {
  public:
@@ -37,6 +37,9 @@ class ElkapodMotionManager : public rclcpp::Node {
   void lowerDownPlanning();
   void standUpPlanning();
   void initPlanning();
+
+  void init4Planning();
+  void standUp4Planning();
 
   rclcpp::CallbackGroup::SharedPtr my_group_;
 
