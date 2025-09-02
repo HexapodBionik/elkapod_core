@@ -2,17 +2,9 @@
 
 #include <math.h>
 
-#include <stdexcept>
+using namespace elkapod_leg_paths;
 
-void ElkapodLegPath::init() {
-  // const double R =
-  //     (std::pow(step_height_, 2) + std::pow(step_length_, 2) / 4.) / (2 * step_height_);
-  // const double h = R - step_height_;
-  // if (h < 0) {
-  //   throw std::invalid_argument("Invalid step parameters: computed height offset is negative.");
-  // }
-  const double a = -(step_height_) / pow(step_length_ / 2, 2);
-
+void BasicPath::init() {
   x_func_stance_ = [this](double s) { return step_length_ / 2.0 - step_length_ * s; };
   y_func_stance_ = []([[maybe_unused]] double s) { return 0.0; };
   z_func_stance_ = []([[maybe_unused]] double s) { return 0.0; };
@@ -20,62 +12,64 @@ void ElkapodLegPath::init() {
   x_func_swing_ = [this](double s) { return -step_length_ / 2.0 + step_length_ * s; };
   y_func_swing_ = []([[maybe_unused]] double s) { return 0.0; };
 
-  z_func_swing_ = [this, a](double s) {
+  z_func_swing_ = [this](double s) {
+    double a = -(step_height_) / pow(step_length_ / 2, 2);
+
+    if (step_length_ <= 0) {
+      a = 0.0;
+    }
+
     const double x = -step_length_ / 2.0 + step_length_ * s;
     return a * (x - step_length_ / 2) * (x + step_length_ / 2);
   };
+
+  initialized_ = true;
 }
 
-Eigen::Vector3d ElkapodLegPath::operator()(double s, double phase) const {
+std::optional<UpdateParametersError> BasicPath::updateBasicParameters(double step_length,
+                                                                      double step_height) noexcept {
+  if (step_length < 0 || step_height < 0) {
+    return UpdateParametersError::NEGATIVE_STEP_LENGTH_HEIGHT;
+  }
+  step_length_ = step_length;
+  step_height_ = step_height;
+  return {};
+}
+
+std::optional<Eigen::Vector3d> BasicPath::eval(double s, double phase) const noexcept {
+  if (!initialized_) {
+    return {};
+  }
+
   if (phase) {
-    if (!x_func_swing_ || !y_func_swing_ || !z_func_swing_)
-      throw std::runtime_error("Swing functions are not initialized.");
-    return {x_func_swing_(s), y_func_swing_(s), z_func_swing_(s)};
+    return Eigen::Vector3d{x_func_swing_(s), y_func_swing_(s), z_func_swing_(s)};
   } else {
-    if (!x_func_stance_ || !y_func_stance_ || !z_func_stance_)
-      throw std::runtime_error("Stance functions are not initialized.");
-    return {x_func_stance_(s), y_func_stance_(s), z_func_stance_(s)};
+    return Eigen::Vector3d{x_func_stance_(s), y_func_stance_(s), z_func_stance_(s)};
   }
 }
 
-void ElkapodLegPathBezier::init() {
-  // const double R =
-  //     (std::pow(step_height_, 2) + std::pow(step_length_, 2) / 4.) / (2 * step_height_);
-  // const double h = R - step_height_;
-  // if (h < 0) {
-  //   throw std::invalid_argument("Invalid step parameters: computed height offset is negative.");
-  // }
-  const double a = -(step_height_) / pow(step_length_ / 2, 2);
+std::optional<Eigen::Vector3d> BasicPath::operator()(double s, double phase) const noexcept {
+  return eval(s, phase);
+}
 
-  auto bezier = [](double s) {
-    return 10 * std::pow(s, 3) - 15 * std::pow(s, 4) + 6 * std::pow(s, 5);
-  };
+void BasicPathBezier::init() {
+  bezier_ = [](double s) { return 10 * std::pow(s, 3) - 15 * std::pow(s, 4) + 6 * std::pow(s, 5); };
 
-  x_func_stance_ = [this, bezier](double s) {
-    return step_length_ / 2.0 - step_length_ * bezier(s);
-  };
+  x_func_stance_ = [this](double s) { return step_length_ / 2.0 - step_length_ * bezier_(s); };
   y_func_stance_ = []([[maybe_unused]] double s) { return 0.0; };
   z_func_stance_ = []([[maybe_unused]] double s) { return 0.0; };
 
-  x_func_swing_ = [this, bezier](double s) {
-    return -step_length_ / 2.0 + step_length_ * bezier(s);
-  };
+  x_func_swing_ = [this](double s) { return -step_length_ / 2.0 + step_length_ * bezier_(s); };
   y_func_swing_ = []([[maybe_unused]] double s) { return 0.0; };
 
-  z_func_swing_ = [this, a, bezier](double s) {
-    const double x = -step_length_ / 2.0 + step_length_ * bezier(s);
+  z_func_swing_ = [this](double s) {
+    double a = -(step_height_) / pow(step_length_ / 2, 2);
+
+    if (step_length_ <= 0) {
+      a = 0.0;
+    }
+    const double x = -step_length_ / 2.0 + step_length_ * bezier_(s);
     return a * (x - step_length_ / 2) * (x + step_length_ / 2);
   };
-}
-
-Eigen::Vector3d ElkapodLegPathBezier::operator()(double s, double phase) const {
-  if (phase) {
-    if (!x_func_swing_ || !y_func_swing_ || !z_func_swing_)
-      throw std::runtime_error("Swing functions are not initialized.");
-    return {x_func_swing_(s), y_func_swing_(s), z_func_swing_(s)};
-  } else {
-    if (!x_func_stance_ || !y_func_stance_ || !z_func_stance_)
-      throw std::runtime_error("Stance functions are not initialized.");
-    return {x_func_stance_(s), y_func_stance_(s), z_func_stance_(s)};
-  }
+  initialized_ = true;
 }

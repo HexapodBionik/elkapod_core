@@ -24,7 +24,7 @@ elkapod_gait:
           min: 0.1
           max: 0.2
         height:             # parametry min i max do doprecyzowania
-          default: 0.05
+          default: 0.025
           min: 0.05       
           max: 0.15
 

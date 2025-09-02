@@ -1,3 +1,10 @@
+//
+// Created by Piotr Patek.
+//
+// Copyright (c) 2025.
+// Elkapod Bionik, Warsaw University of Technology. All rights reserved.
+//
+
 #include "../include/elkapod_gait_gen_cpp/elkapod_gait_gen.hpp"
 
 #include <format>
@@ -54,8 +61,6 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   // Publishers
   leg_signal_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
       "/elkapod_ik_controller/elkapod_leg_positions", 10);
-  leg_phase_pub_ =
-      this->create_publisher<std_msgs::msg::Float64MultiArray>("/leg_phase_signal", 10);
 
   // Services
   enable_srv_ = this->create_service<ServiceTriggerSrv>(
@@ -70,7 +75,7 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   leg_clock_timer_ = this->create_timer(std::chrono::duration<double>(write_loop_dt),
                                         std::bind(&ElkapodGaitGen::updateAndWriteCommands, this));
   leg_clock_timer_->cancel();
-  base_traj_ = std::make_unique<ElkapodLegPathBezier>(step_length_, 0.025);
+  leg_path_gen_ = std::make_unique<elkapod_leg_paths::BasicPathBezier>(step_length_, step_height_);
 
   base_link_rotations_ = {0.63973287, -0.63973287, M_PI / 2., -M_PI / 2., 2.38414364, -2.38414364};
   base_link_translations_ = {{0.17841, 0.13276, -0.03},  {0.17841, -0.13276, -0.03},
@@ -92,7 +97,6 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   last_leg_position_relative_ = std::vector<Eigen::Vector3d>(kLegsNb, {0.0, 0.0, 0.0});
 
   planner = LinearLegPlanner();
-  hop_planner = HopLegPlanner();
   executor_ = TrajectoryExecutor();
   executor_enable_ = false;
 
@@ -100,7 +104,7 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
 }
 
 void ElkapodGaitGen::init() {
-  base_traj_->init();
+  leg_path_gen_->init();
   changeGait();
   leg_clock_timer_->reset();
   init_time_ = this->now();
@@ -202,7 +206,7 @@ void ElkapodGaitGen::velocityClamp(Eigen::Vector2d& vel, double& angular_vel) {
   }
 
   if (std::fabs(angular_vel) > max_angular_vel_ && std::fabs(angular_vel) > 0) {
-    angular_vel *= max_angular_vel_ / angular_vel;
+    angular_vel *= max_angular_vel_ / std::fabs(angular_vel);
     RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 500,
                          std::format("Provided angular velocity exceeds max velocity of {:.3f} rad "
                                      "/ s! Clamping to the limit...",
@@ -229,7 +233,7 @@ void ElkapodGaitGen::updateVelocityCommand() {
     }
 
     const double R = leg_spacing_ + 0.22;
-    step_length_ = cycle_time_ * duty_factor_ * R * fabs(angular_vel);
+    step_length_ = cycle_time_ * duty_factor_ * R * std::fabs(angular_vel);
   } else {
     for (auto& leg_vel : current_velocity_) {
       leg_vel = current_vel_command_;
@@ -238,6 +242,10 @@ void ElkapodGaitGen::updateVelocityCommand() {
     current_vel_scalar_ = current_vel_command_.norm();
     step_length_ = cycle_time_ * current_vel_scalar_ * duty_factor_;
   }
+
+  RCLCPP_DEBUG(get_logger(), std::format("Current velocity: {:.4f} m/s\tAngular: {:.4f} rad/s",
+                                         current_vel_scalar_, current_angular_velocity_)
+                                 .c_str());
 
   if (is_close(current_vel_scalar_, 0.0, VEL_TOL) &&
       is_close(current_angular_velocity_, 0.0, VEL_TOL) && state_ == State::WALKING) {
@@ -293,11 +301,13 @@ void ElkapodGaitGen::clockFunction(double t, double T, double phase_shift, int l
 void ElkapodGaitGen::updateAndWriteCommands() {
   updateVelocityCommand();
 
-  base_traj_->step_length_ = step_length_;
-  base_traj_->init();
-
-  auto msg_phase = FloatArrayMsg();
-  msg_phase.data.resize(kLegsNb, 0.0);
+  auto status = leg_path_gen_->updateBasicParameters(step_length_, step_height_);
+  if (status.has_value()) {
+    leg_path_gen_->updateBasicParameters(0.0, 0.0);
+    RCLCPP_ERROR_THROTTLE(
+        get_logger(), *get_clock(), 500,
+        "Error setting new step_length and step_height! Fallback to zero values...");
+  }
 
   if (state_ == State::IDLE) {
     for (size_t leg_nb = 0; leg_nb < kLegsNb; ++leg_nb) {
@@ -309,14 +319,8 @@ void ElkapodGaitGen::updateAndWriteCommands() {
     double elapsed_time_sec = (now - init_time_).nanoseconds() / 1e9;
     for (int leg_nb = 0; leg_nb < 6; ++leg_nb) {
       clockFunction(elapsed_time_sec, cycle_time_, phase_offset_[leg_nb], leg_nb);
-      msg_phase.data[leg_nb] = leg_phase_[leg_nb];
     }
   }
-
-  // RCLCPP_INFO(get_logger(), std::format("Current velocity: {:.4f} m/s\tAngular: {:.4f} rad/s",
-  // current_vel_scalar_, current_angular_velocity_).c_str());
-
-  leg_phase_pub_->publish(msg_phase);
 
   auto msg3 = FloatArrayMsg();
   msg3.data.resize(kJointsNum, 0.0);
@@ -334,7 +338,8 @@ void ElkapodGaitGen::updateAndWriteCommands() {
       Eigen::Vector3d p;
 
       if (state_ == State::WALKING) {
-        p = (*base_traj_)(leg_clock_[leg_nb], leg_phase_[leg_nb]);
+        p = leg_path_gen_->eval(leg_clock_[leg_nb], leg_phase_[leg_nb])
+                .value_or(Eigen::Vector3d::Zero());
 
         const double omega = current_angular_velocity_;
         Eigen::Vector2d last_leg_xy(last_leg_position_[leg_nb][0], last_leg_position_[leg_nb][1]);

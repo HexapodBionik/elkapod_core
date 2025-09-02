@@ -63,7 +63,7 @@ class ElkapodGaitGen : public rclcpp::Node {
 
   // ROS interfaces
   rclcpp::TimerBase::SharedPtr leg_clock_timer_;
-  rclcpp::Publisher<FloatArrayMsg>::SharedPtr leg_signal_pub_, leg_phase_pub_;
+  rclcpp::Publisher<FloatArrayMsg>::SharedPtr leg_signal_pub_;
   rclcpp::Subscription<VelCmd>::SharedPtr velocity_sub_;
   rclcpp::Subscription<FloatMsg>::SharedPtr param_sub_;
   rclcpp::Subscription<IntMsg>::SharedPtr gait_type_sub_;
@@ -86,11 +86,11 @@ class ElkapodGaitGen : public rclcpp::Node {
   Eigen::Vector2d current_vel_command_;
 
   std::unordered_map<GaitType, double> max_vel_dict_ = {
-      {GaitType::TRIPOD, 0.4}, {GaitType::RIPPLE, 0.2}, {GaitType::WAVE, 0.05}};
+      {GaitType::TRIPOD, 0.2}, {GaitType::RIPPLE, 0.15}, {GaitType::WAVE, 0.05}};
 
   // TODO to be validated later
   std::unordered_map<GaitType, double> max_angular_vel_dict_ = {
-      {GaitType::TRIPOD, 0.9}, {GaitType::RIPPLE, 0.9}, {GaitType::WAVE, 0.9}};
+      {GaitType::TRIPOD, 0.5}, {GaitType::RIPPLE, 0.5}, {GaitType::WAVE, 0.5}};
 
   std::unordered_map<GaitType, double> cycle_time_dict_ = {
       {GaitType::TRIPOD, 1.2}, {GaitType::RIPPLE, 1.2}, {GaitType::WAVE, 2.0}};
@@ -101,7 +101,6 @@ class ElkapodGaitGen : public rclcpp::Node {
   // Temporary parameters
   const double deadzone_d_ = 0.003;
   double ema_filter_alfa_ = 0.0;
-  double handover_sec_ = 0.1;
 
   rclcpp::Time init_time_;
   std::vector<Eigen::Vector2d> current_velocity_;
@@ -112,11 +111,10 @@ class ElkapodGaitGen : public rclcpp::Node {
   std::vector<double> leg_clock_;
   std::array<double, kLegsNb> base_link_rotations_;
   std::vector<Eigen::Vector3d> base_link_translations_;
-  std::unique_ptr<ElkapodLegPathBezier> base_traj_;
+  std::unique_ptr<elkapod_leg_paths::BasicPathBezier> leg_path_gen_;
 
   std::vector<std::array<Trajectory, 6>> trajs;
   LinearLegPlanner planner;
-  HopLegPlanner hop_planner;
   TrajectoryExecutor executor_;
   bool executor_enable_;
 };
