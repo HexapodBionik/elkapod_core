@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>elkapod_gait_gen_cpp</name>
-  <version>1.0.0</version>
+  <version>1.5.0</version>
   <description>Gait generator for Elkapod walking robot</description>
   <maintainer email="piotrpatek17@gmail.com">Piotr Patek</maintainer>
   <license>MIT</license>

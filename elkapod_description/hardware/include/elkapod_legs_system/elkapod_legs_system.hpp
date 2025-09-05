@@ -26,7 +26,7 @@ class ElkapodLegsSystemHardware : public hardware_interface::SystemInterface {
   RCLCPP_SHARED_PTR_DEFINITIONS(ElkapodLegsSystemHardware)
 
   hardware_interface::CallbackReturn on_init(
-    const hardware_interface::HardwareComponentInterfaceParams& params) override;
+      const hardware_interface::HardwareComponentInterfaceParams& params) override;
 
   std::vector<hardware_interface::StateInterface> export_state_interfaces() override;
 

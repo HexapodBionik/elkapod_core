@@ -5,19 +5,22 @@ controller_manager:
     hardware_components_initial_state:
       shutdown_on_initial_state_failure: true
 
+    enforce_command_limits: true
+
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
 
-    joint_position_controller:
-      type: position_controllers/JointGroupPositionController
+    elkapod_ik_controller:
+      type: elkapod_ik_controller/ElkapodIKController
+
+    passthrough_controller:          
+      type: passthrough_controller/PassthroughController
 
     imu_broadcaster:
       type: imu_sensor_broadcaster/IMUSensorBroadcaster
 
-joint_position_controller:
+elkapod_ik_controller:
   ros__parameters:
-    publish_rate: 50
-    type: position_controllers/JointGroupPositionController
     joints:
       - leg1_J1
       - leg1_J2
@@ -37,10 +40,10 @@ joint_position_controller:
       - leg6_J1
       - leg6_J2
       - leg6_J3
-    command_interfaces:
-      - position
-    state_interfaces:
-      - position
+    m1: [0.0, 0.0, 0.025]
+    a1: [0.0676, 0.0, 0.0]
+    a2: [0.09237, 0.0, 0.0]
+    a3: [0.22524, 0.0, 0.0]
 
 imu_broadcaster:
   ros__parameters:
