@@ -31,6 +31,30 @@ static Eigen::Matrix3d rotZ(double theta) {
 namespace elkapod_gait_gen {
 using namespace std::chrono_literals;
 
+PID::PID(double K, double Ti, double Td, double T) {
+  updateCoefficients(K, Ti, Td, T);
+  e_[0] = 0.0;
+  e_[1] = 0.0;
+  e_[2] = 0.0;
+}
+
+void PID::updateCoefficients(double K, double Ti, double Td, double T) {
+  T_ = T;
+  r2_ = K * Td / T;
+  r1_ = K * (T / (2 * Ti) - 2 * Td / T - 1);
+  r0_ = K * (1 + T / (2 * Ti) + Td / T);
+}
+
+double PID::update(double e) {
+  e_[0] = e;
+  const double u = r2_ * e_[2] + r1_ * e_[1] + r0_ * e_[0] + ukm1_;
+  ukm1_ = u;
+
+  e_[1] = e_[0];
+  e_[2] = e_[1];
+  return u;
+}
+
 ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   trajectory_freq_hz = this->declare_parameter<double>("trajectory.frequency_hz");
   min_swing_time_sec_ = this->declare_parameter<double>("gait.min_swing_time_sec");
@@ -57,6 +81,19 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   gait_type_sub_ = this->create_subscription<IntMsg>(
       "/cmd_gait_type", 10,
       std::bind(&ElkapodGaitGen::gaitTypeCallback, this, std::placeholders::_1));
+
+  imu_sub_ = this->create_subscription<IMUMsg>(
+      "/imu", 10, std::bind(&ElkapodGaitGen::imuCallback, this, std::placeholders::_1));
+
+  roll_sub_ = this->create_subscription<FloatMsg>(
+      "/roll_setpoint", 10, std::bind(&ElkapodGaitGen::rollCallback, this, std::placeholders::_1));
+
+  pitch_sub_ = this->create_subscription<FloatMsg>(
+      "/pitch_setpoint", 10,
+      std::bind(&ElkapodGaitGen::pitchCallback, this, std::placeholders::_1));
+
+  fsr_sub_ = this->create_subscription<Int8ArrayMsg>(
+      "/legs/fsr", 10, std::bind(&ElkapodGaitGen::fsrCallback, this, std::placeholders::_1));
 
   // Publishers
   leg_signal_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
@@ -99,6 +136,11 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   planner = LinearLegPlanner();
   executor_ = TrajectoryExecutor();
   executor_enable_ = false;
+
+  roll_pid_ = PID(3.0, 5.0, 0.0, write_loop_dt);
+  pitch_pid_ = PID(3.0, 5.0, 0.0, write_loop_dt);
+
+  fsr_data_ = std::vector<double>(6, 0.);
 
   RCLCPP_INFO(this->get_logger(), "Elkapod gait generator initialized. Use service to activate.");
 }
@@ -169,6 +211,24 @@ void ElkapodGaitGen::paramCallback(const FloatMsg::SharedPtr msg) {
     RCLCPP_WARN(this->get_logger(),
                 "Couldn't set new base height goal - value out of allowed range");
   }
+}
+
+void ElkapodGaitGen::imuCallback(const IMUMsg::SharedPtr msg) {
+  tf2::fromMsg(msg->orientation, q_);
+  q_.normalize();
+  tf2::Matrix3x3(q_).getRPY(roll_, pitch_, yaw_);
+}
+
+void ElkapodGaitGen::rollCallback(const FloatMsg::SharedPtr msg) {
+  set_roll_ = msg->data / 180.0 * M_PI;
+}
+
+void ElkapodGaitGen::pitchCallback(const FloatMsg::SharedPtr msg) {
+  set_pitch_ = msg->data / 180.0 * M_PI;
+}
+
+void ElkapodGaitGen::fsrCallback(const Int8ArrayMsg::SharedPtr msg) {
+  std::copy(msg->data.cbegin(), msg->data.cend(), fsr_data_.begin());
 }
 
 void ElkapodGaitGen::velocityCallback(const VelCmd::SharedPtr msg) {
@@ -322,6 +382,22 @@ void ElkapodGaitGen::updateAndWriteCommands() {
     }
   }
 
+  double e_roll = set_roll_ - roll_;
+  double u_roll = roll_pid_.update(e_roll);
+
+  RCLCPP_INFO_THROTTLE(
+      get_logger(), *get_clock(), 500,
+      std::format("PID roll u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_roll, e_roll, set_roll_)
+          .c_str());
+
+  double e_pitch = set_pitch_ - pitch_;
+  double u_pitch = pitch_pid_.update(e_pitch);
+
+  RCLCPP_INFO_THROTTLE(
+      get_logger(), *get_clock(), 500,
+      std::format("PID pitch u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_pitch, e_pitch, set_pitch_)
+          .c_str());
+
   auto msg3 = FloatArrayMsg();
   msg3.data.resize(kJointsNum, 0.0);
 
@@ -356,6 +432,15 @@ void ElkapodGaitGen::updateAndWriteCommands() {
       p = rotZ(-base_link_rotations_[leg_nb]) * p;
 
       p += Eigen::Vector3d(leg_spacing_, 0.0, -base_height_ + base_link_translations_[leg_nb][2]);
+
+      double dz = 0.0;
+
+      if (leg_phase_[leg_nb] == 0) {
+        double dz = -u_roll * (p[0] + base_link_translations_[leg_nb][1]) +
+                    u_pitch * (p[1] + base_link_translations_[leg_nb][0]);
+        p[2] += dz;
+      }
+
       last_leg_position_relative_[leg_nb] = p;
 
       double rot = base_link_rotations_[leg_nb];
@@ -368,7 +453,7 @@ void ElkapodGaitGen::updateAndWriteCommands() {
       L_B_H(1, 1) = std::cos(rot);
       L_B_H(0, 3) = -(std::cos(rot) * leg_spacing_ + trans[0]);
       L_B_H(1, 3) = -(std::sin(rot) * leg_spacing_ + trans[1]);
-      L_B_H(2, 3) = base_height_ - base_link_translations_[leg_nb][2];
+      L_B_H(2, 3) = base_height_ - base_link_translations_[leg_nb][2] + dz;
 
       Eigen::Vector4d p_homogeneous(p[0], p[1], p[2], 1.0);
       Eigen::Vector4d p_base_homogeneous = L_B_H * p_homogeneous;

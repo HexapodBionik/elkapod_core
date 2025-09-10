@@ -8,16 +8,22 @@
 #ifndef ELKAPOD_GAIT_GEN_HPP
 #define ELKAPOD_GAIT_GEN_HPP
 
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
+
 #include <chrono>
 #include <eigen3/Eigen/Eigen>
 #include <geometry_msgs/msg/twist.hpp>
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/imu.hpp>
 #include <std_msgs/msg/float64.hpp>
 #include <std_msgs/msg/float64_multi_array.hpp>
 #include <std_msgs/msg/int32.hpp>
+#include <std_msgs/msg/int8_multi_array.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <string>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <unordered_map>
 
 #include "elkapod_leg_trajectory.hpp"
@@ -28,9 +34,25 @@ using ServiceTriggerSrv = std_srvs::srv::Trigger;
 using ServiceTriggerSrv_Req = std::shared_ptr<std_srvs::srv::Trigger_Request>;
 using ServiceTriggerSrv_Resp = std::shared_ptr<std_srvs::srv::Trigger_Response>;
 using FloatArrayMsg = std_msgs::msg::Float64MultiArray;
+using Int8ArrayMsg = std_msgs::msg::Int8MultiArray;
 using FloatMsg = std_msgs::msg::Float64;
 using IntMsg = std_msgs::msg::Int32;
 using VelCmd = geometry_msgs::msg::Twist;
+using IMUMsg = sensor_msgs::msg::Imu;
+
+class PID {
+ public:
+  PID() = default;
+  PID(double K, double Ti, double Td, double T);
+  void updateCoefficients(double K, double Ti, double Td, double T);
+  double update(double e);
+
+ private:
+  double T_;
+  double r2_, r1_, r0_;
+  double ukm1_;
+  double e_[3];
+};
 
 class ElkapodGaitGen : public rclcpp::Node {
  public:
@@ -51,6 +73,10 @@ class ElkapodGaitGen : public rclcpp::Node {
   void paramCallback(const FloatMsg::SharedPtr msg);
   void gaitTypeCallback(const IntMsg::SharedPtr msg);
   void velocityCallback(const VelCmd::SharedPtr msg);
+  void imuCallback(const IMUMsg::SharedPtr msg);
+  void rollCallback(const FloatMsg::SharedPtr msg);
+  void pitchCallback(const FloatMsg::SharedPtr msg);
+  void fsrCallback(const Int8ArrayMsg::SharedPtr msg);
 
   // Gait logic
   void changeGait();
@@ -66,7 +92,11 @@ class ElkapodGaitGen : public rclcpp::Node {
   rclcpp::Publisher<FloatArrayMsg>::SharedPtr leg_signal_pub_;
   rclcpp::Subscription<VelCmd>::SharedPtr velocity_sub_;
   rclcpp::Subscription<FloatMsg>::SharedPtr param_sub_;
+  rclcpp::Subscription<IMUMsg>::SharedPtr imu_sub_;
+  rclcpp::Subscription<FloatMsg>::SharedPtr roll_sub_;
+  rclcpp::Subscription<FloatMsg>::SharedPtr pitch_sub_;
   rclcpp::Subscription<IntMsg>::SharedPtr gait_type_sub_;
+  rclcpp::Subscription<Int8ArrayMsg>::SharedPtr fsr_sub_;
   rclcpp::Service<ServiceTriggerSrv>::SharedPtr enable_srv_, disable_srv_;
 
   // Variables
@@ -117,6 +147,14 @@ class ElkapodGaitGen : public rclcpp::Node {
   LinearLegPlanner planner;
   TrajectoryExecutor executor_;
   bool executor_enable_;
+
+  PID roll_pid_, pitch_pid_;
+  tf2::Quaternion q_;
+  double roll_, pitch_, yaw_;
+  double set_roll_ = 0.0;
+  double set_pitch_ = 0.0;
+
+  std::vector<double> fsr_data_;
 };
 };  // namespace elkapod_gait_gen
 

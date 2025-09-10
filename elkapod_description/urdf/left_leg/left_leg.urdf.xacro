@@ -140,7 +140,7 @@
           <color rgba="1 0 0 1" />
         </material>
       </visual>
-      <collision>
+      <collision name="${leg_name}_FCP">
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
           <sphere radius="0.01"/>
@@ -156,7 +156,7 @@
       <minDepth>0.01</minDepth>
     </gazebo>
 
-    <gazebo reference="${leg_name}_FCP_joint">
+    <!-- <gazebo reference="${leg_name}_FCP_joint">
         <sensor name="${leg_name}_fsr" type="force_torque">
           <always_on>true</always_on>
           <update_rate>100</update_rate>
@@ -169,6 +169,17 @@
             <measure_direction>child_to_parent</measure_direction>
           </force_torque> 
         </sensor>
+    </gazebo> -->
+
+    <gazebo reference="${leg_name}_FCP">
+      <sensor name="contact" type="contact">
+        <always_on>true</always_on>
+        <update_rate>100</update_rate>
+        <contact>
+          <collision>${leg_name}_FCP_collision</collision>
+        </contact>
+        <topic>/legs/${leg_name}_fsr</topic>
+      </sensor>
     </gazebo>
 
     

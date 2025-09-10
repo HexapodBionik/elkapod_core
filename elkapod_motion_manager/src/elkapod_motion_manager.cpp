@@ -259,7 +259,7 @@ void ElkapodMotionManager::standUpPlanning() {
 
   // Final lift up
   auto final_traj = planner.plan({leg_spacing, 0.0, -base_height_waypoint},
-                             {leg_spacing, 0.0, -base_height}, lift_time, trajectory_freq_hz);
+                                 {leg_spacing, 0.0, -base_height}, lift_time, trajectory_freq_hz);
 
   for (int i = 0; i < 6; ++i) {
     step_trajs[i] = final_traj;
@@ -267,27 +267,27 @@ void ElkapodMotionManager::standUpPlanning() {
   trajs.push_back(step_trajs);
 }
 
-void ElkapodMotionManager::init4Planning(){
+void ElkapodMotionManager::init4Planning() {
   const double max_reach_x = 0.38;
   const double movement_time_s = 2.5;
 
   std::array<Trajectory, 6> step_trajs;
   auto traj = hop_planner.plan({max_reach_x, 0.0, 0.0}, {leg_spacing_waypoint, 0.0, -0.02},
                                movement_time_s, trajectory_freq_hz);
-  auto idle_traj = planner.plan({max_reach_x, 0.0, 0.0}, {max_reach_x, 0.0, 0.00},
-                               movement_time_s, trajectory_freq_hz);
+  auto idle_traj = planner.plan({max_reach_x, 0.0, 0.0}, {max_reach_x, 0.0, 0.00}, movement_time_s,
+                                trajectory_freq_hz);
 
   for (size_t i = 0; i < 6; ++i) {
     step_trajs[i] = traj;
 
-    if(i == 2 || i == 3){
+    if (i == 2 || i == 3) {
       step_trajs[i] = idle_traj;
     }
   }
   trajs.push_back(step_trajs);
 }
 
-void ElkapodMotionManager::standUp4Planning(){
+void ElkapodMotionManager::standUp4Planning() {
   const double lift_time = 5.0;
   const double leg_move_time = 1.5;
   const double max_reach_x = 0.38;
@@ -301,13 +301,13 @@ void ElkapodMotionManager::standUp4Planning(){
                            {leg_spacing_waypoint, 0.0, -first_base_height_waypoint}, lift_time,
                            trajectory_freq_hz);
 
-  auto idle_traj = planner.plan({max_reach_x, 0.0, 0.0}, {max_reach_x, 0.0, 0.00},
-                               leg_move_time, trajectory_freq_hz);
-    
+  auto idle_traj = planner.plan({max_reach_x, 0.0, 0.0}, {max_reach_x, 0.0, 0.00}, leg_move_time,
+                                trajectory_freq_hz);
+
   for (size_t i = 0; i < 6; ++i) {
     step_trajs[i] = traj;
 
-    if(i == 2 || i == 3){
+    if (i == 2 || i == 3) {
       step_trajs[i] = idle_traj;
     }
   }
@@ -321,24 +321,24 @@ void ElkapodMotionManager::standUp4Planning(){
     for (size_t j = 0; j < 6; ++j) {
       if (legs_move_order[i] == j && !leg_moved[j]) {
         auto traj = hop_planner.plan({leg_spacing_waypoint, 0.0, -first_base_height_waypoint},
-                                     {first_leg_spacing_waypoint, 0.0, -first_base_height_waypoint}, leg_move_time,
-                                     trajectory_freq_hz);
+                                     {first_leg_spacing_waypoint, 0.0, -first_base_height_waypoint},
+                                     leg_move_time, trajectory_freq_hz);
 
         step_trajs[j] = traj;
         leg_moved[j] = true;
       } else if (legs_move_order[i] != j && leg_moved[j]) {
         auto traj = planner.plan({first_leg_spacing_waypoint, 0.0, -first_base_height_waypoint},
-                                 {first_leg_spacing_waypoint, 0.0, -first_base_height_waypoint}, leg_move_time,
-                                 trajectory_freq_hz);
+                                 {first_leg_spacing_waypoint, 0.0, -first_base_height_waypoint},
+                                 leg_move_time, trajectory_freq_hz);
         step_trajs[j] = traj;
       } else {
         auto traj = planner.plan({leg_spacing_waypoint, 0.0, -first_base_height_waypoint},
-                                 {leg_spacing_waypoint, 0.0, -first_base_height_waypoint}, leg_move_time,
-                                 trajectory_freq_hz);
+                                 {leg_spacing_waypoint, 0.0, -first_base_height_waypoint},
+                                 leg_move_time, trajectory_freq_hz);
         step_trajs[j] = traj;
       }
 
-      if(j == 2 || j == 3){
+      if (j == 2 || j == 3) {
         step_trajs[j] = idle_traj;
       }
     }
@@ -347,12 +347,13 @@ void ElkapodMotionManager::standUp4Planning(){
 
   // Second lift up
   auto second_traj = planner.plan({first_leg_spacing_waypoint, 0.0, -first_base_height_waypoint},
-                             {first_leg_spacing_waypoint, 0.0, -second_base_height_waypoint}, lift_time, trajectory_freq_hz);
+                                  {first_leg_spacing_waypoint, 0.0, -second_base_height_waypoint},
+                                  lift_time, trajectory_freq_hz);
 
   for (int i = 0; i < 6; ++i) {
     step_trajs[i] = second_traj;
 
-    if(i == 2 || i == 3){
+    if (i == 2 || i == 3) {
       step_trajs[i] = idle_traj;
     }
   }
@@ -363,9 +364,9 @@ void ElkapodMotionManager::standUp4Planning(){
   for (size_t i = 0; i < 4; ++i) {
     for (size_t j = 0; j < 6; ++j) {
       if (legs_move_order[i] == j && !leg_moved[j]) {
-        auto traj = hop_planner.plan({first_leg_spacing_waypoint, 0.0, -second_base_height_waypoint},
-                                     {leg_spacing, 0.0, -second_base_height_waypoint}, leg_move_time,
-                                     trajectory_freq_hz);
+        auto traj = hop_planner.plan(
+            {first_leg_spacing_waypoint, 0.0, -second_base_height_waypoint},
+            {leg_spacing, 0.0, -second_base_height_waypoint}, leg_move_time, trajectory_freq_hz);
 
         step_trajs[j] = traj;
         leg_moved[j] = true;
@@ -376,12 +377,12 @@ void ElkapodMotionManager::standUp4Planning(){
         step_trajs[j] = traj;
       } else {
         auto traj = planner.plan({first_leg_spacing_waypoint, 0.0, -second_base_height_waypoint},
-                                 {first_leg_spacing_waypoint, 0.0, -second_base_height_waypoint}, leg_move_time,
-                                 trajectory_freq_hz);
+                                 {first_leg_spacing_waypoint, 0.0, -second_base_height_waypoint},
+                                 leg_move_time, trajectory_freq_hz);
         step_trajs[j] = traj;
       }
 
-      if(j == 2 || j == 3){
+      if (j == 2 || j == 3) {
         step_trajs[j] = idle_traj;
       }
     }
@@ -390,12 +391,12 @@ void ElkapodMotionManager::standUp4Planning(){
 
   // Final lift up
   auto final_traj = planner.plan({leg_spacing, 0.0, -second_base_height_waypoint},
-                             {leg_spacing, 0.0, -base_height}, lift_time, trajectory_freq_hz);
+                                 {leg_spacing, 0.0, -base_height}, lift_time, trajectory_freq_hz);
 
   for (int i = 0; i < 6; ++i) {
     step_trajs[i] = final_traj;
 
-    if(i == 2 || i == 3){
+    if (i == 2 || i == 3) {
       step_trajs[i] = idle_traj;
     }
   }
@@ -445,7 +446,7 @@ void ElkapodMotionManager::lowerDownPlanning() {
   }
 
   auto traj = planner.plan({leg_spacing_waypoint, 0.0, -base_height_waypoint},
-                             {leg_spacing_waypoint, 0.0, -0.02}, lift_time, trajectory_freq_hz);
+                           {leg_spacing_waypoint, 0.0, -0.02}, lift_time, trajectory_freq_hz);
 
   for (int i = 0; i < 6; ++i) {
     step_trajs[i] = traj;
