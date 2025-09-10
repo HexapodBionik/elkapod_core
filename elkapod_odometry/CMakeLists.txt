@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(elkapod_kinematics)
+project(elkapod_odometry)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -10,33 +10,31 @@ find_package(ament_cmake REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(yaml-cpp REQUIRED)
+find_package(ros_gz_interfaces REQUIRED)
 include_directories(include)
-FILE(GLOB_RECURSE INCLUDE_FILES "include/elkapod_kinematics/*.hpp")
+FILE(GLOB_RECURSE INCLUDE_FILES "include/elkapod_odometry/*.hpp")
 
-add_executable(elkapod_ik src/elkapod_control.cpp src/elkapod_leg_controller.cpp src/elkapod_leg_inverse_kinematics.cpp)
 
-target_sources(elkapod_ik PRIVATE ${INCLUDE_FILES})
+add_executable(elkapod_relay src/elkapod_touch_sensor_relay_init.cpp src/elkapod_touch_sensor_relay.cpp)
+target_sources(elkapod_relay PRIVATE ${INCLUDE_FILES})
 
-target_include_directories(elkapod_ik PUBLIC
+target_include_directories(elkapod_relay PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/elkapod_kinematics
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/elkapod_odometry
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>)
 
 
-target_compile_features(elkapod_ik PUBLIC c_std_99 cxx_std_20)  # Require C99 and C++17
+target_compile_features(elkapod_relay PUBLIC c_std_99 cxx_std_20)  # Require C99 and C++17
 ament_target_dependencies(
-        elkapod_ik
+        elkapod_relay
         "rclcpp"
         "geometry_msgs"
-        "yaml-cpp"
+        "ros_gz_interfaces"
 )
 
-target_link_libraries(elkapod_ik yaml-cpp)
-
 # Install the executable
-install(TARGETS elkapod_ik
+install(TARGETS elkapod_relay
         DESTINATION lib/${PROJECT_NAME}
 )
 
