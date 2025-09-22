@@ -31,6 +31,7 @@ ElkapodTouchSensorRelay::ElkapodTouchSensorRelay() : Node("elkapod_fsr_relay") {
                               std::bind(&ElkapodTouchSensorRelay::collisionPubCallback, this));
 
   force_cache_ = {0.};
+  last_contact_ = {0.};
   RCLCPP_INFO(get_logger(), "Elkapod FSR relay started!");
 }
 
@@ -49,7 +50,11 @@ void ElkapodTouchSensorRelay::collisionPubCallback() {
   auto msg = std_msgs::msg::Int8MultiArray();
   std::vector<int8_t> data(6, 0.);
   for (size_t i = 0; i < 6; ++i) {
-    if (force_cache_[i] > treshold_) {
+    if (force_cache_[i] >= treshold_) {
+      data[i] = 1;
+      last_contact_[i] = get_clock()->now().seconds();
+    }
+    else if(force_cache_[i] < treshold_ && get_clock()->now().seconds() - last_contact_[i] < 0.1){
       data[i] = 1;
     }
   }

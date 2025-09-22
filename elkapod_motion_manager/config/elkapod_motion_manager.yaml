@@ -16,7 +16,7 @@ elkapod_gait:
 
     gait:
       min_swing_time_sec: 0.42
-      default_phase_lag_sec: 0.05
+      default_phase_lag: 0.05 # 5% na cały cykl
 
       step:
         length:             # tutaj też min będzie można lepiej dobrać

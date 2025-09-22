@@ -58,7 +58,7 @@ double PID::update(double e) {
 ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   trajectory_freq_hz = this->declare_parameter<double>("trajectory.frequency_hz");
   min_swing_time_sec_ = this->declare_parameter<double>("gait.min_swing_time_sec");
-  phase_lag_ = this->declare_parameter<double>("gait.default_phase_lag_sec");
+  phase_lag_ = this->declare_parameter<double>("gait.default_phase_lag");
 
   leg_spacing_ = this->declare_parameter<double>("leg_spacing.default");
 
@@ -300,7 +300,12 @@ void ElkapodGaitGen::updateVelocityCommand() {
     }
 
     current_vel_scalar_ = current_vel_command_.norm();
-    step_length_ = cycle_time_ * current_vel_scalar_ * duty_factor_;
+    const double T_stride = cycle_time_ * (duty_factor_ - phase_lag_);
+    step_length_ = current_vel_scalar_ * T_stride;
+
+    if(gait_type_ == GaitType::TRIPOD){
+      step_length_ /= 0.7;
+    }
   }
 
   RCLCPP_DEBUG(get_logger(), std::format("Current velocity: {:.4f} m/s\tAngular: {:.4f} rad/s",
@@ -346,15 +351,22 @@ void ElkapodGaitGen::clockFunction(double t, double T, double phase_shift, int l
 
   const double t_mod = std::fmod((t + 3 * T / 4. + leg_phase_shift_[leg_nb]), T);
 
-  if (t_mod < T * phase_lag_) {  // swing lag phase
+  if (t_mod < T * phase_lag_ * 0.5) {  // swing lag phase
     leg_phase_[leg_nb] = 1;
-    leg_clock_[leg_nb] = 0.0;
-  } else if (T * phase_lag_ < t_mod && t_mod < T * (1. - duty_factor_)) {  // swing
+    leg_clock_[leg_nb] = 0.;
+  } else if (T * phase_lag_ * 0.5 <= t_mod && t_mod < T * (1. - duty_factor_) - T * phase_lag_ * 0.5) {  // swing
     leg_phase_[leg_nb] = 1;
-    leg_clock_[leg_nb] = (t_mod - T * phase_lag_) / (T * (1. - duty_factor_) - T * phase_lag_);
-  } else {  // stance
+    leg_clock_[leg_nb] = (t_mod - T * phase_lag_ * 0.5) / (T * (1. - duty_factor_) - T * phase_lag_ * 0.5);
+  }else if(T * (1. - duty_factor_) - T * phase_lag_ * 0.5 <= t_mod && t_mod < T * (1. - duty_factor_) + 0.5 * T * phase_lag_){  // swing - stance lag phase
+    leg_phase_[leg_nb] = 0;
+    leg_clock_[leg_nb] = 0.;
+  } else if (T * (1. - duty_factor_) + 0.5 * T * phase_lag_ < t_mod && t_mod <  T - 0.5 * T * phase_lag_) {                    // stance
     leg_phase_[leg_nb] = 0;
     leg_clock_[leg_nb] = (t_mod - T * (1. - duty_factor_)) / (T - T * (1. - duty_factor_));
+  }
+  else{                             // stance lag phase
+    leg_phase_[leg_nb] = 0;
+    leg_clock_[leg_nb] = 1.;
   }
 }
 
@@ -385,18 +397,18 @@ void ElkapodGaitGen::updateAndWriteCommands() {
   double e_roll = set_roll_ - roll_;
   double u_roll = roll_pid_.update(e_roll);
 
-  RCLCPP_INFO_THROTTLE(
-      get_logger(), *get_clock(), 500,
-      std::format("PID roll u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_roll, e_roll, set_roll_)
-          .c_str());
+  // RCLCPP_INFO_THROTTLE(
+  //     get_logger(), *get_clock(), 500,
+  //     std::format("PID roll u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_roll, e_roll, set_roll_)
+  //         .c_str());
 
   double e_pitch = set_pitch_ - pitch_;
   double u_pitch = pitch_pid_.update(e_pitch);
 
-  RCLCPP_INFO_THROTTLE(
-      get_logger(), *get_clock(), 500,
-      std::format("PID pitch u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_pitch, e_pitch, set_pitch_)
-          .c_str());
+  // RCLCPP_INFO_THROTTLE(
+  //     get_logger(), *get_clock(), 500,
+  //     std::format("PID pitch u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_pitch, e_pitch, set_pitch_)
+  //         .c_str());
 
   auto msg3 = FloatArrayMsg();
   msg3.data.resize(kJointsNum, 0.0);

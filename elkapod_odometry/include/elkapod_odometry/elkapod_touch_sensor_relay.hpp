@@ -32,6 +32,7 @@ class ElkapodTouchSensorRelay : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr timer_;
 
   std::array<double, 6> force_cache_;
+  std::array<double, 6> last_contact_;
   static inline constexpr double treshold_ = 0.08;
 };
 
