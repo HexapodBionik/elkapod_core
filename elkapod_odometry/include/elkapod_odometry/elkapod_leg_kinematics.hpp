@@ -7,7 +7,6 @@
 // Elkapod Bionik, Warsaw University of Technology. All rights reserved.
 //
 
-
 #ifndef ELKAPOD_LEG_KINEMATICS
 #define ELKAPOD_LEG_KINEMATICS
 
@@ -16,7 +15,7 @@
 
 class KinematicsSolver {
  public:
-  KinematicsSolver()=default;
+  KinematicsSolver() = default;
   KinematicsSolver(const std::vector<Eigen::Vector3d> linkLengths);
   Eigen::Vector3d inverse(const Eigen::Vector3d& point) const;
   Eigen::Vector3d forward(const Eigen::Vector3d& angles) const noexcept;
@@ -29,4 +28,4 @@ class KinematicsSolver {
   const Eigen::Vector3d a3_;
 };
 
-#endif // ELKAPOD_LEG_KINEMATICS
+#endif  // ELKAPOD_LEG_KINEMATICS

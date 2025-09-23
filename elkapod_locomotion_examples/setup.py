@@ -24,6 +24,7 @@ setup(
         'console_scripts': [
             'rot_waypoints = elkapod_locomotion_examples.rot_waypoints:main',
             'rectangle_drawer = elkapod_locomotion_examples.rectangle_drawer:main',
+            'rectangle_drawer_error = elkapod_locomotion_examples.rectangle_drawer_error:main',
         ],
     },
 )

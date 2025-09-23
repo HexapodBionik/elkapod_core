@@ -10,15 +10,16 @@
 
 #include <array>
 #include <chrono>
+#include <eigen3/Eigen/Eigen>
 #include <functional>
 #include <memory>
+#include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <ros_gz_interfaces/msg/contacts.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/int8_multi_array.hpp>
 #include <string>
-#include <eigen3/Eigen/Eigen>
-#include <sensor_msgs/msg/joint_state.hpp>
-#include <nav_msgs/msg/odometry.hpp>
+
 #include "elkapod_leg_kinematics.hpp"
 
 using namespace std::chrono_literals;
@@ -46,7 +47,6 @@ class ElkapodOdom : public rclcpp::Node {
   Eigen::Matrix4d odom_pose_;
   std::vector<Eigen::Vector3d> last_leg_positions_;
   std::unique_ptr<KinematicsSolver> solver_;
-
 };
 
 #endif  // ELKAPOD_ODOM_HPP

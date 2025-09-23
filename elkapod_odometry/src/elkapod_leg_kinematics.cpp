@@ -8,9 +8,11 @@
 //
 
 #include "../include/elkapod_odometry/elkapod_leg_kinematics.hpp"
+
 #include <math.h>
-#include <iostream>
+
 #include <eigen3/Eigen/Geometry>
+#include <iostream>
 
 static inline double sign(double x) { return (x > 0) - (x < 0); }
 
@@ -59,10 +61,14 @@ Eigen::Vector3d KinematicsSolver::inverse(const Eigen::Vector3d& point) const {
   return {q1, q2, q3};
 }
 
-Eigen::Vector3d KinematicsSolver::forward(const Eigen::Vector3d& angles) const noexcept{
-  Eigen::Matrix3d rot_0_1  = Eigen::AngleAxisd(angles[0], Eigen::Vector3d::UnitZ()).toRotationMatrix();
-  Eigen::Matrix3d rot_1_2 = (Eigen::AngleAxisd(0.5 * EIGEN_PI, Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(angles[1], Eigen::Vector3d::UnitZ())).toRotationMatrix();
-  Eigen::Matrix3d rot_2_3  = Eigen::AngleAxisd(angles[2], Eigen::Vector3d::UnitZ()).toRotationMatrix();
+Eigen::Vector3d KinematicsSolver::forward(const Eigen::Vector3d& angles) const noexcept {
+  Eigen::Matrix3d rot_0_1 =
+      Eigen::AngleAxisd(angles[0], Eigen::Vector3d::UnitZ()).toRotationMatrix();
+  Eigen::Matrix3d rot_1_2 = (Eigen::AngleAxisd(0.5 * EIGEN_PI, Eigen::Vector3d::UnitX()) *
+                             Eigen::AngleAxisd(angles[1], Eigen::Vector3d::UnitZ()))
+                                .toRotationMatrix();
+  Eigen::Matrix3d rot_2_3 =
+      Eigen::AngleAxisd(angles[2], Eigen::Vector3d::UnitZ()).toRotationMatrix();
 
   Eigen::Vector3d trans_0_1 = {0., 0., m1_[2]};
   Eigen::Vector3d trans_1_2 = a1_;
@@ -75,16 +81,13 @@ Eigen::Vector3d KinematicsSolver::forward(const Eigen::Vector3d& angles) const n
   t_0_1.block<3, 3>(0, 0) = rot_0_1;
   t_0_1.block<3, 1>(0, 3) = trans_0_1;
 
-
   t_1_2.setIdentity();
   t_1_2.block<3, 3>(0, 0) = rot_1_2;
   t_1_2.block<3, 1>(0, 3) = trans_1_2;
 
-
   t_2_3.setIdentity();
   t_2_3.block<3, 3>(0, 0) = rot_2_3;
   t_2_3.block<3, 1>(0, 3) = trans_2_3;
-
 
   t_3_4.setIdentity();
   t_3_4.block<3, 1>(0, 3) = trans_3_4;

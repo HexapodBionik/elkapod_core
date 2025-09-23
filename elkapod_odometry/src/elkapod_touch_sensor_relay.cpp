@@ -27,7 +27,7 @@ ElkapodTouchSensorRelay::ElkapodTouchSensorRelay() : Node("elkapod_fsr_relay") {
 
   my_publisher_ = this->create_publisher<std_msgs::msg::Int8MultiArray>("/legs/fsr", 10);
 
-  timer_ = this->create_timer(std::chrono::duration<double>(0.02),
+  timer_ = this->create_timer(std::chrono::duration<double>(0.01),
                               std::bind(&ElkapodTouchSensorRelay::collisionPubCallback, this));
 
   force_cache_ = {0.};
@@ -53,8 +53,8 @@ void ElkapodTouchSensorRelay::collisionPubCallback() {
     if (force_cache_[i] >= treshold_) {
       data[i] = 1;
       last_contact_[i] = get_clock()->now().seconds();
-    }
-    else if(force_cache_[i] < treshold_ && get_clock()->now().seconds() - last_contact_[i] < 0.1){
+    } else if (force_cache_[i] < treshold_ &&
+               get_clock()->now().seconds() - last_contact_[i] < 0.04) {
       data[i] = 1;
     }
   }

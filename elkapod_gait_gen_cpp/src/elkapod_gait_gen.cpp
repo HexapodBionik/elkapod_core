@@ -303,7 +303,7 @@ void ElkapodGaitGen::updateVelocityCommand() {
     const double T_stride = cycle_time_ * (duty_factor_ - phase_lag_);
     step_length_ = current_vel_scalar_ * T_stride;
 
-    if(gait_type_ == GaitType::TRIPOD){
+    if (gait_type_ == GaitType::TRIPOD) {
       step_length_ /= 0.7;
     }
   }
@@ -354,17 +354,20 @@ void ElkapodGaitGen::clockFunction(double t, double T, double phase_shift, int l
   if (t_mod < T * phase_lag_ * 0.5) {  // swing lag phase
     leg_phase_[leg_nb] = 1;
     leg_clock_[leg_nb] = 0.;
-  } else if (T * phase_lag_ * 0.5 <= t_mod && t_mod < T * (1. - duty_factor_) - T * phase_lag_ * 0.5) {  // swing
+  } else if (T * phase_lag_ * 0.5 <= t_mod &&
+             t_mod < T * (1. - duty_factor_) - T * phase_lag_ * 0.5) {  // swing
     leg_phase_[leg_nb] = 1;
-    leg_clock_[leg_nb] = (t_mod - T * phase_lag_ * 0.5) / (T * (1. - duty_factor_) - T * phase_lag_ * 0.5);
-  }else if(T * (1. - duty_factor_) - T * phase_lag_ * 0.5 <= t_mod && t_mod < T * (1. - duty_factor_) + 0.5 * T * phase_lag_){  // swing - stance lag phase
+    leg_clock_[leg_nb] =
+        (t_mod - T * phase_lag_ * 0.5) / (T * (1. - duty_factor_) - T * phase_lag_ * 0.5);
+  } else if (T * (1. - duty_factor_) - T * phase_lag_ * 0.5 <= t_mod &&
+             t_mod < T * (1. - duty_factor_) + 0.5 * T * phase_lag_) {  // swing - stance lag phase
     leg_phase_[leg_nb] = 0;
     leg_clock_[leg_nb] = 0.;
-  } else if (T * (1. - duty_factor_) + 0.5 * T * phase_lag_ < t_mod && t_mod <  T - 0.5 * T * phase_lag_) {                    // stance
+  } else if (T * (1. - duty_factor_) + 0.5 * T * phase_lag_ < t_mod &&
+             t_mod < T - 0.5 * T * phase_lag_) {  // stance
     leg_phase_[leg_nb] = 0;
     leg_clock_[leg_nb] = (t_mod - T * (1. - duty_factor_)) / (T - T * (1. - duty_factor_));
-  }
-  else{                             // stance lag phase
+  } else {  // stance lag phase
     leg_phase_[leg_nb] = 0;
     leg_clock_[leg_nb] = 1.;
   }
@@ -445,13 +448,11 @@ void ElkapodGaitGen::updateAndWriteCommands() {
 
       p += Eigen::Vector3d(leg_spacing_, 0.0, -base_height_ + base_link_translations_[leg_nb][2]);
 
-      double dz = 0.0;
+      // double dz = 0.0;
 
-      if (leg_phase_[leg_nb] == 0) {
-        double dz = -u_roll * (p[0] + base_link_translations_[leg_nb][1]) +
-                    u_pitch * (p[1] + base_link_translations_[leg_nb][0]);
-        p[2] += dz;
-      }
+      double dz = -u_roll * (p[0] + base_link_translations_[leg_nb][1]) +
+                  u_pitch * (p[1] + base_link_translations_[leg_nb][0]);
+      p[2] += dz;
 
       last_leg_position_relative_[leg_nb] = p;
 
