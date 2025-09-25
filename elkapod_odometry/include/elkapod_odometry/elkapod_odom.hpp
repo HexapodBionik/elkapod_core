@@ -19,6 +19,9 @@
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/int8_multi_array.hpp>
 #include <string>
+#include "geometry_msgs/msg/transform_stamped.hpp"
+#include "tf2/LinearMath/Quaternion.h"
+#include "tf2_ros/transform_broadcaster.h"
 
 #include "elkapod_leg_kinematics.hpp"
 
@@ -32,10 +35,19 @@ class ElkapodOdom : public rclcpp::Node {
   void collisionSubCallback(const std_msgs::msg::Int8MultiArray::SharedPtr contacts);
   void jointStatesCallback(const sensor_msgs::msg::JointState::SharedPtr joint_states);
   void odomCallback();
+  void tfCallback();
+  nav_msgs::msg::Odometry fillOdomMsg();
+
+  Eigen::Vector4d findPlane(const Eigen::Matrix3Xd contact_points);
+  Eigen::Vector3d findBaseFootprintCoords(Eigen::Vector4d plane);
+
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_states_sub_;
   rclcpp::Subscription<std_msgs::msg::Int8MultiArray>::SharedPtr collision_sub_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
+  rclcpp::TimerBase::SharedPtr broadcaster_timer_;
+
+  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
   std::array<double, 6> contact_cache_;
   std::array<double, 18> leg_angles_;
@@ -45,6 +57,7 @@ class ElkapodOdom : public rclcpp::Node {
   bool joint_states_initialized_ = false;
   bool position_initialized_ = false;
   Eigen::Matrix4d odom_pose_;
+  Eigen::Vector3d base_footprint_;
   std::vector<Eigen::Vector3d> last_leg_positions_;
   std::unique_ptr<KinematicsSolver> solver_;
 };

@@ -15,6 +15,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_eigen REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(nav_msgs REQUIRED)
 include_directories(include)
 FILE(GLOB_RECURSE INCLUDE_FILES "include/elkapod_odometry/*.hpp")
@@ -64,10 +65,33 @@ ament_target_dependencies(
         "tf2_geometry_msgs"
         "nav_msgs"
         "tf2_eigen"
+        "tf2_ros"
 )
 
 # Install the executable
 install(TARGETS elkapod_odom
+        DESTINATION lib/${PROJECT_NAME}
+)
+
+add_executable(imu_republisher src/imu_republisher.cpp src/imu_republisher_init.cpp)
+target_sources(imu_republisher PRIVATE ${INCLUDE_FILES})
+
+target_include_directories(imu_republisher PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/elkapod_odometry
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>)
+
+
+target_compile_features(imu_republisher PUBLIC c_std_99 cxx_std_20)  # Require C99 and C++20
+ament_target_dependencies(
+        imu_republisher
+        "rclcpp"
+        "sensor_msgs"
+)
+
+# Install the executable
+install(TARGETS imu_republisher
         DESTINATION lib/${PROJECT_NAME}
 )
 

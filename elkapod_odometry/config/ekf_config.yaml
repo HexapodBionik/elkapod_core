@@ -5,33 +5,33 @@ ekf_filter_node:
     use_sim_time: true
 
     # Filter setup
-    frequency: 50.0
-    sensor_timeout: 1.0
+    frequency: 30.0
+    sensor_timeout: 0.1
     two_d_mode: true
 
     # Frames
     odom_frame: odom
-    base_link_frame: base_link
+    base_link_frame: base_footprint
     world_frame: odom
     map_frame: map
     publish_tf: true
 
     # ---- IMU on /imu/data (orientation + gyro) ----
-    imu0: /imu/data
+    imu0: /imu
     imu0_config: [false, false, false,   # x, y, z position
-                  true,  true,  true,    # roll, pitch, yaw (orientation)
+                  false,  false,  true,    # roll, pitch, yaw (orientation)
                   false, false, false,   # vx, vy, vz (linear velocity)
-                  true,  true,  true,    # vroll, vpitch, vyaw (angular velocity)
+                  false, false,  true,    # vroll, vpitch, vyaw (angular velocity)
                   false, false, false]   # ax, ay, az (linear acceleration)
     imu0_differential: false
     imu0_relative: false
-    imu0_queue_size: 5
+    imu0_queue_size: 10
     imu0_remove_gravitational_acceleration: true
 
     # ---- Legged odometry on /leg_odom (POSE ONLY) ----
     odom0: /leg_odom
     odom0_config: [true,  true,  false,  # x, y, z position
-                   false, false, true,   # roll, pitch, yaw (orientation)
+                   false, false, false,   # roll, pitch, yaw (orientation)
                    false, false, false,  # vx, vy, vz (no twist)
                    false, false, false,  # vroll, vpitch, vyaw (no twist)
                    false, false, false]  # ax, ay, az
