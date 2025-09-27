@@ -16,8 +16,6 @@
 
 static inline double sign(double x) { return (x > 0) - (x < 0); }
 
-static inline double rad2deg(double deg) { return deg * 180 / M_PI; }
-
 KinematicsSolver::KinematicsSolver(const std::vector<Eigen::Vector3d> linkLengths)
     : m1_(linkLengths[0]), a1_(linkLengths[1]), a2_(linkLengths[2]), a3_(linkLengths[3]) {
   validateConstructorArguments({linkLengths[0], linkLengths[1], linkLengths[2], linkLengths[3]});

@@ -6,9 +6,11 @@
 #include <format>
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose_with_covariance.hpp>
+#include <geometry_msgs/msg/twist_with_covariance.hpp>
 #include <geometry_msgs/msg/quaternion.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include "../include/elkapod_odometry/psocpp.h"
 
 using namespace std::chrono_literals;
 
@@ -22,27 +24,32 @@ ElkapodOdom::ElkapodOdom() : Node("elkapod_odom") {
 
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
-  timer_ = this->create_timer(20ms, std::bind(&ElkapodOdom::odomCallback, this));
+  timer_ = this->create_timer(12500us, std::bind(&ElkapodOdom::odomCallback, this));
   broadcaster_timer_ = this->create_timer(10ms, std::bind(&ElkapodOdom::tfCallback, this));
 
   odom_pose_ = Eigen::Matrix4d::Identity();
+  previous_odom_pose_ = Eigen::Matrix4d::Identity();
   base_footprint_ = Eigen::Vector3d::Zero();
   contact_cache_ = {0.};
   leg_angles_ = {0.};
   last_leg_positions_ = std::vector<Eigen::Vector3d>(6, Eigen::Vector3d::Zero());
+
+  current_leg_config_ = std::vector<Eigen::Vector3d>(6, Eigen::Vector3d::Zero());
+  previous_leg_config_ = std::vector<Eigen::Vector3d>(6, Eigen::Vector3d::Zero());
 
   base_link_rotations_ = {0.63973287, -0.63973287, M_PI / 2., -M_PI / 2., 2.38414364, -2.38414364};
   base_link_translations_ = {{0.17841, 0.13276, -0.03},  {0.17841, -0.13276, -0.03},
                              {0.0138, 0.1643, -0.03},    {0.0138, -0.1643, -0.03},
                              {-0.15903, 0.15038, -0.03}, {-0.15903, -0.15038, -0.03}};
 
+  last_odom_estimate_time_ = get_clock()->now().seconds();
   Eigen::Vector3d m1(0.0, 0.0, 0.025);
   Eigen::Vector3d a1(0.0676, 0.0, 0.0);
   Eigen::Vector3d a2(0.09237, 0.0, 0.0);
   Eigen::Vector3d a3(0.22524, 0.0, 0.0);
 
   const std::vector<Eigen::Vector3d> input = {m1, a1, a2, a3};
-  solver_ = std::make_unique<KinematicsSolver>(input);
+  solver_ = std::make_shared<KinematicsSolver>(input);
 }
 
 void ElkapodOdom::collisionSubCallback(const std_msgs::msg::Int8MultiArray::SharedPtr contacts) {
@@ -87,8 +94,8 @@ Eigen::Vector3d ElkapodOdom::findBaseFootprintCoords(Eigen::Vector4d plane){
   const double d = plane[3];
   
   auto p = v * d / v.squaredNorm();
-  RCLCPP_INFO(get_logger(), std::format("X: {:.2f}\tY: {:.2f}\tZ: {:.2f}", p[0],
-     p[1], p[2]).c_str());
+  // RCLCPP_INFO(get_logger(), std::format("X: {:.2f}\tY: {:.2f}\tZ: {:.2f}", p[0],
+  //    p[1], p[2]).c_str());
 
   return p;
 }
@@ -113,16 +120,17 @@ void ElkapodOdom::tfCallback(){
   tf_broadcaster_->sendTransform(t);
 }
 
-nav_msgs::msg::Odometry ElkapodOdom::fillOdomMsg(){
+nav_msgs::msg::Odometry ElkapodOdom::fillOdomMsg(const Eigen::Matrix4d odom_pose, const Eigen::Matrix4d previous_odom_pose){
   auto odom_msg = nav_msgs::msg::Odometry();
+  auto time = get_clock()->now();
   odom_msg.header.frame_id = "odom";
-  odom_msg.header.stamp = get_clock()->now();
+  odom_msg.header.stamp = time;
   odom_msg.child_frame_id = "base_footprint";
 
   auto pose = geometry_msgs::msg::PoseWithCovariance();
   auto position = geometry_msgs::msg::Point();
 
-  const Eigen::Quaterniond q(odom_pose_.block<3, 3>(0, 0));
+  const Eigen::Quaterniond q(odom_pose.block<3, 3>(0, 0));
   q.normalized();
 
   geometry_msgs::msg::Quaternion orientation;
@@ -131,9 +139,9 @@ nav_msgs::msg::Odometry ElkapodOdom::fillOdomMsg(){
   orientation.z = q.z();
   orientation.w = q.w();
 
-  position.x = odom_pose_(0, 3);
-  position.y = odom_pose_(1, 3);
-  position.z = odom_pose_(2, 3);
+  position.x = odom_pose(0, 3);
+  position.y = odom_pose(1, 3);
+  position.z = odom_pose(2, 3);
 
   pose.pose.position = position;
   pose.pose.orientation = orientation;
@@ -144,6 +152,35 @@ nav_msgs::msg::Odometry ElkapodOdom::fillOdomMsg(){
                      0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0};
 
   odom_msg.pose = pose;
+
+  double dt = time.seconds() - last_odom_estimate_time_;
+  if (dt <= 1e-6) dt = 1e-6; 
+  auto twist = geometry_msgs::msg::TwistWithCovariance();
+  
+  Eigen::Vector3d p(odom_pose(0,3), odom_pose(1,3), odom_pose(2,3));
+  Eigen::Vector3d prev_p(previous_odom_pose_(0,3), previous_odom_pose_(1,3), previous_odom_pose_(2,3));
+  Eigen::Vector3d v_world = (p - prev_p) / dt;
+  Eigen::Matrix3d R_world_body = odom_pose.block<3,3>(0,0);
+  Eigen::Vector3d v_body = R_world_body.transpose() * v_world;
+
+  // Odometria oczekuje prędkości w układzie robota (base_link / base_footprint), a nie w układzie świata - stąd transformacje.
+
+  twist.twist.linear.x = v_body.x();
+  twist.twist.linear.y = v_body.y();
+  twist.twist.linear.z = v_body.z();
+
+
+  twist.covariance = {
+    0.1, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.1, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  };
+
+  odom_msg.twist = twist;
+  last_odom_estimate_time_ = time.seconds();
   return odom_msg;
 }
 
@@ -157,6 +194,7 @@ void ElkapodOdom::odomCallback() {
   for (size_t i = 0; i < 6; ++i) {
     if (contact_cache_[i] == 1) {
       Eigen::Vector3d angles = {leg_angles_[i * 3], leg_angles_[i * 3 + 1], leg_angles_[i * 3 + 2]};
+      current_leg_config_[i] = angles;
       auto point =
           Eigen::AngleAxis(base_link_rotations_[i], Eigen::Vector3d::UnitZ()).toRotationMatrix() *
               solver_->forward(angles) +
@@ -175,7 +213,6 @@ void ElkapodOdom::odomCallback() {
     }
 
     const size_t N = common_legs.size();
-    // RCLCPP_INFO(get_logger(), std::format("N: {:}", N).c_str());
     if (N < 3) {
       RCLCPP_ERROR(get_logger(), "CONTACT LOST!!!");
     }
@@ -184,21 +221,22 @@ void ElkapodOdom::odomCallback() {
       Eigen::Matrix3Xd Q(3, N);
       int i = 0;
       for (auto leg_nb : common_legs) {
-        P.col(i) = last_leg_positions_[leg_nb];
-        Q.col(i) = current_leg_positions[leg_nb];
+        Q.col(i) = last_leg_positions_[leg_nb];
+        P.col(i) = current_leg_positions[leg_nb];
         ++i;
       }
-
       auto T = Eigen::umeyama(P, Q, false);
-      odom_pose_ = odom_pose_ * T.inverse();
-      double yaw = odom_pose_.block<3, 3>(0, 0).eulerAngles(0, 1, 2)[2];
+      previous_odom_pose_ = odom_pose_;
+      odom_pose_ = odom_pose_ * T;
+      
       auto plane = findPlane(Q);
       base_footprint_ = findBaseFootprintCoords(plane);
+
+      auto odom_msg = fillOdomMsg(odom_pose_, previous_odom_pose_);
+      odom_pub_->publish(odom_msg);
     }
   }
   position_initialized_ = true;
   last_leg_positions_ = current_leg_positions;
-
-  auto odom_msg = fillOdomMsg();
-  odom_pub_->publish(odom_msg);
+  previous_leg_config_ = current_leg_config_;
 }

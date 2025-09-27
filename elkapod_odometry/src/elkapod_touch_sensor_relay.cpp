@@ -54,7 +54,7 @@ void ElkapodTouchSensorRelay::collisionPubCallback() {
       data[i] = 1;
       last_contact_[i] = get_clock()->now().seconds();
     } else if (force_cache_[i] < treshold_ &&
-               get_clock()->now().seconds() - last_contact_[i] < 0.04) {
+               get_clock()->now().seconds() - last_contact_[i] < 0.02) {
       data[i] = 1;
     }
   }

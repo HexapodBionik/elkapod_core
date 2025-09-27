@@ -25,6 +25,7 @@ setup(
             'rot_waypoints = elkapod_locomotion_examples.rot_waypoints:main',
             'rectangle_drawer = elkapod_locomotion_examples.rectangle_drawer:main',
             'rectangle_drawer_error = elkapod_locomotion_examples.rectangle_drawer_error:main',
+            'rotation_error_calib = elkapod_locomotion_examples.rotation_error_measurement:main'
         ],
     },
 )

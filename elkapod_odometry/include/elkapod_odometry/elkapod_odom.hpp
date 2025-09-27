@@ -36,7 +36,7 @@ class ElkapodOdom : public rclcpp::Node {
   void jointStatesCallback(const sensor_msgs::msg::JointState::SharedPtr joint_states);
   void odomCallback();
   void tfCallback();
-  nav_msgs::msg::Odometry fillOdomMsg();
+  nav_msgs::msg::Odometry fillOdomMsg(const Eigen::Matrix4d odom_pose, const Eigen::Matrix4d previous_odom_pose);
 
   Eigen::Vector4d findPlane(const Eigen::Matrix3Xd contact_points);
   Eigen::Vector3d findBaseFootprintCoords(Eigen::Vector4d plane);
@@ -57,9 +57,14 @@ class ElkapodOdom : public rclcpp::Node {
   bool joint_states_initialized_ = false;
   bool position_initialized_ = false;
   Eigen::Matrix4d odom_pose_;
+  Eigen::Matrix4d previous_odom_pose_;
   Eigen::Vector3d base_footprint_;
   std::vector<Eigen::Vector3d> last_leg_positions_;
-  std::unique_ptr<KinematicsSolver> solver_;
+  std::shared_ptr<KinematicsSolver> solver_;
+  double last_odom_estimate_time_;
+
+  std::vector<Eigen::Vector3d> current_leg_config_;
+  std::vector<Eigen::Vector3d> previous_leg_config_;
 };
 
 #endif  // ELKAPOD_ODOM_HPP

@@ -30,11 +30,11 @@ ekf_filter_node:
 
     # ---- Legged odometry on /leg_odom (POSE ONLY) ----
     odom0: /leg_odom
-    odom0_config: [true,  true,  false,  # x, y, z position
+    odom0_config: [false, false,  false,  # x, y, z position
                    false, false, false,   # roll, pitch, yaw (orientation)
-                   false, false, false,  # vx, vy, vz (no twist)
-                   false, false, false,  # vroll, vpitch, vyaw (no twist)
+                   true, true, false,  # vx, vy, vz
+                   false, false, false,  # vroll, vpitch, vyaw 
                    false, false, false]  # ax, ay, az
-    odom0_differential: false   # pose is absolute, not incremental
+    odom0_differential: true   # pose is absolute, not incremental
     odom0_relative: false
     odom0_queue_size: 5
