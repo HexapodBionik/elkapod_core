@@ -27,6 +27,14 @@ elkapod_gait:
           default: 0.025
           min: 0.05       
           max: 0.15
+    roll_pid:
+      k: 4.0
+      ti: 0.2
+      td: 0.0
+    pitch_pid:
+      k: 4.0
+      ti: 0.2
+      td: 0.0
 
 elkapod_motion_manager:
   ros__parameters:
