@@ -19,7 +19,7 @@ ekf_filter_node:
     # ---- IMU on /imu/data (orientation + gyro) ----
     imu0: /imu
     imu0_config: [false, false, false,   # x, y, z position
-                  false,  false,  true,    # roll, pitch, yaw (orientation)
+                  false,  false,  false,    # roll, pitch, yaw (orientation)
                   false, false, false,   # vx, vy, vz (linear velocity)
                   false, false,  true,    # vroll, vpitch, vyaw (angular velocity)
                   false, false, false]   # ax, ay, az (linear acceleration)
@@ -35,6 +35,6 @@ ekf_filter_node:
                    true, true, false,  # vx, vy, vz
                    false, false, false,  # vroll, vpitch, vyaw 
                    false, false, false]  # ax, ay, az
-    odom0_differential: true   # pose is absolute, not incremental
+    odom0_differential: true   
     odom0_relative: false
     odom0_queue_size: 5
