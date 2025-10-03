@@ -11,8 +11,6 @@
 #include <tf2_eigen/tf2_eigen.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-#include "../include/elkapod_odometry/psocpp.h"
-
 using namespace std::chrono_literals;
 
 ElkapodOdom::ElkapodOdom() : Node("elkapod_odom") {
@@ -121,7 +119,7 @@ void ElkapodOdom::tfCallback() {
 }
 
 nav_msgs::msg::Odometry ElkapodOdom::fillOdomMsg(const Eigen::Matrix4d odom_pose,
-                                                 const Eigen::Matrix4d previous_odom_pose) {
+                                                 const Eigen::Matrix4d /*previous_odom_pose*/) {
   auto odom_msg = nav_msgs::msg::Odometry();
   auto time = get_clock()->now();
   odom_msg.header.frame_id = "odom";
