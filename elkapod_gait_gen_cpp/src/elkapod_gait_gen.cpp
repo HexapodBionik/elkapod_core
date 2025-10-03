@@ -16,6 +16,7 @@ constexpr auto INPUT_VEL_TOL = 1e-5;
 constexpr auto VEL_TOL = 1e-3;
 
 constexpr auto EMA_FILTER_TAU = 0.15;
+constexpr auto EMA_FILTER_TAU_BASE_HEIGHT = 0.15;
 
 }  // namespace
 
@@ -79,17 +80,19 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   base_height_max_ = this->declare_parameter<double>("base_height.max");
   set_base_height_ = base_height_;
 
-  const double k_roll = this->declare_parameter<double>("roll_pid.k");
-  const double ti_roll = this->declare_parameter<double>("roll_pid.ti");
-  const double td_roll = this->declare_parameter<double>("roll_pid.td");
-  const double cmd_lo_roll = this->declare_parameter<double>("roll_pid.cmd_lo");
-  const double cmd_hi_roll = this->declare_parameter<double>("roll_pid.cmd_hi");
+  const double k_roll = this->declare_parameter<double>("roll.pid.k");
+  const double ti_roll = this->declare_parameter<double>("roll.pid.ti");
+  const double td_roll = this->declare_parameter<double>("roll.pid.td");
+  const double cmd_lo_roll = this->declare_parameter<double>("roll.pid.cmd_lo");
+  const double cmd_hi_roll = this->declare_parameter<double>("roll.pid.cmd_hi");
+  roll_limit_ = this->declare_parameter<double>("roll.max_rad");
 
-  const double k_pitch = this->declare_parameter<double>("pitch_pid.k");
-  const double ti_pitch = this->declare_parameter<double>("pitch_pid.ti");
-  const double td_pitch = this->declare_parameter<double>("pitch_pid.td");
-  const double cmd_lo_pitch = this->declare_parameter<double>("pitch_pid.cmd_lo");
-  const double cmd_hi_pitch = this->declare_parameter<double>("pitch_pid.cmd_hi");
+  const double k_pitch = this->declare_parameter<double>("pitch.pid.k");
+  const double ti_pitch = this->declare_parameter<double>("pitch.pid.ti");
+  const double td_pitch = this->declare_parameter<double>("pitch.pid.td");
+  const double cmd_lo_pitch = this->declare_parameter<double>("pitch.pid.cmd_lo");
+  const double cmd_hi_pitch = this->declare_parameter<double>("pitch.pid.cmd_hi");
+  pitch_limit_ = this->declare_parameter<double>("pitch.max_rad");
 
   // Subscriptions
   velocity_sub_ = this->create_subscription<VelCmd>(
@@ -149,14 +152,11 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   current_angular_velocity_ = 0.;
   cycle_time_ = 0.0;
   ema_filter_alfa_ = 1. - std::exp(-write_loop_dt / EMA_FILTER_TAU);
+  base_height_ema_filter_alfa_ = 1. - std::exp(-write_loop_dt / EMA_FILTER_TAU_BASE_HEIGHT);
 
   current_velocity_ = std::vector<Eigen::Vector2d>(kLegsNb, {0.0, 0.0});
   last_leg_position_ = std::vector<Eigen::Vector3d>(kLegsNb, {0.0, 0.0, 0.0});
   last_leg_position_relative_ = std::vector<Eigen::Vector3d>(kLegsNb, {0.0, 0.0, 0.0});
-
-  planner = LinearLegPlanner();
-  executor_ = TrajectoryExecutor();
-  executor_enable_ = false;
 
   roll_pid_ = PID(k_roll, ti_roll, td_roll, write_loop_dt);
   roll_pid_.setCommandLimits(cmd_lo_roll, cmd_hi_roll);
@@ -244,11 +244,25 @@ void ElkapodGaitGen::imuCallback(const IMUMsg::SharedPtr msg) {
 }
 
 void ElkapodGaitGen::rollCallback(const FloatMsg::SharedPtr msg) {
-  set_roll_ = msg->data;
+  auto x = std::pow(msg->data, 2) / std::pow(roll_limit_, 2) + std::pow(set_pitch_, 2) / std::pow(pitch_limit_, 2);
+  
+  if(x <= 1.0){
+    set_roll_ = msg->data;
+  }
+  else{
+    RCLCPP_WARN(get_logger(), "Couldn't set new roll value - out of allowed range");
+  }
 }
 
 void ElkapodGaitGen::pitchCallback(const FloatMsg::SharedPtr msg) {
-  set_pitch_ = msg->data;
+  auto x = std::pow(set_roll_, 2) / std::pow(roll_limit_, 2) + std::pow(msg->data, 2) / std::pow(pitch_limit_, 2);
+  
+  if(x <= 1.0){
+    set_pitch_ = msg->data;
+  }
+  else{
+    RCLCPP_WARN(get_logger(), "Couldn't set new pitch value - out of allowed range");
+  }
 }
 
 void ElkapodGaitGen::fsrCallback(const Int8ArrayMsg::SharedPtr msg) {
@@ -316,7 +330,8 @@ void ElkapodGaitGen::updateVelocityCommand() {
       leg_vel.setZero();
     }
 
-    const double R = leg_spacing_ + 0.22;
+    constexpr double kBaseToLegMountDist = 0.20204;
+    const double R = leg_spacing_ + kBaseToLegMountDist;
     step_length_ = cycle_time_ * duty_factor_ * R * std::fabs(angular_vel);
   } else {
     for (auto& leg_vel : current_velocity_) {
@@ -338,8 +353,8 @@ void ElkapodGaitGen::updateVelocityCommand() {
 
   if (is_close(current_vel_scalar_, 0.0, VEL_TOL) &&
       is_close(current_angular_velocity_, 0.0, VEL_TOL) && state_ == State::WALKING) {
-    RCLCPP_INFO(this->get_logger(), "Going to IDLE SETTLE state");
-    state_ = State::IDLE_SETTLE;
+    RCLCPP_INFO(this->get_logger(), "Going to IDLE state");
+    state_ = State::IDLE;
   } else if ((!is_close(current_vel_scalar_, 0.0, VEL_TOL) ||
               !is_close(current_angular_velocity_, 0.0, VEL_TOL)) &&
              state_ == State::IDLE) {
@@ -421,32 +436,11 @@ void ElkapodGaitGen::updateAndWriteCommands() {
     }
   }
 
-  double e_roll = set_roll_ - roll_;
-  double u_roll = roll_pid_.update(e_roll);
+  auto msg = FloatArrayMsg();
+  msg.data.resize(kJointsNum, 0.0);
 
-  RCLCPP_DEBUG_THROTTLE(
-      get_logger(), *get_clock(), 500,
-      std::format("PID roll u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_roll, e_roll, set_roll_)
-          .c_str());
-
-  double e_pitch = set_pitch_ - pitch_;
-  double u_pitch = pitch_pid_.update(e_pitch);
-
-  RCLCPP_DEBUG_THROTTLE(
-      get_logger(), *get_clock(), 500,
-      std::format("PID pitch u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_pitch, e_pitch, set_pitch_)
-          .c_str());
-
-  auto msg3 = FloatArrayMsg();
-  msg3.data.resize(kJointsNum, 0.0);
-
-  // TODO Base height regulation commented for now, to be fixed
-  if (!is_close(base_height_, set_base_height_, 1e-3)) {
-    if (base_height_ < set_base_height_)
-      base_height_ += 0.005;
-    else
-      base_height_ -= 0.005;
-  }
+  // Set height
+  base_height_ = base_height_ + base_height_ema_filter_alfa_ * (set_base_height_ - base_height_);
 
   if (state_ == State::WALKING || state_ == State::IDLE) {
     for (size_t leg_nb = 0; leg_nb < kLegsNb; ++leg_nb) {
@@ -471,72 +465,51 @@ void ElkapodGaitGen::updateAndWriteCommands() {
       p = rotZ(-base_link_rotations_[leg_nb]) * p;
       p += Eigen::Vector3d(leg_spacing_, 0.0, -base_height_ + base_link_translations_[leg_nb][2]);
 
-      // Convert current leg pose to base coordinate system
-      const double rot_z = base_link_rotations_[leg_nb];
-      Eigen::Matrix4d H = Eigen::Matrix4d::Identity();
-      H.block<3, 3>(0, 0) = Eigen::AngleAxisd(rot_z, Eigen::Vector3d::UnitZ()).toRotationMatrix();
-      H.block<3, 1>(0, 3) = base_link_translations_[leg_nb];
-
-      Eigen::Vector4d p_homogeneous(p[0], p[1], p[2], 1.0);
-      auto p_base_homogeneous = H * p_homogeneous;
-
-      
-      double dz = 0.0;
-      dz += - u_roll * (p_base_homogeneous[1]);
-      dz += u_pitch * (p_base_homogeneous[0]);
-
-      p[2] += dz;
-      p[2] = std::clamp(p[2], -0.2, -0.05);
-
       last_leg_position_relative_[leg_nb] = p;
-      last_leg_position_[leg_nb] = p_base_homogeneous.head<3>();
-
-      msg3.data[leg_nb * 3 + 0] = p[0];
-      msg3.data[leg_nb * 3 + 1] = p[1];
-      msg3.data[leg_nb * 3 + 2] = p[2];
-    }
-    leg_signal_pub_->publish(msg3);
-  }
-
-  if (state_ == State::IDLE_SETTLE) {
-    if (settle_substate_ == SettleStates::PLAN) {
-      std::array<Trajectory, 6> step_trajs;
-      for (size_t leg_nb = 0; leg_nb < kLegsNb; ++leg_nb) {
-        auto goal = last_leg_position_relative_[leg_nb];
-        goal[2] = -base_height_ + base_link_translations_[leg_nb][2];
-        auto traj =
-            planner.plan(last_leg_position_relative_[leg_nb], goal, 0.5, trajectory_freq_hz);
-        step_trajs[leg_nb] = traj;
-      }
-      trajs.push_back(step_trajs);
-
-      executor_enable_ = true;
-      settle_substate_ = SettleStates::EXECUTE;
-
-    } else if (settle_substate_ == SettleStates::EXECUTE) {
-      if (executor_enable_ && !executor_.hasNext() && trajs.size() > 0) {
-        auto current_traj = trajs.front();
-        trajs.erase(trajs.begin());
-        executor_.setTrajectories(current_traj);
-      }
-
-      if (executor_enable_ && (executor_.hasNext() || trajs.size() > 0)) {
-        auto step = executor_.next();
-        size_t index = 0;
-        for (const auto& leg : step) {
-          for (double coordinate : leg) {
-            msg3.data[index++] = coordinate;
-          }
-        }
-        leg_signal_pub_->publish(msg3);
-      } else if (executor_enable_ && !executor_.hasNext() && trajs.size() <= 0) {
-        executor_enable_ = false;
-        settle_substate_ = SettleStates::PLAN;
-        state_ = State::IDLE;
-        RCLCPP_INFO(this->get_logger(), "Going to IDLE state");
-      }
     }
   }
+
+  // Pitch && Roll PIDs
+  double e_roll = set_roll_ - roll_;
+  double u_roll = roll_pid_.update(e_roll);
+
+  RCLCPP_DEBUG_THROTTLE(
+      get_logger(), *get_clock(), 500,
+      std::format("PID roll u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_roll, e_roll, set_roll_)
+          .c_str());
+
+  double e_pitch = set_pitch_ - pitch_;
+  double u_pitch = pitch_pid_.update(e_pitch);
+
+  RCLCPP_DEBUG_THROTTLE(
+      get_logger(), *get_clock(), 500,
+      std::format("PID pitch u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_pitch, e_pitch, set_pitch_)
+          .c_str());
+  
+  for(size_t i = 0; i < 6; ++i){
+    auto p = last_leg_position_relative_[i];
+    const double rot_z = base_link_rotations_[i];
+    Eigen::Matrix4d H = Eigen::Matrix4d::Identity();
+    H.block<3, 3>(0, 0) = Eigen::AngleAxisd(rot_z, Eigen::Vector3d::UnitZ()).toRotationMatrix();
+    H.block<3, 1>(0, 3) = base_link_translations_[i];
+
+    Eigen::Vector4d p_homogeneous(p[0], p[1], p[2], 1.0);
+    Eigen::Vector4d p_base_homogeneous = H * p_homogeneous;
+
+    double dz = 0.0;
+    dz += - u_roll * p_base_homogeneous[1];
+    dz += u_pitch * p_base_homogeneous[0];
+    p[2] += dz;
+    p_base_homogeneous[2] += dz;
+    
+    last_leg_position_[i] = p_base_homogeneous.head<3>();
+    last_leg_position_relative_[i] = p;
+
+    msg.data[i * 3 + 0] = p[0];
+    msg.data[i * 3 + 1] = p[1];
+    msg.data[i * 3 + 2] = p[2];
+  }
+  leg_signal_pub_->publish(msg);
 }
 
 }  // namespace elkapod_gait_gen
