@@ -25,6 +25,7 @@
 #include <string>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <unordered_map>
+#include <limits>
 
 #include "elkapod_leg_trajectory.hpp"
 #include "leg_path.hpp"
@@ -45,9 +46,12 @@ class PID {
   PID() = default;
   PID(double K, double Ti, double Td, double T);
   void updateCoefficients(double K, double Ti, double Td, double T);
+  void setCommandLimits(double lo, double hi);
   double update(double e);
 
  private:
+  double command_lo_limit_ = - std::numeric_limits<double>::infinity();
+  double command_hi_limit_ = std::numeric_limits<double>::infinity();
   double T_;
   double r2_, r1_, r0_;
   double ukm1_;

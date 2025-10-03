@@ -40,6 +40,11 @@ PID::PID(double K, double Ti, double Td, double T) {
   ukm1_ = 0.0;
 }
 
+void PID::setCommandLimits(double lo, double hi){
+  command_lo_limit_ = lo;
+  command_hi_limit_ = hi;
+}
+
 void PID::updateCoefficients(double K, double Ti, double Td, double T) {
   T_ = T;
   r2_ = K * Td / T;
@@ -53,7 +58,7 @@ double PID::update(double e) {
   e_[0] = e;
 
   double u = r2_ * e_[2] + r1_ * e_[1] + r0_ * e_[0] + ukm1_;
-  u = std::clamp(u, -0.4, 0.4);
+  u = std::clamp(u, command_lo_limit_, command_hi_limit_);
   ukm1_ = u;
 
   return u;
@@ -77,10 +82,14 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   const double k_roll = this->declare_parameter<double>("roll_pid.k");
   const double ti_roll = this->declare_parameter<double>("roll_pid.ti");
   const double td_roll = this->declare_parameter<double>("roll_pid.td");
+  const double cmd_lo_roll = this->declare_parameter<double>("roll_pid.cmd_lo");
+  const double cmd_hi_roll = this->declare_parameter<double>("roll_pid.cmd_hi");
 
   const double k_pitch = this->declare_parameter<double>("pitch_pid.k");
   const double ti_pitch = this->declare_parameter<double>("pitch_pid.ti");
   const double td_pitch = this->declare_parameter<double>("pitch_pid.td");
+  const double cmd_lo_pitch = this->declare_parameter<double>("pitch_pid.cmd_lo");
+  const double cmd_hi_pitch = this->declare_parameter<double>("pitch_pid.cmd_hi");
 
   // Subscriptions
   velocity_sub_ = this->create_subscription<VelCmd>(
@@ -150,7 +159,10 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   executor_enable_ = false;
 
   roll_pid_ = PID(k_roll, ti_roll, td_roll, write_loop_dt);
+  roll_pid_.setCommandLimits(cmd_lo_roll, cmd_hi_roll);
+
   pitch_pid_ = PID(k_pitch, ti_pitch, td_pitch, write_loop_dt);
+  pitch_pid_.setCommandLimits(cmd_lo_pitch, cmd_hi_pitch);
 
   fsr_data_ = std::vector<double>(6, 0.);
 
@@ -412,15 +424,15 @@ void ElkapodGaitGen::updateAndWriteCommands() {
   double e_roll = set_roll_ - roll_;
   double u_roll = roll_pid_.update(e_roll);
 
-  // RCLCPP_INFO_THROTTLE(
-  //     get_logger(), *get_clock(), 500,
-  //     std::format("PID roll u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_roll, e_roll, set_roll_)
-  //         .c_str());
+  RCLCPP_DEBUG_THROTTLE(
+      get_logger(), *get_clock(), 500,
+      std::format("PID roll u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_roll, e_roll, set_roll_)
+          .c_str());
 
   double e_pitch = set_pitch_ - pitch_;
   double u_pitch = pitch_pid_.update(e_pitch);
 
-  RCLCPP_INFO_THROTTLE(
+  RCLCPP_DEBUG_THROTTLE(
       get_logger(), *get_clock(), 500,
       std::format("PID pitch u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_pitch, e_pitch, set_pitch_)
           .c_str());
@@ -446,7 +458,7 @@ void ElkapodGaitGen::updateAndWriteCommands() {
 
         const double omega = current_angular_velocity_;
         Eigen::Vector2d last_leg_xy(last_leg_position_[leg_nb][0], last_leg_position_[leg_nb][1]);
-        Eigen::Vector2d angular_part = -omega * Eigen::Vector2d(-last_leg_xy[1], last_leg_xy[0]);
+        Eigen::Vector2d angular_part = omega * Eigen::Vector2d(-last_leg_xy[1], last_leg_xy[0]);
 
         Eigen::Vector2d vel2D = current_velocity_[leg_nb] + angular_part;
 
@@ -457,69 +469,31 @@ void ElkapodGaitGen::updateAndWriteCommands() {
       }
 
       p = rotZ(-base_link_rotations_[leg_nb]) * p;
-
       p += Eigen::Vector3d(leg_spacing_, 0.0, -base_height_ + base_link_translations_[leg_nb][2]);
 
       // Convert current leg pose to base coordinate system
-      const double rot_z = -base_link_rotations_[leg_nb];
+      const double rot_z = base_link_rotations_[leg_nb];
       Eigen::Matrix4d H = Eigen::Matrix4d::Identity();
       H.block<3, 3>(0, 0) = Eigen::AngleAxisd(rot_z, Eigen::Vector3d::UnitZ()).toRotationMatrix();
       H.block<3, 1>(0, 3) = base_link_translations_[leg_nb];
 
-      Eigen::Vector4d p_homogeneous1(p[0], p[1], p[2], 1.0);
-
-      auto p_base_homogeneous_2 = H * p_homogeneous1;
+      Eigen::Vector4d p_homogeneous(p[0], p[1], p[2], 1.0);
+      auto p_base_homogeneous = H * p_homogeneous;
 
       
       double dz = 0.0;
-      if(base_link_translations_[leg_nb][1] > 0){
-        dz += -1 * u_roll * (p[0] + base_link_translations_[leg_nb][1]); 
-      }
-      else{
-        dz += u_roll * (p[0] + base_link_translations_[leg_nb][1]);
-      }
+      dz += - u_roll * (p_base_homogeneous[1]);
+      dz += u_pitch * (p_base_homogeneous[0]);
 
-      // if(base_link_translations_[leg_nb][0] < 0){
-      //   dz += u_pitch * (p[1] + base_link_translations_[leg_nb][0]);
-      // }
-      // else{
-      //   dz += - u_pitch * (p[1] + base_link_translations_[leg_nb][0]);
-      // }
-      dz += u_pitch * (p[1] + base_link_translations_[leg_nb][0]);
-
-                  // u_pitch * (p[1] + base_link_translations_[leg_nb][0]);
       p[2] += dz;
       p[2] = std::clamp(p[2], -0.2, -0.05);
 
       last_leg_position_relative_[leg_nb] = p;
-
-      double rot = base_link_rotations_[leg_nb];
-      Eigen::Vector3d trans = base_link_translations_[leg_nb];
-
-      Eigen::Matrix4d L_B_H = Eigen::Matrix4d::Identity();
-      L_B_H(0, 0) = std::cos(rot);
-      L_B_H(0, 1) = -std::sin(rot);
-      L_B_H(1, 0) = std::sin(rot);
-      L_B_H(1, 1) = std::cos(rot);
-      L_B_H(0, 3) = -(std::cos(rot) * leg_spacing_ + trans[0]);
-      L_B_H(1, 3) = -(std::sin(rot) * leg_spacing_ + trans[1]);
-      L_B_H(2, 3) = base_height_ - base_link_translations_[leg_nb][2] + dz;
-
-      Eigen::Vector4d p_homogeneous(p[0], p[1], p[2], 1.0);
-      Eigen::Vector4d p_base_homogeneous = L_B_H * p_homogeneous;
-
       last_leg_position_[leg_nb] = p_base_homogeneous.head<3>();
 
       msg3.data[leg_nb * 3 + 0] = p[0];
       msg3.data[leg_nb * 3 + 1] = p[1];
       msg3.data[leg_nb * 3 + 2] = p[2];
-
-      // std::cout<<"Leg nb: "<<leg_nb<<std::endl;
-      // std::cout<<"P1"<<std::endl;
-      // std::cout<<p_base_homogeneous_2<<std::endl;
-      // std::cout<<"P2"<<std::endl;
-      // std::cout<<p_base_homogeneous<<std::endl;
-
     }
     leg_signal_pub_->publish(msg3);
   }
