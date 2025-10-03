@@ -6,10 +6,11 @@
 #include <format>
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose_with_covariance.hpp>
-#include <geometry_msgs/msg/twist_with_covariance.hpp>
 #include <geometry_msgs/msg/quaternion.hpp>
+#include <geometry_msgs/msg/twist_with_covariance.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
 #include "../include/elkapod_odometry/psocpp.h"
 
 using namespace std::chrono_literals;
@@ -67,18 +68,17 @@ void ElkapodOdom::jointStatesCallback(const sensor_msgs::msg::JointState::Shared
   joint_states_initialized_ = true;
 }
 
-Eigen::Vector4d ElkapodOdom::findPlane(const Eigen::Matrix3Xd contact_points){
+Eigen::Vector4d ElkapodOdom::findPlane(const Eigen::Matrix3Xd contact_points) {
   Eigen::Matrix<double, Eigen::Dynamic, 4> A(contact_points.cols(), 4);
   Eigen::VectorXd b(contact_points.cols());
   b.setZero();
 
-  
   for (int i = 0; i < contact_points.cols(); ++i) {
-      auto point = contact_points.col(i);
-      A(i, 0) = point[0];
-      A(i, 1) = point[1];
-      A(i, 2) = point[2];
-      A(i, 3) = -1.0;
+    auto point = contact_points.col(i);
+    A(i, 0) = point[0];
+    A(i, 1) = point[1];
+    A(i, 2) = point[2];
+    A(i, 3) = -1.0;
   }
 
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullV);
@@ -86,13 +86,13 @@ Eigen::Vector4d ElkapodOdom::findPlane(const Eigen::Matrix3Xd contact_points){
   return plane;
 }
 
-Eigen::Vector3d ElkapodOdom::findBaseFootprintCoords(Eigen::Vector4d plane){
+Eigen::Vector3d ElkapodOdom::findBaseFootprintCoords(Eigen::Vector4d plane) {
   Eigen::Vector3d v;
   v[0] = plane[0];
   v[1] = plane[1];
   v[2] = plane[2];
   const double d = plane[3];
-  
+
   auto p = v * d / v.squaredNorm();
   // RCLCPP_INFO(get_logger(), std::format("X: {:.2f}\tY: {:.2f}\tZ: {:.2f}", p[0],
   //    p[1], p[2]).c_str());
@@ -100,7 +100,7 @@ Eigen::Vector3d ElkapodOdom::findBaseFootprintCoords(Eigen::Vector4d plane){
   return p;
 }
 
-void ElkapodOdom::tfCallback(){
+void ElkapodOdom::tfCallback() {
   geometry_msgs::msg::TransformStamped t;
   t.header.stamp = this->get_clock()->now();
   t.header.frame_id = "base_footprint";
@@ -120,7 +120,8 @@ void ElkapodOdom::tfCallback(){
   tf_broadcaster_->sendTransform(t);
 }
 
-nav_msgs::msg::Odometry ElkapodOdom::fillOdomMsg(const Eigen::Matrix4d odom_pose, const Eigen::Matrix4d previous_odom_pose){
+nav_msgs::msg::Odometry ElkapodOdom::fillOdomMsg(const Eigen::Matrix4d odom_pose,
+                                                 const Eigen::Matrix4d previous_odom_pose) {
   auto odom_msg = nav_msgs::msg::Odometry();
   auto time = get_clock()->now();
   odom_msg.header.frame_id = "odom";
@@ -154,29 +155,26 @@ nav_msgs::msg::Odometry ElkapodOdom::fillOdomMsg(const Eigen::Matrix4d odom_pose
   odom_msg.pose = pose;
 
   double dt = time.seconds() - last_odom_estimate_time_;
-  if (dt <= 1e-6) dt = 1e-6; 
+  if (dt <= 1e-6) dt = 1e-6;
   auto twist = geometry_msgs::msg::TwistWithCovariance();
-  
-  Eigen::Vector3d p(odom_pose(0,3), odom_pose(1,3), odom_pose(2,3));
-  Eigen::Vector3d prev_p(previous_odom_pose_(0,3), previous_odom_pose_(1,3), previous_odom_pose_(2,3));
+
+  Eigen::Vector3d p(odom_pose(0, 3), odom_pose(1, 3), odom_pose(2, 3));
+  Eigen::Vector3d prev_p(previous_odom_pose_(0, 3), previous_odom_pose_(1, 3),
+                         previous_odom_pose_(2, 3));
   Eigen::Vector3d v_world = (p - prev_p) / dt;
-  Eigen::Matrix3d R_world_body = odom_pose.block<3,3>(0,0);
+  Eigen::Matrix3d R_world_body = odom_pose.block<3, 3>(0, 0);
   Eigen::Vector3d v_body = R_world_body.transpose() * v_world;
 
-  // Odometria oczekuje prędkości w układzie robota (base_link / base_footprint), a nie w układzie świata - stąd transformacje.
+  // Odometria oczekuje prędkości w układzie robota (base_link / base_footprint), a nie w układzie
+  // świata - stąd transformacje.
 
   twist.twist.linear.x = v_body.x();
   twist.twist.linear.y = v_body.y();
   twist.twist.linear.z = v_body.z();
 
-
   twist.covariance = {
-    0.1, 0.0, 0.0, 0.0, 0.0, 0.0,
-    0.0, 0.1, 0.0, 0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
   };
 
   odom_msg.twist = twist;
@@ -228,7 +226,7 @@ void ElkapodOdom::odomCallback() {
       auto T = Eigen::umeyama(P, Q, false);
       previous_odom_pose_ = odom_pose_;
       odom_pose_ = odom_pose_ * T;
-      
+
       auto plane = findPlane(Q);
       base_footprint_ = findBaseFootprintCoords(plane);
 

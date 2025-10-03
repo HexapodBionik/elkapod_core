@@ -14,6 +14,7 @@
 #include <chrono>
 #include <eigen3/Eigen/Eigen>
 #include <geometry_msgs/msg/twist.hpp>
+#include <limits>
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
@@ -25,7 +26,6 @@
 #include <string>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <unordered_map>
-#include <limits>
 
 #include "leg_path.hpp"
 
@@ -49,7 +49,7 @@ class PID {
   double update(double e);
 
  private:
-  double command_lo_limit_ = - std::numeric_limits<double>::infinity();
+  double command_lo_limit_ = -std::numeric_limits<double>::infinity();
   double command_hi_limit_ = std::numeric_limits<double>::infinity();
   double T_;
   double r2_, r1_, r0_;

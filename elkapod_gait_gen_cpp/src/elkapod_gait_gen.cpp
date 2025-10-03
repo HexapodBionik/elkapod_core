@@ -7,9 +7,9 @@
 
 #include "../include/elkapod_gait_gen_cpp/elkapod_gait_gen.hpp"
 
+#include <algorithm>
 #include <format>
 #include <functional>
-#include <algorithm>
 
 namespace {
 constexpr auto INPUT_VEL_TOL = 1e-5;
@@ -41,7 +41,7 @@ PID::PID(double K, double Ti, double Td, double T) {
   ukm1_ = 0.0;
 }
 
-void PID::setCommandLimits(double lo, double hi){
+void PID::setCommandLimits(double lo, double hi) {
   command_lo_limit_ = lo;
   command_hi_limit_ = hi;
 }
@@ -244,23 +244,23 @@ void ElkapodGaitGen::imuCallback(const IMUMsg::SharedPtr msg) {
 }
 
 void ElkapodGaitGen::rollCallback(const FloatMsg::SharedPtr msg) {
-  auto x = std::pow(msg->data, 2) / std::pow(roll_limit_, 2) + std::pow(set_pitch_, 2) / std::pow(pitch_limit_, 2);
-  
-  if(x <= 1.0){
+  auto x = std::pow(msg->data, 2) / std::pow(roll_limit_, 2) +
+           std::pow(set_pitch_, 2) / std::pow(pitch_limit_, 2);
+
+  if (x <= 1.0) {
     set_roll_ = msg->data;
-  }
-  else{
+  } else {
     RCLCPP_WARN(get_logger(), "Couldn't set new roll value - out of allowed range");
   }
 }
 
 void ElkapodGaitGen::pitchCallback(const FloatMsg::SharedPtr msg) {
-  auto x = std::pow(set_roll_, 2) / std::pow(roll_limit_, 2) + std::pow(msg->data, 2) / std::pow(pitch_limit_, 2);
-  
-  if(x <= 1.0){
+  auto x = std::pow(set_roll_, 2) / std::pow(roll_limit_, 2) +
+           std::pow(msg->data, 2) / std::pow(pitch_limit_, 2);
+
+  if (x <= 1.0) {
     set_pitch_ = msg->data;
-  }
-  else{
+  } else {
     RCLCPP_WARN(get_logger(), "Couldn't set new pitch value - out of allowed range");
   }
 }
@@ -485,8 +485,8 @@ void ElkapodGaitGen::updateAndWriteCommands() {
       get_logger(), *get_clock(), 500,
       std::format("PID pitch u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_pitch, e_pitch, set_pitch_)
           .c_str());
-  
-  for(size_t i = 0; i < 6; ++i){
+
+  for (size_t i = 0; i < 6; ++i) {
     auto p = last_leg_position_relative_[i];
     const double rot_z = base_link_rotations_[i];
     Eigen::Matrix4d H = Eigen::Matrix4d::Identity();
@@ -497,11 +497,11 @@ void ElkapodGaitGen::updateAndWriteCommands() {
     Eigen::Vector4d p_base_homogeneous = H * p_homogeneous;
 
     double dz = 0.0;
-    dz += - u_roll * p_base_homogeneous[1];
+    dz += -u_roll * p_base_homogeneous[1];
     dz += u_pitch * p_base_homogeneous[0];
     p[2] += dz;
     p_base_homogeneous[2] += dz;
-    
+
     last_leg_position_[i] = p_base_homogeneous.head<3>();
     last_leg_position_relative_[i] = p;
 

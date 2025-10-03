@@ -19,11 +19,11 @@
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/int8_multi_array.hpp>
 #include <string>
+
+#include "elkapod_leg_kinematics.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_broadcaster.h"
-
-#include "elkapod_leg_kinematics.hpp"
 
 using namespace std::chrono_literals;
 
@@ -36,7 +36,8 @@ class ElkapodOdom : public rclcpp::Node {
   void jointStatesCallback(const sensor_msgs::msg::JointState::SharedPtr joint_states);
   void odomCallback();
   void tfCallback();
-  nav_msgs::msg::Odometry fillOdomMsg(const Eigen::Matrix4d odom_pose, const Eigen::Matrix4d previous_odom_pose);
+  nav_msgs::msg::Odometry fillOdomMsg(const Eigen::Matrix4d odom_pose,
+                                      const Eigen::Matrix4d previous_odom_pose);
 
   Eigen::Vector4d findPlane(const Eigen::Matrix3Xd contact_points);
   Eigen::Vector3d findBaseFootprintCoords(Eigen::Vector4d plane);
