@@ -9,6 +9,7 @@ def generate_launch_description():
 
     elkapod_odometry_dir = get_package_share_directory('elkapod_odometry')
     ekf_config = os.path.join(elkapod_odometry_dir, 'config', 'ekf_config.yaml')
+    odom_config = os.path.join(elkapod_odometry_dir, 'config', 'elkapod_odometry_params.yaml')
 
     relay_node = Node(
         package="elkapod_odometry",
@@ -21,7 +22,7 @@ def generate_launch_description():
     odom_node = Node(
         package="elkapod_odometry",
         executable="elkapod_odom",
-        parameters=[{'use_sim_time': use_sim_time}],
+        parameters=[odom_config, {'use_sim_time': use_sim_time}],
         output='screen',
         emulate_tty=True
     )

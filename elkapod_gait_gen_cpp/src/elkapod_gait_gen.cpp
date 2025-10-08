@@ -99,7 +99,7 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
       "/cmd_vel", 10, std::bind(&ElkapodGaitGen::velocityCallback, this, std::placeholders::_1));
 
   param_sub_ = this->create_subscription<FloatMsg>(
-      "/cmd_base_param", 10,
+      "/cmd_base_height", 10,
       std::bind(&ElkapodGaitGen::paramCallback, this, std::placeholders::_1));
 
   gait_type_sub_ = this->create_subscription<IntMsg>(
@@ -229,7 +229,7 @@ void ElkapodGaitGen::gaitTypeCallback(const IntMsg::SharedPtr msg) {
 }
 
 void ElkapodGaitGen::paramCallback(const FloatMsg::SharedPtr msg) {
-  if (msg->data > base_height_min_ && msg->data < base_height_max_) {
+  if (msg->data >= base_height_min_ && msg->data <= base_height_max_) {
     set_base_height_ = msg->data;
   } else {
     RCLCPP_WARN(this->get_logger(),

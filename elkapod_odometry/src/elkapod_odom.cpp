@@ -14,6 +14,22 @@
 using namespace std::chrono_literals;
 
 ElkapodOdom::ElkapodOdom() : Node("elkapod_odom") {
+  this->declare_parameter<double>("kinematics_solver.m1.m1_0");
+  this->declare_parameter<double>("kinematics_solver.m1.m1_1");
+  this->declare_parameter<double>("kinematics_solver.m1.m1_2");
+
+  this->declare_parameter<double>("kinematics_solver.a1.a1_0");
+  this->declare_parameter<double>("kinematics_solver.a1.a1_1");
+  this->declare_parameter<double>("kinematics_solver.a1.a1_2");
+
+  this->declare_parameter<double>("kinematics_solver.a2.a2_0");
+  this->declare_parameter<double>("kinematics_solver.a2.a2_1");
+  this->declare_parameter<double>("kinematics_solver.a2.a2_2");
+
+  this->declare_parameter<double>("kinematics_solver.a3.a3_0");
+  this->declare_parameter<double>("kinematics_solver.a3.a3_1");
+  this->declare_parameter<double>("kinematics_solver.a3.a3_2");
+
   joint_states_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
       "/joint_states", 10,
       std::bind(&ElkapodOdom::jointStatesCallback, this, std::placeholders::_1));
@@ -42,10 +58,21 @@ ElkapodOdom::ElkapodOdom() : Node("elkapod_odom") {
                              {-0.15903, 0.15038, -0.03}, {-0.15903, -0.15038, -0.03}};
 
   last_odom_estimate_time_ = get_clock()->now().seconds();
-  Eigen::Vector3d m1(0.0, 0.0, 0.025);
-  Eigen::Vector3d a1(0.0676, 0.0, 0.0);
-  Eigen::Vector3d a2(0.09237, 0.0, 0.0);
-  Eigen::Vector3d a3(0.22524, 0.0, 0.0);
+  const Eigen::Vector3d m1(get_parameter("kinematics_solver.m1.m1_0").as_double(),
+                           get_parameter("kinematics_solver.m1.m1_1").as_double(),
+                           get_parameter("kinematics_solver.m1.m1_2").as_double());
+
+  const Eigen::Vector3d a1(get_parameter("kinematics_solver.a1.a1_0").as_double(),
+                           get_parameter("kinematics_solver.a1.a1_1").as_double(),
+                           get_parameter("kinematics_solver.a1.a1_2").as_double());
+
+  const Eigen::Vector3d a2(get_parameter("kinematics_solver.a2.a2_0").as_double(),
+                           get_parameter("kinematics_solver.a2.a2_1").as_double(),
+                           get_parameter("kinematics_solver.a2.a2_2").as_double());
+
+  const Eigen::Vector3d a3(get_parameter("kinematics_solver.a3.a3_0").as_double(),
+                           get_parameter("kinematics_solver.a3.a3_1").as_double(),
+                           get_parameter("kinematics_solver.a3.a3_2").as_double());
 
   const std::vector<Eigen::Vector3d> input = {m1, a1, a2, a3};
   solver_ = std::make_shared<KinematicsSolver>(input);
@@ -163,9 +190,6 @@ nav_msgs::msg::Odometry ElkapodOdom::fillOdomMsg(const Eigen::Matrix4d odom_pose
   Eigen::Matrix3d R_world_body = odom_pose.block<3, 3>(0, 0);
   Eigen::Vector3d v_body = R_world_body.transpose() * v_world;
 
-  // Odometria oczekuje prędkości w układzie robota (base_link / base_footprint), a nie w układzie
-  // świata - stąd transformacje.
-
   twist.twist.linear.x = v_body.x();
   twist.twist.linear.y = v_body.y();
   twist.twist.linear.z = v_body.z();
@@ -200,7 +224,7 @@ void ElkapodOdom::odomCallback() {
   }
 
   if (position_initialized_) {
-    // Część wspólna zbiorów C(t) i C(t+1)
+    // Common part of sets C(t) and C(t+1)
     std::vector<int> common_legs;
     for (size_t i = 0; i < 6; ++i) {
       if (!last_leg_positions_[i].isZero() && !current_leg_positions[i].isZero()) {

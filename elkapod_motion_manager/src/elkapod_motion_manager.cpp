@@ -150,7 +150,7 @@ void ElkapodMotionManager::walkEnableServiceCallback(
 
     auto future = this->gait_enable_publisher_->async_send_request(gait_request);
 
-    if (future.wait_for(5s) == std::future_status::ready) {
+    if (future.wait_for(5s) == std::future_status::ready && future.get()->success) {
       RCLCPP_INFO(this->get_logger(), "Successfully transitioned to WALKING state");
       response->success = true;
       state_ = State::WALKING;
@@ -183,14 +183,14 @@ void ElkapodMotionManager::walkDisableServiceCallback(
     }
 
     auto future = this->gait_disable_publisher_->async_send_request(gait_request);
-    if (future.wait_for(5s) == std::future_status::ready) {
+    if (future.wait_for(5s) == std::future_status::ready && future.get()->success) {
       RCLCPP_INFO(this->get_logger(), "Successfully transitioned to IDLE state");
       response->success = true;
       state_ = State::IDLE;
     } else {
       this->gait_disable_publisher_->remove_pending_request(future);
       RCLCPP_WARN(this->get_logger(),
-                  "Gait generator hasn't been enabled due to some error! "
+                  "Gait generator hasn't been disabled due to some error! "
                   "Staying in WALKING state.");
       response->success = false;
     }
