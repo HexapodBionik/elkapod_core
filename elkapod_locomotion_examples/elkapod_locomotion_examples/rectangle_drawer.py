@@ -28,7 +28,7 @@ class RectangleDrawer(Node):
         self.declare_parameter("loops", value=1)
         self.declare_parameter("clockwise", value=False)
 
-        self._true_position_subscriber = self.create_subscription(Odometry, "/ground_truth_odom", self._update_odom, 10)
+        self._true_position_subscriber = self.create_subscription(Odometry, "/odometry/filtered", self._update_odom, 10)
         self._publisher = self.create_publisher(Twist, "/cmd_vel", 10)
 
         self._start_clock = 0

@@ -4,7 +4,7 @@
   gz_type_name: "gz.msgs.Clock"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "imu"
+- ros_topic_name: "imu_raw"
   gz_topic_name: "/imu"
   ros_type_name: "sensor_msgs/msg/Imu"
   gz_type_name: "gz.msgs.IMU"
@@ -17,39 +17,39 @@
   direction: GZ_TO_ROS
 
 - ros_topic_name: "/legs/leg1_fsr"
-  gz_topic_name: "/legs/leg1_fsr"
-  ros_type_name: "geometry_msgs/msg/Wrench"
-  gz_type_name: "gz.msgs.Wrench"
+  gz_topic_name: "/world/empty/model/Elkapod/link/leg1_FCP/sensor/contact/contact"
+  ros_type_name: "ros_gz_interfaces/msg/Contacts"
+  gz_type_name: "gz.msgs.Contacts"
   direction: GZ_TO_ROS
 
 - ros_topic_name: "/legs/leg2_fsr"
-  gz_topic_name: "/legs/leg2_fsr"
-  ros_type_name: "geometry_msgs/msg/Wrench"
-  gz_type_name: "gz.msgs.Wrench"
+  gz_topic_name: "/world/empty/model/Elkapod/link/leg2_FCP/sensor/contact/contact"
+  ros_type_name: "ros_gz_interfaces/msg/Contacts"
+  gz_type_name: "gz.msgs.Contacts"
   direction: GZ_TO_ROS
 
 - ros_topic_name: "/legs/leg3_fsr"
-  gz_topic_name: "/legs/leg3_fsr"
-  ros_type_name: "geometry_msgs/msg/Wrench"
-  gz_type_name: "gz.msgs.Wrench"
+  gz_topic_name: "/world/empty/model/Elkapod/link/leg3_FCP/sensor/contact/contact"
+  ros_type_name: "ros_gz_interfaces/msg/Contacts"
+  gz_type_name: "gz.msgs.Contacts"
   direction: GZ_TO_ROS
 
 - ros_topic_name: "/legs/leg4_fsr"
-  gz_topic_name: "/legs/leg4_fsr"
-  ros_type_name: "geometry_msgs/msg/Wrench"
-  gz_type_name: "gz.msgs.Wrench"
+  gz_topic_name: "/world/empty/model/Elkapod/link/leg4_FCP/sensor/contact/contact"
+  ros_type_name: "ros_gz_interfaces/msg/Contacts"
+  gz_type_name: "gz.msgs.Contacts"
   direction: GZ_TO_ROS
 
 - ros_topic_name: "/legs/leg5_fsr"
-  gz_topic_name: "/legs/leg5_fsr"
-  ros_type_name: "geometry_msgs/msg/Wrench"
-  gz_type_name: "gz.msgs.Wrench"
+  gz_topic_name: "/world/empty/model/Elkapod/link/leg5_FCP/sensor/contact/contact"
+  ros_type_name: "ros_gz_interfaces/msg/Contacts"
+  gz_type_name: "gz.msgs.Contacts"
   direction: GZ_TO_ROS
 
 - ros_topic_name: "/legs/leg6_fsr"
-  gz_topic_name: "/legs/leg6_fsr"
-  ros_type_name: "geometry_msgs/msg/Wrench"
-  gz_type_name: "gz.msgs.Wrench"
+  gz_topic_name: "/world/empty/model/Elkapod/link/leg6_FCP/sensor/contact/contact"
+  ros_type_name: "ros_gz_interfaces/msg/Contacts"
+  gz_type_name: "gz.msgs.Contacts"
   direction: GZ_TO_ROS
 
 - ros_topic_name: "lidar_data_points"
