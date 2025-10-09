@@ -14,10 +14,11 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(elkapod_core_lib REQUIRED)
 include_directories(include)
 FILE(GLOB_RECURSE INCLUDE_FILES "include/elkapod_motion_manager/*.hpp")
 
-add_executable(elkapod_motion_manager src/elkapod_motion_manager_init.cpp src/elkapod_motion_manager.cpp src/elkapod_leg_trajectory.cpp)
+add_executable(elkapod_motion_manager src/elkapod_motion_manager_init.cpp src/elkapod_motion_manager.cpp)
 target_sources(elkapod_motion_manager PRIVATE ${INCLUDE_FILES})
 
 target_include_directories(elkapod_motion_manager PUBLIC
@@ -25,7 +26,7 @@ target_include_directories(elkapod_motion_manager PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include/elkapod_motion_manager
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>)
-target_compile_features(elkapod_motion_manager PUBLIC c_std_99 cxx_std_20)  # Require C99 and C++17
+target_compile_features(elkapod_motion_manager PUBLIC c_std_99 cxx_std_20)  # Require C99 and C++20
 ament_target_dependencies(
         elkapod_motion_manager
         "rclcpp"
@@ -34,6 +35,7 @@ ament_target_dependencies(
         "rclcpp_action"
         "std_srvs"
         "std_msgs"
+        "elkapod_core_lib"
 )
 
 install(TARGETS elkapod_motion_manager

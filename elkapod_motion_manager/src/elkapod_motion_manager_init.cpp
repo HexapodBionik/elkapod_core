@@ -5,7 +5,7 @@
 int main(int argc, char* argv[]) {
   rclcpp::init(argc, argv);
 
-  auto my_node = std::make_shared<ElkapodMotionManager>();
+  auto my_node = std::make_shared<elkapod_motion_manager::ElkapodMotionManager>();
   my_node->initNode();
 
   rclcpp::executors::MultiThreadedExecutor executor(rclcpp::ExecutorOptions(), 4);

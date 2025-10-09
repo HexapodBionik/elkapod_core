@@ -1,4 +1,6 @@
-#include "../include/elkapod_motion_manager/elkapod_leg_trajectory.hpp"
+#include "elkapod_core_lib/trajectory.hpp"
+
+using namespace elkapod_core_lib::trajectory;
 
 Trajectory::Trajectory(const double timestep) { this->timestep = timestep; }
 

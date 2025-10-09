@@ -17,6 +17,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_eigen REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(elkapod_core_lib REQUIRED)
 include_directories(include)
 FILE(GLOB_RECURSE INCLUDE_FILES "include/elkapod_odometry/*.hpp")
 
@@ -44,7 +45,7 @@ install(TARGETS elkapod_relay
         DESTINATION lib/${PROJECT_NAME}
 )
 
-add_executable(elkapod_odom src/elkapod_odom_init.cpp src/elkapod_odom.cpp src/elkapod_leg_kinematics.cpp)
+add_executable(elkapod_odom src/elkapod_odom_init.cpp src/elkapod_odom.cpp)
 target_sources(elkapod_odom PRIVATE ${INCLUDE_FILES})
 
 target_include_directories(elkapod_odom PUBLIC
@@ -66,6 +67,7 @@ ament_target_dependencies(
         "nav_msgs"
         "tf2_eigen"
         "tf2_ros"
+        "elkapod_core_lib"
 )
 
 # Install the executable

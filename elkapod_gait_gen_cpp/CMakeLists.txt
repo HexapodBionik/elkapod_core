@@ -15,6 +15,7 @@ find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(elkapod_core_lib REQUIRED)
 include_directories(include)
 FILE(GLOB_RECURSE INCLUDE_FILES "include/elkapod_gait_gen_cpp/*.hpp")
 
@@ -26,7 +27,7 @@ target_include_directories(elkapod_gait PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include/elkapod_gait_gen_cpp
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>)
-target_compile_features(elkapod_gait PUBLIC c_std_99 cxx_std_20)  # Require C99 and C++17
+target_compile_features(elkapod_gait PUBLIC c_std_99 cxx_std_20)  # Require C99 and C++20
 ament_target_dependencies(
         elkapod_gait
         "rclcpp"
@@ -36,18 +37,12 @@ ament_target_dependencies(
         "sensor_msgs"
         "tf2"
         "tf2_geometry_msgs"
+        "elkapod_core_lib"
 )
 
 install(TARGETS elkapod_gait
   DESTINATION lib/${PROJECT_NAME})
 
-
-# Install the executable
-install(TARGETS elkapod_gait
-        DESTINATION lib/${PROJECT_NAME}
-)
-
-# Install the include directory
 install(DIRECTORY include/
         DESTINATION include/${PROJECT_NAME}
 )

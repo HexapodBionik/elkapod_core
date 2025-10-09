@@ -5,6 +5,7 @@
 using std::placeholders::_1;
 using std::placeholders::_2;
 using namespace std::literals::chrono_literals;
+using namespace elkapod_motion_manager;
 
 ElkapodMotionManager::ElkapodMotionManager() : Node("elkapod_motion_manager") {
   base_height = this->declare_parameter<double>("base_height.default");

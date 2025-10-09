@@ -19,11 +19,17 @@
 #include <std_srvs/srv/trigger.hpp>
 #include <string>
 
-#include "elkapod_leg_trajectory.hpp"
+#include "elkapod_core_lib/trajectory.hpp"
 #include "elkapod_msgs/action/motion_manager_trigger.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 
+namespace elkapod_motion_manager {
 enum class State { INIT, IDLE_LOWERED, IDLE_4_LOWERED, IDLE_4, IDLE, WALKING };
+
+using LinearLegPlanner = elkapod_core_lib::trajectory::LinearLegPlanner;
+using HopLegPlanner = elkapod_core_lib::trajectory::HopLegPlanner;
+using TrajectoryExecutor = elkapod_core_lib::trajectory::TrajectoryExecutor;
+using Trajectory = elkapod_core_lib::trajectory::Trajectory;
 
 class ElkapodMotionManager : public rclcpp::Node {
  public:
@@ -92,5 +98,6 @@ class ElkapodMotionManager : public rclcpp::Node {
   // Trajectory variables
   double trajectory_freq_hz;
 };
+};  // namespace elkapod_motion_manager
 
 #endif  // ELKAPOD_MOTION_MANAGER_HPP
