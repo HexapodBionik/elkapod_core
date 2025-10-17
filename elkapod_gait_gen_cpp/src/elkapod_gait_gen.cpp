@@ -39,8 +39,6 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   phase_lag_ = this->declare_parameter<double>("gait.default_phase_lag");
 
   leg_spacing_ = this->declare_parameter<double>("leg_spacing.default");
-
-  step_length_ = this->declare_parameter<double>("gait.step.length.default");
   step_height_ = this->declare_parameter<double>("gait.step.height.default");
 
   base_height_ = this->declare_parameter<double>("base_height.default");
@@ -104,7 +102,7 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   leg_clock_timer_ = this->create_timer(std::chrono::duration<double>(write_loop_dt),
                                         std::bind(&ElkapodGaitGen::updateAndWriteCommands, this));
   leg_clock_timer_->cancel();
-  leg_path_gen_ = std::make_unique<elkapod_leg_paths::BasicPathBezier>(step_length_, step_height_);
+  leg_path_gen_ = std::make_unique<elkapod_leg_paths::BasicPathBezier>(0.0, step_height_);
 
   base_link_rotations_ = {0.63973287, -0.63973287, M_PI / 2., -M_PI / 2., 2.38414364, -2.38414364};
   base_link_translations_ = {{0.17841, 0.13276, -0.03},  {0.17841, -0.13276, -0.03},

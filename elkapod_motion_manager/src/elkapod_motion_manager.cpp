@@ -220,8 +220,15 @@ void ElkapodMotionManager::standUpPlanning() {
   const double lift_time = 1.0;
   const double leg_move_time = 0.8;
   const int steps = 5;
-  const double spacing_step = (leg_spacing_waypoint - leg_spacing) / static_cast<double>(steps - 1);
-  const double height_step = (base_height) / static_cast<double>(2 * (steps - 1));
+  const double leg_second_spacing_waypoint = 0.175;
+
+  double spacing_step =
+      (leg_spacing_waypoint - leg_second_spacing_waypoint) / static_cast<double>(steps - 1);
+  if (leg_spacing >= leg_second_spacing_waypoint) {
+    spacing_step = (leg_spacing_waypoint - leg_spacing) / static_cast<double>(steps - 1);
+  }
+
+  const double height_step = base_height / static_cast<double>(2 * (steps - 1));
 
   std::vector<double> height_waypoints;
   height_waypoints.reserve(2 * steps);
@@ -281,6 +288,49 @@ void ElkapodMotionManager::standUpPlanning() {
       step_trajs[i] = final_traj;
     }
     trajs.push_back(step_trajs);
+  }
+
+  if (leg_spacing < leg_second_spacing_waypoint) {
+    const int second_spacing_steps = 3;
+    const double second_spacing_step =
+        (leg_second_spacing_waypoint - leg_spacing) / static_cast<double>(second_spacing_steps - 1);
+    std::vector<double> second_spacing_waypoints;
+    second_spacing_waypoints.reserve(second_spacing_steps);
+    std::generate_n(std::back_inserter(second_spacing_waypoints), second_spacing_steps,
+                    [i = 0, leg_second_spacing_waypoint, second_spacing_step]() mutable {
+                      return leg_second_spacing_waypoint - i++ * second_spacing_step;
+                    });
+
+    std::array<size_t, 6> legs_move_order = {0, 5, 2, 1, 4, 3};
+    for (size_t k = 1; k < second_spacing_steps; ++k) {
+      std::array<Trajectory, 6> step_trajs;
+
+      std::array<bool, 6> leg_moved = {false};
+
+      for (size_t i = 0; i < 6; ++i) {
+        for (size_t j = 0; j < 6; ++j) {
+          if (legs_move_order[i] == j && !leg_moved[j]) {
+            auto traj = hop_planner.plan({second_spacing_waypoints[k - 1], 0.0, -base_height},
+                                         {second_spacing_waypoints[k], 0.0, -base_height},
+                                         leg_move_time, trajectory_freq_hz);
+
+            step_trajs[j] = traj;
+            leg_moved[j] = true;
+          } else if (legs_move_order[i] != j && leg_moved[j]) {
+            auto traj = planner.plan({second_spacing_waypoints[k], 0.0, -base_height},
+                                     {second_spacing_waypoints[k], 0.0, -base_height},
+                                     leg_move_time, trajectory_freq_hz);
+            step_trajs[j] = traj;
+          } else {
+            auto traj = planner.plan({second_spacing_waypoints[k - 1], 0.0, -base_height},
+                                     {second_spacing_waypoints[k - 1], 0.0, -base_height},
+                                     leg_move_time, trajectory_freq_hz);
+            step_trajs[j] = traj;
+          }
+        }
+        trajs.push_back(step_trajs);
+      }
+    }
   }
 }
 
@@ -424,7 +474,7 @@ void ElkapodMotionManager::standUp4Planning() {
 void ElkapodMotionManager::lowerDownPlanning() {
   const double lift_time = 1.0;
   const double leg_move_time = 0.8;
-  const int steps = 5;
+  const int steps = 10;
   const double spacing_step = (leg_spacing_waypoint - leg_spacing) / static_cast<double>(steps - 1);
   const double height_step = (base_height) / static_cast<double>(2 * (steps - 1));
 
