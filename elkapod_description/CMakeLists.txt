@@ -13,6 +13,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   pluginlib
   rclcpp
   rclcpp_lifecycle
+  elkapod_msgs
 )
 
 # find dependencies
@@ -40,13 +41,20 @@ target_include_directories(elkapod_legs_control_comm PUBLIC
 $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/hardware/include>
 $<INSTALL_INTERFACE:include/elkapod_legs_control_comm>
 )
+
+ament_target_dependencies(
+        elkapod_legs_control_comm PUBLIC
+        "rclcpp"
+        "rclcpp_lifecycle"
+        "elkapod_msgs"
+)
+
 target_link_libraries(elkapod_legs_control_comm PUBLIC
   hardware_interface::hardware_interface
   pluginlib::pluginlib
-  rclcpp::rclcpp
-  rclcpp_lifecycle::rclcpp_lifecycle
   libserial.so
 )
+
 
 
 # Export hardware plugins

@@ -1,5 +1,6 @@
 #include "elkapod_legs_system/elkapod_legs_system.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -173,16 +174,25 @@ hardware_interface::CallbackReturn ElkapodLegsSystemHardware::on_configure(
     temperature_pub_ =
         get_node()->create_publisher<sensor_msgs::msg::Temperature>("/temperature", 10);
     battery_pub_ = get_node()->create_publisher<sensor_msgs::msg::BatteryState>("/battery", 10);
+    fsr_pub_ =
+        get_node()->create_publisher<elkapod_msgs::msg::Float64ArrayStamped>("/legs/fsr", 10);
 
     using namespace std::chrono_literals;
     timer_ = get_node()->create_wall_timer(1s, [this]() {
+      auto time_stamp = get_clock()->now();
       sensor_msgs::msg::Temperature msg;
-      msg.temperature = temperatures_[0];
-      msg.header.stamp = get_clock()->now();
+      msg.temperature = temperature_;
+      msg.header.stamp = time_stamp;
       temperature_pub_->publish(msg);
 
+      elkapod_msgs::msg::Float64ArrayStamped fsr_msg;
+      fsr_msg.header.stamp = time_stamp;
+      fsr_msg.data.resize(6);
+      std::copy(fsr_data_.begin(), fsr_data_.end(), fsr_msg.data.begin());
+      fsr_pub_->publish(fsr_msg);
+
       sensor_msgs::msg::BatteryState battery_msg;
-      battery_msg.header.stamp = get_clock()->now();
+      battery_msg.header.stamp = time_stamp;
       battery_msg.percentage = battery_percentage_;
       battery_msg.voltage = battery_voltage_;
       battery_msg.present = battery_present_;
@@ -242,6 +252,7 @@ hardware_interface::return_type ElkapodLegsSystemHardware::read(const rclcpp::Ti
                   "Hardware Controller presence check failed! Trying to restart hardware... "
                   "Attempt %03d/%03d",
                   kWatchdogRestartAttemps - watchdog_counter_, kWatchdogRestartAttemps);
+      comm_->sendSystemStartCommand();
       watchdog_time_counter_ = 0;
       watchdog_counter_--;
     } else {
@@ -271,10 +282,10 @@ hardware_interface::return_type ElkapodLegsSystemHardware::write(
                    float degrees = static_cast<float>(val * 180.0 / M_PI);  // rad -> deg
 
                    if (i % 3 == 0 || i % 3 == 1) {
-                     degrees = std::max(std::min(degrees, 90.0f), -90.0f);
+                     degrees = std::clamp(degrees, -90.0f, 90.0f);
                      degrees += 90.0f;
                    } else if (i % 3 == 2) {
-                     degrees = std::max(std::min(degrees, 0.0f), -180.0f);
+                     degrees = std::clamp(degrees, -180.0f, 0.0f);
                      degrees *= -1.0f;
                    }
 
@@ -297,8 +308,9 @@ hardware_interface::return_type ElkapodLegsSystemHardware::write(
   elkapod_comm::SpiTransmissionRequest request = {.angles = cmd_positions_float};
 
   elkapod_comm::SpiTransmissionResponse response = comm_->transfer(request);
-  std::copy(response.temperatures.begin(), response.temperatures.end(), temperatures_.begin());
+  temperature_ = response.temperature;
   std::copy(response.imu_data.begin(), response.imu_data.end(), imu_data_.begin());
+  std::copy(response.fsr_data.begin(), response.fsr_data.end(), fsr_data_.begin());
 
   battery_percentage_ = response.battery_percentage;
   battery_voltage_ = response.battery_voltage;

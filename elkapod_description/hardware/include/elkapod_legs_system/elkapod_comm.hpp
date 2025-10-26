@@ -10,11 +10,12 @@
 
 namespace elkapod_comm {
 typedef struct {
-  std::array<float, 4> temperatures;
-  std::array<float, 10> imu_data;
+  float temperature;
   float battery_voltage;
   float battery_percentage;
   bool battery_present;
+  std::array<float, 10> imu_data;
+  std::array<float, 6> fsr_data;
 } SpiTransmissionResponse;
 
 typedef struct {

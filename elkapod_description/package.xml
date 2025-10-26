@@ -15,6 +15,7 @@
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_lifecycle</depend>
+  <depend>elkapod_msgs</depend>
 
   <exec_depend>joint_state_publisher</exec_depend>
   <exec_depend>xacro</exec_depend>

@@ -52,31 +52,39 @@ void ElkapodComm::disconnect() {
 
 SpiTransmissionResponse ElkapodComm::parseSpiTransferBytesResponse(
     const std::vector<uint8_t> bytes_response) {
-  std::array<float, 4> temperatures;
-  std::vector<uint8_t> bytes_buff(16, 0);
+  uint32_t pointer = 0;
+  float temperature;
+  std::vector<uint8_t> bytes_buff(10 * sizeof(float), 0);
 
-  std::copy_n(bytes_response.begin(), 16, bytes_buff.begin());
-  std::memcpy(temperatures.data(), bytes_buff.data(), 16);
+  std::copy_n(bytes_response.begin(), sizeof(float), bytes_buff.begin());
+  std::memcpy(&temperature, bytes_buff.data(), sizeof(float));
+  pointer += sizeof(float);
+
+  float battery_voltage;
+  float battery_percentage;
+
+  std::memcpy(&battery_voltage, bytes_response.data() + pointer, sizeof(float));
+  std::memcpy(&battery_percentage, bytes_response.data() + pointer + sizeof(float), sizeof(float));
+  pointer += 2 * sizeof(float);
 
   std::array<float, 10> imu_data;
   bytes_buff.resize(40);
 
-  std::copy_n(bytes_response.begin() + 16, 40, bytes_buff.begin());
-  std::memcpy(imu_data.data(), bytes_buff.data(), 40);
+  std::copy_n(bytes_response.begin() + pointer, 10 * sizeof(float), bytes_buff.begin());
+  std::memcpy(imu_data.data(), bytes_buff.data(), 10 * sizeof(float));
+  pointer += 10 * sizeof(float);
 
-  float battery_voltage;
-  float battery_percentage;
-  bool battery_present;
+  std::array<float, 6> fsr_data;
+  std::copy_n(bytes_response.begin() + pointer, 6 * sizeof(float), bytes_buff.begin());
+  std::memcpy(fsr_data.data(), bytes_buff.data(), 6 * sizeof(float));
+  pointer += 6 * sizeof(float);
 
-  std::memcpy(&battery_voltage, bytes_response.data() + 56, sizeof(float));
-  std::memcpy(&battery_percentage, bytes_response.data() + 60, sizeof(float));
-  std::memcpy(&battery_present, bytes_response.data() + 64, sizeof(bool));
-
-  SpiTransmissionResponse response{.temperatures = temperatures,
-                                   .imu_data = imu_data,
+  SpiTransmissionResponse response{.temperature = temperature,
                                    .battery_voltage = battery_voltage,
                                    .battery_percentage = battery_percentage,
-                                   .battery_present = battery_present};
+                                   .battery_present = true,
+                                   .imu_data = imu_data,
+                                   .fsr_data = fsr_data};
   return response;
 }
 
