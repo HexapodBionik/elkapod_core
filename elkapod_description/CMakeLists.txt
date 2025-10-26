@@ -29,27 +29,27 @@ find_library(LIBSERIAL_LIBRARY
 
 # COMPILE
 add_library(
-  elkapod_legs_control_comm
+  elkapod_system
   SHARED
-  hardware/elkapod_legs_system.cpp
+  hardware/elkapod_system.cpp
   hardware/elkapod_comm.cpp
   hardware/spidev.cpp
 )
 
-target_compile_features(elkapod_legs_control_comm PUBLIC cxx_std_20)
-target_include_directories(elkapod_legs_control_comm PUBLIC
+target_compile_features(elkapod_system PUBLIC cxx_std_20)
+target_include_directories(elkapod_system PUBLIC
 $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/hardware/include>
-$<INSTALL_INTERFACE:include/elkapod_legs_control_comm>
+$<INSTALL_INTERFACE:include/elkapod_system>
 )
 
 ament_target_dependencies(
-        elkapod_legs_control_comm PUBLIC
+        elkapod_system PUBLIC
         "rclcpp"
         "rclcpp_lifecycle"
         "elkapod_msgs"
 )
 
-target_link_libraries(elkapod_legs_control_comm PUBLIC
+target_link_libraries(elkapod_system PUBLIC
   hardware_interface::hardware_interface
   pluginlib::pluginlib
   libserial.so
@@ -58,7 +58,7 @@ target_link_libraries(elkapod_legs_control_comm PUBLIC
 
 
 # Export hardware plugins
-pluginlib_export_plugin_description_file(hardware_interface elkapod_legs_control_comm.xml)
+pluginlib_export_plugin_description_file(hardware_interface elkapod_system.xml)
 
 
 install(
@@ -66,8 +66,8 @@ install(
     DESTINATION share/${PROJECT_NAME}
 )
 
-install(TARGETS elkapod_legs_control_comm
-  EXPORT export_elkapod_legs_control_comm
+install(TARGETS elkapod_system
+  EXPORT elkapod_system
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -77,6 +77,6 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
 endif()
 
-ament_export_targets(export_elkapod_legs_control_comm HAS_LIBRARY_TARGET)
+ament_export_targets(elkapod_system HAS_LIBRARY_TARGET)
 ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})
 ament_package()

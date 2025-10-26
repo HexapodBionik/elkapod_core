@@ -168,9 +168,9 @@
         </xacro:if>
 
         <xacro:unless value="${sim_mode}">
-            <ros2_control name="ElkapodLegsSystemHardware" type="system">
+            <ros2_control name="ElkapodSystemHardware" type="system">
                 <hardware>
-                    <plugin>elkapod_description/ElkapodLegsSystemHardware</plugin>
+                    <plugin>elkapod_description/elkapod_system_hardware</plugin>
                     <param name="uart_device">/dev/ttyAMA1</param>
                     <param name="uart_baudrate">1152000</param>
                     <param name="uart_timeout_ms">10</param>

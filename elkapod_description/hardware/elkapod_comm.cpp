@@ -1,8 +1,9 @@
-#include "elkapod_legs_system/elkapod_comm.hpp"
+#include "elkapod_system/elkapod_comm.hpp"
 
 #include <algorithm>
 #include <cstring>
 #include <memory>
+#include <format>
 
 using namespace elkapod_comm;
 
@@ -50,19 +51,21 @@ void ElkapodComm::disconnect() {
   uart_->disconnect();
 }
 
-SpiTransmissionResponse ElkapodComm::parseSpiTransferBytesResponse(
+std::optional<SpiTransmissionResponse>  ElkapodComm::parseSpiTransferBytesResponse(
     const std::vector<uint8_t> bytes_response) {
-  uint32_t pointer = 0;
+  if(bytes_response[0] == 0x7E && bytes_response[79] == 0x0F){
+    uint32_t pointer = 1;
   float temperature;
   std::vector<uint8_t> bytes_buff(10 * sizeof(float), 0);
 
-  std::copy_n(bytes_response.begin(), sizeof(float), bytes_buff.begin());
+  std::copy_n(bytes_response.begin() + pointer, sizeof(float), bytes_buff.begin());
   std::memcpy(&temperature, bytes_buff.data(), sizeof(float));
   pointer += sizeof(float);
 
   float battery_voltage;
   float battery_percentage;
-
+  
+  std::copy_n(bytes_response.begin() + pointer, 2 * sizeof(float), bytes_buff.begin());
   std::memcpy(&battery_voltage, bytes_response.data() + pointer, sizeof(float));
   std::memcpy(&battery_percentage, bytes_response.data() + pointer + sizeof(float), sizeof(float));
   pointer += 2 * sizeof(float);
@@ -85,10 +88,13 @@ SpiTransmissionResponse ElkapodComm::parseSpiTransferBytesResponse(
                                    .battery_present = true,
                                    .imu_data = imu_data,
                                    .fsr_data = fsr_data};
-  return response;
+                                   return response;
+  }
+
+  return {};
 }
 
-SpiTransmissionResponse ElkapodComm::transfer(const SpiTransmissionRequest& request) {
+std::optional<SpiTransmissionResponse> ElkapodComm::transfer(const SpiTransmissionRequest& request) {
   std::vector<uint8_t> bytes(80, 0);
   bytes[0] = 0x7E;
   bytes[79] = 0x0F;
@@ -100,9 +106,7 @@ SpiTransmissionResponse ElkapodComm::transfer(const SpiTransmissionRequest& requ
   }
 
   std::vector<uint8_t> result = spi_->transfer(bytes);
-  SpiTransmissionResponse response = parseSpiTransferBytesResponse(result);
-
-  return response;
+  return parseSpiTransferBytesResponse(result);
 }
 
 void ElkapodComm::sendSystemStartCommand() { uart_->sendSystemStartCommand(); }

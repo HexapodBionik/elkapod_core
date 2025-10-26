@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <optional>
 
 #include "spidev.hpp"
 
@@ -58,10 +59,10 @@ class ElkapodComm {
 
   void sendSystemStartCommand();
   void sendSystemShutdownCommand();
-  SpiTransmissionResponse transfer(const SpiTransmissionRequest& request);
+  std::optional<SpiTransmissionResponse> transfer(const SpiTransmissionRequest& request);
 
  private:
-  SpiTransmissionResponse parseSpiTransferBytesResponse(const std::vector<uint8_t> bytes_response);
+  std::optional<SpiTransmissionResponse> parseSpiTransferBytesResponse(const std::vector<uint8_t> bytes_response);
   std::unique_ptr<UARTDevice> uart_;
   std::unique_ptr<SpiDevice> spi_;
 };

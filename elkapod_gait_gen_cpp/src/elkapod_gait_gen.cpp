@@ -83,7 +83,7 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
       std::bind(&ElkapodGaitGen::pitchCallback, this, std::placeholders::_1));
 
   fsr_sub_ = this->create_subscription<Int8ArrayMsg>(
-      "/legs/fsr", 10, std::bind(&ElkapodGaitGen::fsrCallback, this, std::placeholders::_1));
+      "/legs/fsr_contact", 10, std::bind(&ElkapodGaitGen::fsrCallback, this, std::placeholders::_1));
 
   // Publishers
   leg_signal_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(

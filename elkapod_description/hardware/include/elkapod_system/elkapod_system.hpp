@@ -22,10 +22,10 @@
 #include "sensor_msgs/msg/temperature.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
 
-namespace elkapod_legs_system {
-class ElkapodLegsSystemHardware : public hardware_interface::SystemInterface {
+namespace elkapod_system {
+class ElkapodSystemHardware : public hardware_interface::SystemInterface {
  public:
-  RCLCPP_SHARED_PTR_DEFINITIONS(ElkapodLegsSystemHardware)
+  RCLCPP_SHARED_PTR_DEFINITIONS(ElkapodSystemHardware)
 
   hardware_interface::CallbackReturn on_init(
       const hardware_interface::HardwareComponentInterfaceParams& params) override;
