@@ -34,7 +34,8 @@ ElkapodOdom::ElkapodOdom() : Node("elkapod_odom") {
       "/joint_states", 10,
       std::bind(&ElkapodOdom::jointStatesCallback, this, std::placeholders::_1));
   collision_sub_ = this->create_subscription<std_msgs::msg::Int8MultiArray>(
-      "/legs/fsr", 10, std::bind(&ElkapodOdom::collisionSubCallback, this, std::placeholders::_1));
+      "/legs/fsr_contact", 10,
+      std::bind(&ElkapodOdom::collisionSubCallback, this, std::placeholders::_1));
   odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>("/leg_odom", 10);
 
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
@@ -234,7 +235,7 @@ void ElkapodOdom::odomCallback() {
 
     const size_t N = common_legs.size();
     if (N < 3) {
-      RCLCPP_ERROR(get_logger(), "CONTACT LOST!!!");
+      RCLCPP_WARN(get_logger(), "CONTACT LOST!!!");
     }
     if (N >= 3) {
       Eigen::Matrix3Xd P(3, N);
