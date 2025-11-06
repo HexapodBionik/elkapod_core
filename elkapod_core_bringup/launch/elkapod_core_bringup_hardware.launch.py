@@ -63,9 +63,8 @@ def generate_launch_description():
     )
 
     motion_manager_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(motion_manager_launch_path)
+        PythonLaunchDescriptionSource(motion_manager_launch_path), launch_arguments={'use_sim_time': 'false'}.items()
     )
-
     delayed_nodes = TimerAction(
         period=10.0,
         actions=[
