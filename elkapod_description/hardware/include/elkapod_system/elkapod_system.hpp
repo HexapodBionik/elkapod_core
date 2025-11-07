@@ -80,6 +80,7 @@ class ElkapodSystemHardware : public hardware_interface::SystemInterface {
   rclcpp::Publisher<sensor_msgs::msg::BatteryState>::SharedPtr battery_pub_;
   rclcpp::Publisher<elkapod_msgs::msg::Float64ArrayStamped>::SharedPtr fsr_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
+  rclcpp::TimerBase::SharedPtr fsr_timer_;
 };
 
 }  // namespace elkapod_legs_system

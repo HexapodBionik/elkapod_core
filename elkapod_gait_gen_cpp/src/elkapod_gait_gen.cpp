@@ -466,7 +466,8 @@ void ElkapodGaitGen::updateAndWriteCommands() {
     dz += -u_roll * p_base_homogeneous[1];
     dz += u_pitch * p_base_homogeneous[0];
     p[2] += dz;
-    p_base_homogeneous[2] += dz;
+    p[2] = std::clamp(-0.2, -0.11, p[2]);
+    p_base_homogeneous[2] = p[2];
 
     last_leg_position_[i] = p_base_homogeneous.head<3>();
     last_leg_position_relative_[i] = p;

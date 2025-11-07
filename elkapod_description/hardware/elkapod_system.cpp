@@ -185,12 +185,6 @@ hardware_interface::CallbackReturn ElkapodSystemHardware::on_configure(
       msg.header.stamp = time_stamp;
       temperature_pub_->publish(msg);
 
-      elkapod_msgs::msg::Float64ArrayStamped fsr_msg;
-      fsr_msg.header.stamp = time_stamp;
-      fsr_msg.data.resize(6);
-      std::copy(fsr_data_.begin(), fsr_data_.end(), fsr_msg.data.begin());
-      fsr_pub_->publish(fsr_msg);
-
       sensor_msgs::msg::BatteryState battery_msg;
       battery_msg.header.stamp = time_stamp;
       battery_msg.percentage = battery_percentage_;
@@ -198,6 +192,16 @@ hardware_interface::CallbackReturn ElkapodSystemHardware::on_configure(
       battery_msg.present = battery_present_;
       battery_pub_->publish(battery_msg);
     });
+
+    fsr_timer_ = get_node()->create_wall_timer(20ms, [this]() {
+      auto time_stamp = get_clock()->now();
+      elkapod_msgs::msg::Float64ArrayStamped fsr_msg;
+      fsr_msg.header.stamp = time_stamp;
+      fsr_msg.data.resize(6);
+      std::copy(fsr_data_.begin(), fsr_data_.end(), fsr_msg.data.begin());
+      fsr_pub_->publish(fsr_msg);
+    });
+
   }
 
   RCLCPP_INFO(rclcpp::get_logger("ElkapodSystemHardware"), "Successfully configured!");
