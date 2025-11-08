@@ -105,9 +105,9 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   leg_path_gen_ = std::make_unique<elkapod_leg_paths::BasicPathBezier>(0.0, step_height_);
 
   base_link_rotations_ = {0.63973287, -0.63973287, M_PI / 2., -M_PI / 2., 2.38414364, -2.38414364};
-  base_link_translations_ = {{0.17841, 0.13276, -0.03},  {0.17841, -0.13276, -0.03},
-                             {0.0138, 0.1643, -0.03},    {0.0138, -0.1643, -0.03},
-                             {-0.15903, 0.15038, -0.03}, {-0.15903, -0.15038, -0.03}};
+  base_link_translations_ = {{0.17841, 0.13276, -0.025},  {0.17841, -0.13276, -0.025},
+                             {0.0138, 0.1643, -0.025},    {0.0138, -0.1643, -0.025},
+                             {-0.15903, 0.15038, -0.025}, {-0.15903, -0.15038, -0.025}};
 
   leg_clock_ = std::vector<double>(kLegsNb, 0.);
   leg_phase_ = std::vector<int>(kLegsNb, 0);
@@ -426,6 +426,9 @@ void ElkapodGaitGen::updateAndWriteCommands() {
         p = rotZ(angle) * p;
       } else {
         p = Eigen::Vector3d::Zero();
+        if(abs((-base_height_ + base_link_translations_[leg_nb][2]) - last_leg_position_relative_[leg_nb][2]) > 0.05){
+          p[2] = last_leg_position_relative_[leg_nb][2] + base_height_ - base_link_translations_[leg_nb][2] - 0.05;
+        }
       }
 
       p = rotZ(-base_link_rotations_[leg_nb]) * p;
@@ -439,7 +442,7 @@ void ElkapodGaitGen::updateAndWriteCommands() {
   double e_roll = set_roll_ - roll_;
   double u_roll = roll_pid_.update(e_roll);
 
-  RCLCPP_DEBUG_THROTTLE(
+  RCLCPP_INFO_THROTTLE(
       get_logger(), *get_clock(), 500,
       std::format("PID roll u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_roll, e_roll, set_roll_)
           .c_str());
@@ -447,7 +450,7 @@ void ElkapodGaitGen::updateAndWriteCommands() {
   double e_pitch = set_pitch_ - pitch_;
   double u_pitch = pitch_pid_.update(e_pitch);
 
-  RCLCPP_DEBUG_THROTTLE(
+  RCLCPP_INFO_THROTTLE(
       get_logger(), *get_clock(), 500,
       std::format("PID pitch u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_pitch, e_pitch, set_pitch_)
           .c_str());

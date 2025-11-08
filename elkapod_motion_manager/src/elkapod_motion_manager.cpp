@@ -21,8 +21,8 @@ ElkapodMotionManager::ElkapodMotionManager() : Node("elkapod_motion_manager") {
   base_height_waypoint = this->declare_parameter<double>("standing_up.base_height_waypoint");
 
   // Leg mounting point correction
-  base_height += 0.03;
-  base_height_waypoint += 0.03;
+  base_height += 0.025;
+  base_height_waypoint += 0.025;
 
   trajectory_freq_hz = this->declare_parameter<double>("trajectory.frequency_hz");
 
@@ -204,11 +204,11 @@ void ElkapodMotionManager::walkDisableServiceCallback(
 }
 
 void ElkapodMotionManager::initPlanning() {
-  const double max_reach_x = 0.38;
-  const double movement_time_s = 2.0;
+  const double max_reach_x = 0.38521;
+  const double movement_time_s = 4.0;
 
   std::array<Trajectory, 6> step_trajs;
-  auto traj = hop_planner.plan({max_reach_x, 0.0, 0.0}, {leg_spacing_waypoint, 0.0, 0.0},
+  auto traj = hop_planner.plan({max_reach_x, 0.0, 0.025}, {leg_spacing_waypoint, 0.0, 0.0},
                                movement_time_s, trajectory_freq_hz);
   for (size_t i = 0; i < 6; ++i) {
     step_trajs[i] = traj;
@@ -219,7 +219,7 @@ void ElkapodMotionManager::initPlanning() {
 void ElkapodMotionManager::standUpPlanning() {
   const double lift_time = 1.0;
   const double leg_move_time = 0.8;
-  const int steps = 5;
+  const int steps = 10;
   const double leg_second_spacing_waypoint = 0.175;
 
   double spacing_step =

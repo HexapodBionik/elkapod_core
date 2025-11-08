@@ -39,21 +39,21 @@ elkapod_gait:
         k: 2.0
         ti: 0.2
         td: 0.0
-        cmd_lo: -0.4
-        cmd_hi: 0.4
+        cmd_lo: -0.1
+        cmd_hi: 0.1
     pitch:
       pid:
         k: 1.2
         ti: 0.2
         td: 0.0
-        cmd_lo: -0.4
-        cmd_hi: 0.4
+        cmd_lo: -0.2
+        cmd_hi: 0.2
 
 elkapod_motion_manager:
   ros__parameters:
     standing_up:
       base_height_waypoint: 0.12
-      leg_spacing_waypoint: 0.27
+      leg_spacing_waypoint: 0.275
 
     trajectory:
       frequency_hz: 100.0

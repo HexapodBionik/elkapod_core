@@ -36,8 +36,11 @@ Trajectory HopLegPlanner::plan(const Vec3& start, const Vec3& goal, double durat
   size_t steps = duration / dt;
   Trajectory traj(dt);
 
+  auto bezier_ = [](double s) { return 10 * std::pow(s, 3) - 15 * std::pow(s, 4) + 6 * std::pow(s, 5); };
+
   for (size_t i = 0; i < steps; ++i) {
     double s = static_cast<double>(i) / static_cast<double>(steps);
+    s = bezier_(s);
     Vec3 p = {x_func(s), y_func(s), z_func(s)};
     traj.addPoint(p);
   }
