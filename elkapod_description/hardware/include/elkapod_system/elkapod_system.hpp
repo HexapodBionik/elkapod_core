@@ -83,6 +83,6 @@ class ElkapodSystemHardware : public hardware_interface::SystemInterface {
   rclcpp::TimerBase::SharedPtr fsr_timer_;
 };
 
-}  // namespace elkapod_legs_system
+}  // namespace elkapod_system
 
 #endif  // ELKAPOD_LEGS_SYSTEM_HPP

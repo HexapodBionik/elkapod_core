@@ -83,7 +83,8 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
       std::bind(&ElkapodGaitGen::pitchCallback, this, std::placeholders::_1));
 
   fsr_sub_ = this->create_subscription<Int8ArrayMsg>(
-      "/legs/fsr_contact", 10, std::bind(&ElkapodGaitGen::fsrCallback, this, std::placeholders::_1));
+      "/legs/fsr_contact", 10,
+      std::bind(&ElkapodGaitGen::fsrCallback, this, std::placeholders::_1));
 
   // Publishers
   leg_signal_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
@@ -346,12 +347,12 @@ void ElkapodGaitGen::changeGait() {
 
     for (size_t k = 0; k < 6; ++k) phase_offset_[order[k]] = k * cycle_time_ / 6.0;
     if (gait_type_ == GaitType::WAVE) duty_factor_ = 5 / 6.;
-  } else if (gait_type_ == GaitType::RIPPLE){
+  } else if (gait_type_ == GaitType::RIPPLE) {
     phase_offset_.assign(6, 0.0);
     std::array<int, 6> order = {2, 1, 4, 3, 0, 5};
-    for (size_t k = 0; k < 6; ++k){
+    for (size_t k = 0; k < 6; ++k) {
       phase_offset_[order[k]] = 0.15 * k * cycle_time_;
-    } 
+    }
     if (gait_type_ == GaitType::RIPPLE) duty_factor_ = 0.75;
   }
 }

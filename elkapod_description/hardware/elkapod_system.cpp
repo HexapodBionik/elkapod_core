@@ -114,8 +114,7 @@ hardware_interface::CallbackReturn ElkapodSystemHardware::on_init(
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
-std::vector<hardware_interface::StateInterface>
-ElkapodSystemHardware::export_state_interfaces() {
+std::vector<hardware_interface::StateInterface> ElkapodSystemHardware::export_state_interfaces() {
   std::vector<hardware_interface::StateInterface> state_interfaces;
 
   for (size_t i = 0; i < positions_.size(); ++i) {
@@ -201,7 +200,6 @@ hardware_interface::CallbackReturn ElkapodSystemHardware::on_configure(
       std::copy(fsr_data_.begin(), fsr_data_.end(), fsr_msg.data.begin());
       fsr_pub_->publish(fsr_msg);
     });
-
   }
 
   RCLCPP_INFO(rclcpp::get_logger("ElkapodSystemHardware"), "Successfully configured!");
@@ -244,7 +242,7 @@ hardware_interface::CallbackReturn ElkapodSystemHardware::on_error(
 }
 
 hardware_interface::return_type ElkapodSystemHardware::read(const rclcpp::Time& /*time*/,
-                                                                const rclcpp::Duration& period) {
+                                                            const rclcpp::Duration& period) {
   for (size_t i = 0; i < cmd_positions_.size(); ++i) {
     positions_[i] = cmd_positions_[i];
   }
@@ -277,8 +275,8 @@ hardware_interface::return_type ElkapodSystemHardware::read(const rclcpp::Time& 
   return hardware_interface::return_type::OK;
 }
 
-hardware_interface::return_type ElkapodSystemHardware::write(
-    const rclcpp::Time& /*time*/, const rclcpp::Duration& /*period*/) {
+hardware_interface::return_type ElkapodSystemHardware::write(const rclcpp::Time& /*time*/,
+                                                             const rclcpp::Duration& /*period*/) {
   std::array<float, 18> cmd_positions_float;
 
   std::transform(cmd_positions_.begin(), cmd_positions_.end(), cmd_positions_float.begin(),
@@ -312,7 +310,7 @@ hardware_interface::return_type ElkapodSystemHardware::write(
   elkapod_comm::SpiTransmissionRequest request = {.angles = cmd_positions_float};
 
   auto result = comm_->transfer(request);
-  if(result.has_value()){
+  if (result.has_value()) {
     auto response = result.value();
     temperature_ = response.temperature;
     std::copy(response.imu_data.begin(), response.imu_data.end(), imu_data_.begin());
@@ -322,12 +320,11 @@ hardware_interface::return_type ElkapodSystemHardware::write(
     battery_voltage_ = response.battery_voltage;
     battery_present_ = response.battery_present;
   }
-  
+
   return hardware_interface::return_type::OK;
 }
 
 }  // namespace elkapod_system
 
 #include "pluginlib/class_list_macros.hpp"
-PLUGINLIB_EXPORT_CLASS(elkapod_system::ElkapodSystemHardware,
-                       hardware_interface::SystemInterface)
+PLUGINLIB_EXPORT_CLASS(elkapod_system::ElkapodSystemHardware, hardware_interface::SystemInterface)
