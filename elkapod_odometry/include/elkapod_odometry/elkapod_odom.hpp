@@ -20,12 +20,13 @@
 #include <std_msgs/msg/int8_multi_array.hpp>
 #include <string>
 
-#include "elkapod_leg_kinematics.hpp"
+#include "elkapod_core_lib/leg_kinematics.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_broadcaster.h"
 
 using namespace std::chrono_literals;
+using KinematicsSolver = elkapod_core_lib::kinematics::KinematicsSolver;
 
 class ElkapodOdom : public rclcpp::Node {
  public:

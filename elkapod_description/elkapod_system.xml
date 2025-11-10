@@ -1,0 +1,9 @@
+<library path="elkapod_system">
+  <class name="elkapod_description/elkapod_system_hardware"
+         type="elkapod_system::ElkapodSystemHardware"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      TODO Complete the description
+    </description>
+  </class>
+</library>

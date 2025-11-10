@@ -17,6 +17,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   pluginlib
   rclcpp
   rclcpp_lifecycle
+  elkapod_core_lib
 )
 
 # find dependencies
@@ -37,14 +38,21 @@ add_library(
   elkapod_ik_controller
   SHARED
   src/elkapod_ik_controller.cpp
-  src/elkapod_leg_inverse_kinematics.cpp
 )
 
 target_compile_features(elkapod_ik_controller PUBLIC cxx_std_20)
+
+# ament_target_dependencies(
+#         elkapod_ik_controller
+#         "elkapod_core_lib"
+# )
+
 target_include_directories(elkapod_ik_controller PUBLIC
 $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
 $<INSTALL_INTERFACE:include/elkapod_ik_controller>
 )
+
+
 target_link_libraries(elkapod_ik_controller PUBLIC
   elkapod_ik_controller_parameters
   control_toolbox::control_toolbox
@@ -54,6 +62,7 @@ target_link_libraries(elkapod_ik_controller PUBLIC
   realtime_tools::realtime_tools
   rclcpp::rclcpp
   rclcpp_lifecycle::rclcpp_lifecycle
+  elkapod_core_lib::elkapod_core_lib
 )
 pluginlib_export_plugin_description_file(controller_interface elkapod_ik_plugin.xml)
 

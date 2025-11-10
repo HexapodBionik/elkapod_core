@@ -1,8 +1,7 @@
 ekf_filter_node:
   ros__parameters:
     print_diagnostics: true
-    debug: true
-    use_sim_time: true
+    debug: false
 
     # Filter setup
     frequency: 30.0

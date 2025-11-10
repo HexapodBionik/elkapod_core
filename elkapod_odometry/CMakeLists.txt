@@ -17,6 +17,8 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_eigen REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(elkapod_core_lib REQUIRED)
+find_package(elkapod_msgs REQUIRED)
 include_directories(include)
 FILE(GLOB_RECURSE INCLUDE_FILES "include/elkapod_odometry/*.hpp")
 
@@ -35,8 +37,9 @@ target_compile_features(elkapod_relay PUBLIC c_std_99 cxx_std_20)  # Require C99
 ament_target_dependencies(
         elkapod_relay
         "rclcpp"
-        "geometry_msgs"
         "ros_gz_interfaces"
+        "std_msgs"
+        "elkapod_msgs"
 )
 
 # Install the executable
@@ -44,7 +47,31 @@ install(TARGETS elkapod_relay
         DESTINATION lib/${PROJECT_NAME}
 )
 
-add_executable(elkapod_odom src/elkapod_odom_init.cpp src/elkapod_odom.cpp src/elkapod_leg_kinematics.cpp)
+add_executable(elkapod_binary_fsr_publisher src/elkapod_binary_fsr_publisher.cpp src/elkapod_binary_fsr_publisher_init.cpp)
+target_sources(elkapod_binary_fsr_publisher PRIVATE ${INCLUDE_FILES})
+
+target_include_directories(elkapod_binary_fsr_publisher PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/elkapod_odometry
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>)
+
+
+target_compile_features(elkapod_binary_fsr_publisher PUBLIC c_std_99 cxx_std_20)  # Require C99 and C++20
+ament_target_dependencies(
+        elkapod_binary_fsr_publisher
+        "rclcpp"
+        "std_msgs"
+        "elkapod_msgs"
+)
+
+# Install the executable
+install(TARGETS elkapod_binary_fsr_publisher
+        DESTINATION lib/${PROJECT_NAME}
+)
+
+
+add_executable(elkapod_odom src/elkapod_odom_init.cpp src/elkapod_odom.cpp)
 target_sources(elkapod_odom PRIVATE ${INCLUDE_FILES})
 
 target_include_directories(elkapod_odom PUBLIC
@@ -66,6 +93,7 @@ ament_target_dependencies(
         "nav_msgs"
         "tf2_eigen"
         "tf2_ros"
+        "elkapod_core_lib"
 )
 
 # Install the executable

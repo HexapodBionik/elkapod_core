@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "elkapod_comm.hpp"
+#include "elkapod_msgs/msg/float64_array_stamped.hpp"
 #include "hardware_interface/handle.hpp"
 #include "hardware_interface/hardware_info.hpp"
 #include "hardware_interface/system_interface.hpp"
@@ -19,11 +20,12 @@
 #include "rclcpp_lifecycle/state.hpp"
 #include "sensor_msgs/msg/battery_state.hpp"
 #include "sensor_msgs/msg/temperature.hpp"
+#include "std_msgs/msg/float64_multi_array.hpp"
 
-namespace elkapod_legs_system {
-class ElkapodLegsSystemHardware : public hardware_interface::SystemInterface {
+namespace elkapod_system {
+class ElkapodSystemHardware : public hardware_interface::SystemInterface {
  public:
-  RCLCPP_SHARED_PTR_DEFINITIONS(ElkapodLegsSystemHardware)
+  RCLCPP_SHARED_PTR_DEFINITIONS(ElkapodSystemHardware)
 
   hardware_interface::CallbackReturn on_init(
       const hardware_interface::HardwareComponentInterfaceParams& params) override;
@@ -62,8 +64,9 @@ class ElkapodLegsSystemHardware : public hardware_interface::SystemInterface {
   std::array<double, kJointsNum> positions_{};
   std::array<double, kJointsNum> cmd_positions_{};
 
-  std::array<double, 4> temperatures_;
+  float temperature_;
   std::array<double, 10> imu_data_;
+  std::array<double, 6> fsr_data_;
 
   double battery_percentage_;
   double battery_voltage_;
@@ -75,9 +78,11 @@ class ElkapodLegsSystemHardware : public hardware_interface::SystemInterface {
   std::unique_ptr<elkapod_comm::ElkapodComm> comm_;
   rclcpp::Publisher<sensor_msgs::msg::Temperature>::SharedPtr temperature_pub_;
   rclcpp::Publisher<sensor_msgs::msg::BatteryState>::SharedPtr battery_pub_;
+  rclcpp::Publisher<elkapod_msgs::msg::Float64ArrayStamped>::SharedPtr fsr_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
+  rclcpp::TimerBase::SharedPtr fsr_timer_;
 };
 
-}  // namespace elkapod_legs_system
+}  // namespace elkapod_system
 
 #endif  // ELKAPOD_LEGS_SYSTEM_HPP

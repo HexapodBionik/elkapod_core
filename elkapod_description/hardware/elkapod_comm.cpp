@@ -1,7 +1,8 @@
-#include "elkapod_legs_system/elkapod_comm.hpp"
+#include "elkapod_system/elkapod_comm.hpp"
 
 #include <algorithm>
 #include <cstring>
+#include <format>
 #include <memory>
 
 using namespace elkapod_comm;
@@ -50,37 +51,52 @@ void ElkapodComm::disconnect() {
   uart_->disconnect();
 }
 
-SpiTransmissionResponse ElkapodComm::parseSpiTransferBytesResponse(
+std::optional<SpiTransmissionResponse> ElkapodComm::parseSpiTransferBytesResponse(
     const std::vector<uint8_t> bytes_response) {
-  std::array<float, 4> temperatures;
-  std::vector<uint8_t> bytes_buff(16, 0);
+  if (bytes_response[0] == 0x7E && bytes_response[79] == 0x0F) {
+    uint32_t pointer = 1;
+    float temperature;
+    std::vector<uint8_t> bytes_buff(10 * sizeof(float), 0);
 
-  std::copy_n(bytes_response.begin(), 16, bytes_buff.begin());
-  std::memcpy(temperatures.data(), bytes_buff.data(), 16);
+    std::copy_n(bytes_response.begin() + pointer, sizeof(float), bytes_buff.begin());
+    std::memcpy(&temperature, bytes_buff.data(), sizeof(float));
+    pointer += sizeof(float);
 
-  std::array<float, 10> imu_data;
-  bytes_buff.resize(40);
+    float battery_voltage;
+    float battery_percentage;
 
-  std::copy_n(bytes_response.begin() + 16, 40, bytes_buff.begin());
-  std::memcpy(imu_data.data(), bytes_buff.data(), 40);
+    std::copy_n(bytes_response.begin() + pointer, 2 * sizeof(float), bytes_buff.begin());
+    std::memcpy(&battery_voltage, bytes_response.data() + pointer, sizeof(float));
+    std::memcpy(&battery_percentage, bytes_response.data() + pointer + sizeof(float),
+                sizeof(float));
+    pointer += 2 * sizeof(float);
 
-  float battery_voltage;
-  float battery_percentage;
-  bool battery_present;
+    std::array<float, 10> imu_data;
+    bytes_buff.resize(40);
 
-  std::memcpy(&battery_voltage, bytes_response.data() + 56, sizeof(float));
-  std::memcpy(&battery_percentage, bytes_response.data() + 60, sizeof(float));
-  std::memcpy(&battery_present, bytes_response.data() + 64, sizeof(bool));
+    std::copy_n(bytes_response.begin() + pointer, 10 * sizeof(float), bytes_buff.begin());
+    std::memcpy(imu_data.data(), bytes_buff.data(), 10 * sizeof(float));
+    pointer += 10 * sizeof(float);
 
-  SpiTransmissionResponse response{.temperatures = temperatures,
-                                   .imu_data = imu_data,
-                                   .battery_voltage = battery_voltage,
-                                   .battery_percentage = battery_percentage,
-                                   .battery_present = battery_present};
-  return response;
+    std::array<float, 6> fsr_data;
+    std::copy_n(bytes_response.begin() + pointer, 6 * sizeof(float), bytes_buff.begin());
+    std::memcpy(fsr_data.data(), bytes_buff.data(), 6 * sizeof(float));
+    pointer += 6 * sizeof(float);
+
+    SpiTransmissionResponse response{.temperature = temperature,
+                                     .battery_voltage = battery_voltage,
+                                     .battery_percentage = battery_percentage,
+                                     .battery_present = true,
+                                     .imu_data = imu_data,
+                                     .fsr_data = fsr_data};
+    return response;
+  }
+
+  return {};
 }
 
-SpiTransmissionResponse ElkapodComm::transfer(const SpiTransmissionRequest& request) {
+std::optional<SpiTransmissionResponse> ElkapodComm::transfer(
+    const SpiTransmissionRequest& request) {
   std::vector<uint8_t> bytes(80, 0);
   bytes[0] = 0x7E;
   bytes[79] = 0x0F;
@@ -92,9 +108,7 @@ SpiTransmissionResponse ElkapodComm::transfer(const SpiTransmissionRequest& requ
   }
 
   std::vector<uint8_t> result = spi_->transfer(bytes);
-  SpiTransmissionResponse response = parseSpiTransferBytesResponse(result);
-
-  return response;
+  return parseSpiTransferBytesResponse(result);
 }
 
 void ElkapodComm::sendSystemStartCommand() { uart_->sendSystemStartCommand(); }

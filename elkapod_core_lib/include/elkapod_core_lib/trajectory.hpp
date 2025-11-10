@@ -1,5 +1,3 @@
-
-
 //
 // Created by Piotr Patek.
 //
@@ -7,8 +5,8 @@
 // Elkapod Bionik, Warsaw University of Technology. All rights reserved.
 //
 
-#ifndef ELKAPOD_LEG_TRAJECTORY_HPP
-#define ELKAPOD_LEG_TRAJECTORY_HPP
+#ifndef TRAJECTORY_HPP
+#define TRAJECTORY_HPP
 
 #include <chrono>
 #include <eigen3/Eigen/Eigen>
@@ -16,12 +14,10 @@
 #include <memory>
 #include <string>
 
+namespace elkapod_core_lib::trajectory {
 using Vec3 = Eigen::Vector3d;
 
 class Trajectory {
-  std::vector<Vec3> points;
-  double timestep;
-
  public:
   Trajectory() : timestep(0.0) {}
   Trajectory(double timestep);
@@ -30,14 +26,16 @@ class Trajectory {
   Vec3 interpolate(double t) const;
   size_t size() const;
   double totalDuration() const;
+
+ private:
+  std::vector<Vec3> points;
+  double timestep;
 };
 
 class LegPlanner {
  public:
   virtual ~LegPlanner() = default;
   virtual Trajectory plan(const Vec3& start, const Vec3& goal, double duration, double hz) = 0;
-
- private:
 };
 
 class LinearLegPlanner : public LegPlanner {
@@ -65,4 +63,6 @@ class TrajectoryExecutor {
   std::array<Trajectory, 6> trajectories;
 };
 
-#endif  // ELKAPOD_LEG_TRAJECTORY_HPP
+};  // namespace elkapod_core_lib::trajectory
+
+#endif  // TRAJECTORY_HPP

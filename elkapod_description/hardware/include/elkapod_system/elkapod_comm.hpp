@@ -5,16 +5,18 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <optional>
 
 #include "spidev.hpp"
 
 namespace elkapod_comm {
 typedef struct {
-  std::array<float, 4> temperatures;
-  std::array<float, 10> imu_data;
+  float temperature;
   float battery_voltage;
   float battery_percentage;
   bool battery_present;
+  std::array<float, 10> imu_data;
+  std::array<float, 6> fsr_data;
 } SpiTransmissionResponse;
 
 typedef struct {
@@ -57,10 +59,11 @@ class ElkapodComm {
 
   void sendSystemStartCommand();
   void sendSystemShutdownCommand();
-  SpiTransmissionResponse transfer(const SpiTransmissionRequest& request);
+  std::optional<SpiTransmissionResponse> transfer(const SpiTransmissionRequest& request);
 
  private:
-  SpiTransmissionResponse parseSpiTransferBytesResponse(const std::vector<uint8_t> bytes_response);
+  std::optional<SpiTransmissionResponse> parseSpiTransferBytesResponse(
+      const std::vector<uint8_t> bytes_response);
   std::unique_ptr<UARTDevice> uart_;
   std::unique_ptr<SpiDevice> spi_;
 };

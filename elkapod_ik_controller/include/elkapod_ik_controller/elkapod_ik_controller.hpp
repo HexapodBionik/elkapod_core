@@ -18,13 +18,15 @@
 #include <string>
 
 #include "controller_interface/chainable_controller_interface.hpp"
+#include "elkapod_core_lib/leg_kinematics.hpp"
 #include "elkapod_ik_controller/elkapod_ik_controller_parameters.hpp"
-#include "elkapod_leg_inverse_kinematics.hpp"
 #include "rclcpp_lifecycle/state.hpp"
 #include "realtime_tools/realtime_publisher.hpp"
 #include "realtime_tools/realtime_thread_safe_box.hpp"
 
 namespace elkapod_ik_controller {
+using KinematicsSolver = elkapod_core_lib::kinematics::KinematicsSolver;
+
 class ElkapodIKController : public controller_interface::ChainableControllerInterface {
  public:
   ElkapodIKController();

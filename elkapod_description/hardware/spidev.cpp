@@ -1,4 +1,4 @@
-#include "elkapod_legs_system/spidev.hpp"
+#include "elkapod_system/spidev.hpp"
 
 #include <errno.h>
 #include <fcntl.h>

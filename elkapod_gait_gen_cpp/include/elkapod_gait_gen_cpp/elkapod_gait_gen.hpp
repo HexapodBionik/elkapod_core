@@ -14,7 +14,6 @@
 #include <chrono>
 #include <eigen3/Eigen/Eigen>
 #include <geometry_msgs/msg/twist.hpp>
-#include <limits>
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
@@ -27,6 +26,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <unordered_map>
 
+#include "elkapod_core_lib/control.hpp"
 #include "leg_path.hpp"
 
 namespace elkapod_gait_gen {
@@ -39,23 +39,7 @@ using FloatMsg = std_msgs::msg::Float64;
 using IntMsg = std_msgs::msg::Int32;
 using VelCmd = geometry_msgs::msg::Twist;
 using IMUMsg = sensor_msgs::msg::Imu;
-
-class PID {
- public:
-  PID() = default;
-  PID(double K, double Ti, double Td, double T);
-  void updateCoefficients(double K, double Ti, double Td, double T);
-  void setCommandLimits(double lo, double hi);
-  double update(double e);
-
- private:
-  double command_lo_limit_ = -std::numeric_limits<double>::infinity();
-  double command_hi_limit_ = std::numeric_limits<double>::infinity();
-  double T_;
-  double r2_, r1_, r0_;
-  double ukm1_;
-  double e_[3];
-};
+using PID = elkapod_core_lib::control::PID;
 
 class ElkapodGaitGen : public rclcpp::Node {
  public:
