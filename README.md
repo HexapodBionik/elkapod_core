@@ -2,26 +2,41 @@
 ![ROS2 distro](https://img.shields.io/badge/ros--version-jazzy-blue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Python Version](https://img.shields.io/badge/python-3.12-g.svg)
-[![elkapod](https://github.com/HexapodBionik/Elkapod/actions/workflows/main.yml/badge.svg?branch=elkapod_comm)](https://github.com/HexapodBionik/Elkapod/actions/workflows/main.yml)
+[![elkapod](https://github.com/HexapodBionik/elkapod_core/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/HexapodBionik/elkapod_core/actions/workflows/main.yml)
 
 ## List of packages
-- `elkapod_core_bringup`
+- `elkapod_bringup`
+- `elkapod_core_lib`
 - `elkapod_description`
+- `elkapod_examples`
 - `elkapod_gait_gen_cpp`
-- `elkapod_gait_gen_py`
-- `elkapod_kinematics`
-- `elkapod_locomotion_examples`
+- `elkapod_ik_controller`
 - `elkapod_motion_manager`
+- `elkapod_odometry`
 
 ## Installation and workspace setup
 For installation and workspace setup please follow the steps from the [elkapod_stack](https://github.com/HexapodBionik/elkapod_stack) repository.
+
+> [!IMPORTANT] 
+>
+> If you're running the stack on PC and want to use simulation workspace, visualization or GUI control you have to setupu `RUN_MODE=pc` environment variable in your terminal.
+>
+> You can do it manually:
+> ```bash
+> export RUN_MODE=pc
+> ```
+> or add it to bashrc
+> ```bash
+> echo 'export RUN_MODE=pc' >> ~/.bashrc 
+> ```
+
 
 ## How to run (Gazebo Harmonic Sim version)?
 
 After building and sourcing run the following command
 
 ```bash
-ros2 launch elkapod_core_bringup elkapod_core_bringup_sim.launch.py
+ros2 launch elkapod_bringup simulation.launch.py
 ```
 
 then when you see that the entire motion stack has successfully started like this

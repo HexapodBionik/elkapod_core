@@ -8,8 +8,6 @@ from launch_ros.actions import Node
 import os
 
 def generate_launch_description():
-    elkapod_core = "elkapod_core_bringup"
-
     robot_controllers = PathJoinSubstitution(
         [
             FindPackageShare("elkapod_description"),
@@ -20,7 +18,7 @@ def generate_launch_description():
 
     rsp = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([os.path.join(
-            get_package_share_directory(elkapod_core), 'launch', 'rsp.launch.py'
+            get_package_share_directory("elkapod_bringup"), 'launch', 'rsp.launch.py'
         )]), launch_arguments={'sim_mode': 'false'}.items()
     )
 
@@ -71,7 +69,6 @@ def generate_launch_description():
             motion_manager_launch,
         ]
     )
-
 
 
     return LaunchDescription([

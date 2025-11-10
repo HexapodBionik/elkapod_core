@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 import os
 from glob import glob
 
-package_name = 'elkapod_locomotion_examples'
+package_name = 'elkapod_examples'
 data_files = []
 data_files.append(('share/ament_index/resource_index/packages', ['resource/' + package_name]))
 data_files.append(('share/' + package_name, ['package.xml']))
@@ -22,12 +22,12 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'rot_waypoints = elkapod_locomotion_examples.rot_waypoints:main',
-            'rectangle_drawer = elkapod_locomotion_examples.rectangle_drawer:main',
-            'rectangle_drawer_error = elkapod_locomotion_examples.rectangle_drawer_error:main',
-            'rotation_error_calib = elkapod_locomotion_examples.rotation_error_measurement:main',
-            'roll_demo = elkapod_locomotion_examples.roll_demo:main',
-            'pitch_demo = elkapod_locomotion_examples.pitch_demo:main'
+            'rot_waypoints = elkapod_examples.rot_waypoints:main',
+            'rectangle_drawer = elkapod_examples.rectangle_drawer:main',
+            'rectangle_drawer_error = elkapod_examples.rectangle_drawer_error:main',
+            'rotation_error_calib = elkapod_examples.rotation_error_measurement:main',
+            'roll_demo = elkapod_examples.roll_demo:main',
+            'pitch_demo = elkapod_examples.pitch_demo:main'
         ],
     },
 )
