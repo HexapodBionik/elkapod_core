@@ -1,5 +1,3 @@
-
-
 //
 // Created by Piotr Patek.
 //
@@ -68,6 +66,7 @@ class ElkapodIKController : public controller_interface::ChainableControllerInte
 
   realtime_tools::RealtimeThreadSafeBox<std_msgs::msg::Float64MultiArray> received_position_msg_;
   std_msgs::msg::Float64MultiArray command_msg_;
+  std::vector<double> input_cmd_;
 
   std::vector<hardware_interface::CommandInterface> on_export_reference_interfaces() override;
 

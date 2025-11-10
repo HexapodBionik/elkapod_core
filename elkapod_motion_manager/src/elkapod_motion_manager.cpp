@@ -8,12 +8,12 @@ using namespace std::literals::chrono_literals;
 using namespace elkapod_motion_manager;
 
 ElkapodMotionManager::ElkapodMotionManager() : Node("elkapod_motion_manager") {
-  base_height = this->declare_parameter<double>("base_height.default");
+  base_height = this->declare_parameter<double>("base_height.default_base_height");
 
   base_height_min = this->declare_parameter<double>("base_height.min");
   base_height_max = this->declare_parameter<double>("base_height.max");
 
-  leg_spacing = this->declare_parameter<double>("leg_spacing.default");
+  leg_spacing = this->declare_parameter<double>("leg_spacing.default_leg_spacing");
   leg_spacing_min = this->declare_parameter<double>("leg_spacing.min");
   leg_spacing_max = this->declare_parameter<double>("leg_spacing.max");
 

@@ -56,7 +56,7 @@ class ElkapodGaitGen : public rclcpp::Node {
   // Callbacks
   void enableServiceCallback(ServiceTriggerSrv_Req request, ServiceTriggerSrv_Resp response);
   void disableServiceCallback(ServiceTriggerSrv_Req request, ServiceTriggerSrv_Resp response);
-  void paramCallback(const FloatMsg::SharedPtr msg);
+  void baseHeightCallback(const FloatMsg::SharedPtr msg);
   void gaitTypeCallback(const IntMsg::SharedPtr msg);
   void velocityCallback(const VelCmd::SharedPtr msg);
   void imuCallback(const IMUMsg::SharedPtr msg);

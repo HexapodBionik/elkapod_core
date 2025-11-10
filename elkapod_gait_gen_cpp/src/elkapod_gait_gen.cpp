@@ -38,10 +38,10 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
   min_swing_time_sec_ = this->declare_parameter<double>("gait.min_swing_time_sec");
   phase_lag_ = this->declare_parameter<double>("gait.default_phase_lag");
 
-  leg_spacing_ = this->declare_parameter<double>("leg_spacing.default");
-  step_height_ = this->declare_parameter<double>("gait.step.height.default");
+  leg_spacing_ = this->declare_parameter<double>("leg_spacing.default_leg_spacing");
+  step_height_ = this->declare_parameter<double>("gait.step.height.default_step_height");
 
-  base_height_ = this->declare_parameter<double>("base_height.default");
+  base_height_ = this->declare_parameter<double>("base_height.default_base_height");
   base_height_min_ = this->declare_parameter<double>("base_height.min");
   base_height_max_ = this->declare_parameter<double>("base_height.max");
   set_base_height_ = base_height_;
@@ -66,7 +66,7 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
 
   param_sub_ = this->create_subscription<FloatMsg>(
       "/cmd_base_height", 10,
-      std::bind(&ElkapodGaitGen::paramCallback, this, std::placeholders::_1));
+      std::bind(&ElkapodGaitGen::baseHeightCallback, this, std::placeholders::_1));
 
   gait_type_sub_ = this->create_subscription<IntMsg>(
       "/cmd_gait_type", 10,
@@ -195,7 +195,7 @@ void ElkapodGaitGen::gaitTypeCallback(const IntMsg::SharedPtr msg) {
   }
 }
 
-void ElkapodGaitGen::paramCallback(const FloatMsg::SharedPtr msg) {
+void ElkapodGaitGen::baseHeightCallback(const FloatMsg::SharedPtr msg) {
   if (msg->data >= base_height_min_ && msg->data <= base_height_max_) {
     set_base_height_ = msg->data;
   } else {

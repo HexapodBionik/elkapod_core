@@ -33,6 +33,8 @@ controller_interface::CallbackReturn ElkapodIKController::on_init() {
   Eigen::Vector3d a2(params_.a2[0], params_.a2[1], params_.a2[2]);
   Eigen::Vector3d a3(params_.a3[0], params_.a3[1], params_.a3[2]);
 
+  input_cmd_ = std::vector<double>(18, 0.0);
+
   const std::vector<Eigen::Vector3d> input = {m1, a1, a2, a3};
   solver_ = std::make_shared<KinematicsSolver>(input);
 
@@ -58,7 +60,10 @@ controller_interface::return_type ElkapodIKController::update_reference_from_sub
   auto current_ref_op = received_position_msg_.try_get();
 
   if (current_ref_op.has_value()) {
-    command_msg_ = current_ref_op.value();
+    auto input_cmd = current_ref_op.value().data;
+    if(input_cmd.size() == 18){
+      std::copy_n(input_cmd.begin(), 18, reference_interfaces_.begin());
+    }
   }
 
   return controller_interface::return_type::OK;
@@ -67,7 +72,7 @@ controller_interface::return_type ElkapodIKController::update_reference_from_sub
 controller_interface::return_type ElkapodIKController::update_and_write_commands(
     const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/) {
   auto logger = get_node()->get_logger();
-  if (command_msg_.data.size() < 18) {
+  if (reference_interfaces_.size() < 18 || std::all_of(reference_interfaces_.cbegin(), reference_interfaces_.cend(), [](double value){return value == 0.0;})) {
     return controller_interface::return_type::OK;
   }
 
@@ -75,9 +80,9 @@ controller_interface::return_type ElkapodIKController::update_and_write_commands
 
   Eigen::Vector3d input;
   for (int i = 0; i < 6; ++i) {
-    input[0] = command_msg_.data[i * 3];
-    input[1] = command_msg_.data[i * 3 + 1];
-    input[2] = command_msg_.data[i * 3 + 2];
+    input[0] = reference_interfaces_[i * 3];
+    input[1] = reference_interfaces_[i * 3 + 1];
+    input[2] = reference_interfaces_[i * 3 + 2];
 
     Eigen::Vector3d anglesDeg = solver_->inverse(input);
 
@@ -107,6 +112,8 @@ controller_interface::return_type ElkapodIKController::update_and_write_commands
 controller_interface::CallbackReturn ElkapodIKController::on_configure(
     const rclcpp_lifecycle::State &) {
   auto logger = get_node()->get_logger();
+
+  reference_interfaces_.resize(18);
 
   // update parameters if they have changed
   if (param_listener_->try_update_params(params_)) {
@@ -162,7 +169,7 @@ void ElkapodIKController::reset_buffers() {}
 
 void ElkapodIKController::halt() {}
 
-bool ElkapodIKController::on_set_chained_mode(bool /*chained_mode*/) { return false; }
+bool ElkapodIKController::on_set_chained_mode(bool /*chained_mode*/) { return true; }
 
 std::vector<hardware_interface::CommandInterface>
 ElkapodIKController::on_export_reference_interfaces() {

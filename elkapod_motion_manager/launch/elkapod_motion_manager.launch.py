@@ -37,13 +37,13 @@ def generate_launch_description():
         condition=UnlessCondition(LaunchConfiguration("sim_mode"))
     )
 
-    gait_node = Node(
-        package="elkapod_gait_gen_cpp",
-        executable="elkapod_gait",
-        parameters=[config_path, {'use_sim_time': LaunchConfiguration("sim_mode")}],
-        output='screen',
-        emulate_tty=True
-    )
+    # gait_node = Node(
+    #     package="elkapod_gait_gen_cpp",
+    #     executable="elkapod_gait",
+    #     parameters=[config_path, {'use_sim_time': LaunchConfiguration("sim_mode")}],
+    #     output='screen',
+    #     emulate_tty=True
+    # )
 
     motion_manager = Node(
         package="elkapod_motion_manager",
@@ -57,6 +57,6 @@ def generate_launch_description():
         use_sim_time_arg,
         imu_republisher_sim,
         imu_republisher_hardware,
-        gait_node,
+        # gait_node,
         motion_manager
     ])
