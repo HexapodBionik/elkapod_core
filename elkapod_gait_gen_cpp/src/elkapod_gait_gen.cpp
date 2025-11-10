@@ -138,10 +138,10 @@ ElkapodGaitGen::ElkapodGaitGen() : Node("elkapod_gait") {
 void ElkapodGaitGen::init() {
   leg_path_gen_->init();
   changeGait();
-  leg_clock_timer_->reset();
   init_time_ = this->now();
   state_ = State::IDLE;
   RCLCPP_INFO(this->get_logger(), "Elkapod gait generator started.");
+  leg_clock_timer_->reset();
 }
 
 void ElkapodGaitGen::deinit() {
@@ -340,21 +340,26 @@ void ElkapodGaitGen::changeGait() {
     duty_factor_ = 1 / 2.;
     phase_offset_ = {0.0, cycle_time_ / 2., cycle_time_ / 2., 0.0, 0.0, cycle_time_ / 2.};
 
-  } else if (gait_type_ == GaitType::RIPPLE || gait_type_ == GaitType::WAVE) {
+  } else if (gait_type_ == GaitType::WAVE) {
     phase_offset_.assign(6, 0.0);
     std::array<int, 6> order = {0, 3, 4, 1, 2, 5};
+
     for (size_t k = 0; k < 6; ++k) phase_offset_[order[k]] = k * cycle_time_ / 6.0;
     if (gait_type_ == GaitType::WAVE) duty_factor_ = 5 / 6.;
-    if (gait_type_ == GaitType::RIPPLE) duty_factor_ = 4 / 6.;
+  } else if (gait_type_ == GaitType::RIPPLE){
+    phase_offset_.assign(6, 0.0);
+    std::array<int, 6> order = {2, 1, 4, 3, 0, 5};
+    for (size_t k = 0; k < 6; ++k){
+      phase_offset_[order[k]] = 0.15 * k * cycle_time_;
+    } 
+    if (gait_type_ == GaitType::RIPPLE) duty_factor_ = 0.75;
   }
 }
 
 void ElkapodGaitGen::clockFunction(double t, double T, double phase_shift, int leg_nb) {
-  if (!is_close(leg_phase_shift_[leg_nb], phase_shift, 1e-3)) {
-    leg_phase_shift_[leg_nb] = phase_shift * std::fmod(t, T);
-  }
+  leg_phase_shift_[leg_nb] = phase_shift;
 
-  const double t_mod = std::fmod((t + 3 * T / 4. + leg_phase_shift_[leg_nb]), T);
+  const double t_mod = std::fmod((t + leg_phase_shift_[leg_nb]), T);
 
   if (t_mod < T * phase_lag_ * 0.5) {  // swing lag phase
     leg_phase_[leg_nb] = 1;
@@ -426,9 +431,6 @@ void ElkapodGaitGen::updateAndWriteCommands() {
         p = rotZ(angle) * p;
       } else {
         p = Eigen::Vector3d::Zero();
-        if(abs((-base_height_ + base_link_translations_[leg_nb][2]) - last_leg_position_relative_[leg_nb][2]) > 0.05){
-          p[2] = last_leg_position_relative_[leg_nb][2] + base_height_ - base_link_translations_[leg_nb][2] - 0.05;
-        }
       }
 
       p = rotZ(-base_link_rotations_[leg_nb]) * p;
@@ -442,7 +444,7 @@ void ElkapodGaitGen::updateAndWriteCommands() {
   double e_roll = set_roll_ - roll_;
   double u_roll = roll_pid_.update(e_roll);
 
-  RCLCPP_INFO_THROTTLE(
+  RCLCPP_DEBUG_THROTTLE(
       get_logger(), *get_clock(), 500,
       std::format("PID roll u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_roll, e_roll, set_roll_)
           .c_str());
@@ -450,7 +452,7 @@ void ElkapodGaitGen::updateAndWriteCommands() {
   double e_pitch = set_pitch_ - pitch_;
   double u_pitch = pitch_pid_.update(e_pitch);
 
-  RCLCPP_INFO_THROTTLE(
+  RCLCPP_DEBUG_THROTTLE(
       get_logger(), *get_clock(), 500,
       std::format("PID pitch u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_pitch, e_pitch, set_pitch_)
           .c_str());

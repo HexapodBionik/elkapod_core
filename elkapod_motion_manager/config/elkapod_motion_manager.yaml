@@ -13,9 +13,9 @@
     pitch:
       max_rad: 0.10472
     max_vel:
-      tripod: 0.2
+      tripod: 0.15
       wave: 0.05
-      ripple: 0.15
+      ripple: 0.1
     max_angular_vel:
       tripod: 0.5
       wave: 0.5
@@ -28,7 +28,7 @@ elkapod_gait:
 
     gait:
       min_swing_time_sec: 0.42
-      default_phase_lag: 0.05 # 5% na cały cykl
+      default_phase_lag: 0.0
       step:
         height:             # parametry min i max do doprecyzowania
           default: 0.025
