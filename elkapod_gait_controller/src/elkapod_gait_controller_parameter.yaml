@@ -114,6 +114,14 @@ elkapod_gait_controller:
       description: ""
       validation:
         bounds<>: [0.09, 0.16]
+    min_base_height:
+      type: double
+      default_value: 0.09
+      description: ""
+    max_base_height:
+      type: double
+      default_value: 0.16
+      description: ""
   leg_spacing:
     default_leg_spacing:
       type: double
