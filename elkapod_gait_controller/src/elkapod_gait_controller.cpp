@@ -57,7 +57,134 @@ InterfaceConfiguration ElkapodGaitController::state_interface_configuration() co
   return {interface_configuration_type::NONE, {}};
 }
 
-controller_interface::return_type ElkapodGaitController::update(const rclcpp::Time & time, const rclcpp::Duration & period) {
+controller_interface::CallbackReturn ElkapodGaitController::on_configure(
+    const rclcpp_lifecycle::State &) {
+  auto logger = get_node()->get_logger();
+
+  leg_path_gen_ = std::make_unique<elkapod_leg_paths::BasicPathBezier>(0.0, step_height_);
+
+  base_link_rotations_ = {0.63973287, -0.63973287, M_PI / 2., -M_PI / 2., 2.38414364, -2.38414364};
+  base_link_translations_ = {{0.17841, 0.13276, -0.025},  {0.17841, -0.13276, -0.025},
+                             {0.0138, 0.1643, -0.025},    {0.0138, -0.1643, -0.025},
+                             {-0.15903, 0.15038, -0.025}, {-0.15903, -0.15038, -0.025}};
+
+  leg_clock_ = std::vector<double>(kLegsNb, 0.);
+  leg_phase_ = std::vector<int>(kLegsNb, 0);
+  leg_phase_shift_ = std::vector<double>(kLegsNb, 0.);
+  phase_offset_ = std::vector<double>(kLegsNb, 0.);
+
+  current_velocity_ = std::vector<Eigen::Vector2d>(kLegsNb, {0.0, 0.0});
+  last_leg_position_ = std::vector<Eigen::Vector3d>(kLegsNb, {0.0, 0.0, 0.0});
+  last_leg_position_relative_ = std::vector<Eigen::Vector3d>(kLegsNb, {0.0, 0.0, 0.0});
+
+  if (param_listener_->try_update_params(params_)) {
+    RCLCPP_INFO(logger, "Parameters were updated");
+  }
+
+  min_swing_time_sec_ = params_.gait.min_swing_time_sec;
+  phase_lag_ = params_.gait.default_phase_lag;
+
+  leg_spacing_ = params_.leg_spacing.default_leg_spacing;
+  step_height_ = params_.gait.step.height.default_step_height;
+
+  default_base_height_ = params_.base_height.default_base_height;
+  base_height_min_ = params_.base_height.min_base_height;
+  base_height_max_ = params_.base_height.max_base_height;
+  base_height_ = default_base_height_;
+  set_base_height_ = default_base_height_;
+
+  const double k_roll = params_.roll.pid.k;
+  const double ti_roll = params_.roll.pid.ti;
+  const double td_roll = params_.roll.pid.td;
+  const double cmd_lo_roll = params_.roll.pid.cmd_lo;
+  const double cmd_hi_roll = params_.roll.pid.cmd_hi;
+  roll_limit_ = params_.roll.max_rad;
+
+  const double k_pitch = params_.pitch.pid.k;
+  const double ti_pitch = params_.pitch.pid.ti;
+  const double td_pitch = params_.pitch.pid.td;
+  const double cmd_lo_pitch = params_.pitch.pid.cmd_lo;
+  const double cmd_hi_pitch = params_.pitch.pid.cmd_hi;
+  pitch_limit_ = params_.pitch.max_rad;
+
+  max_vel_dict_ = {
+      {GaitType::TRIPOD, params_.max_vel.tripod},
+      {GaitType::RIPPLE, params_.max_vel.ripple},
+      {GaitType::WAVE, params_.max_vel.wave},
+  };
+
+  max_angular_vel_dict_ = {
+      {GaitType::TRIPOD, params_.max_angular_vel.tripod},
+      {GaitType::RIPPLE, params_.max_angular_vel.ripple},
+      {GaitType::WAVE, params_.max_angular_vel.wave},
+  };
+
+  current_angular_velocity_ = 0.0;
+  current_vel_scalar_ = 0.0;
+
+  roll_pid_ =
+      std::make_unique<control_toolbox::Pid>(k_roll, ti_roll, td_roll, cmd_hi_roll, cmd_lo_roll);
+  pitch_pid_ = std::make_unique<control_toolbox::Pid>(k_pitch, ti_pitch, td_pitch, cmd_hi_pitch,
+                                                      cmd_lo_pitch);
+
+  // Subscriptions
+  velocity_sub_ = get_node()->create_subscription<VelCmd>(
+      "/cmd_vel", 10,
+      std::bind(&ElkapodGaitController::velocityCallback, this, std::placeholders::_1));
+
+  param_sub_ = get_node()->create_subscription<FloatMsg>(
+      "/cmd_base_height", 10,
+      std::bind(&ElkapodGaitController::baseHeightCallback, this, std::placeholders::_1));
+
+  gait_type_sub_ = get_node()->create_subscription<IntMsg>(
+      "/cmd_gait_type", 10,
+      std::bind(&ElkapodGaitController::gaitTypeCallback, this, std::placeholders::_1));
+
+  imu_sub_ = get_node()->create_subscription<IMUMsg>(
+      "/imu", 10, std::bind(&ElkapodGaitController::imuCallback, this, std::placeholders::_1));
+
+  roll_sub_ = get_node()->create_subscription<FloatMsg>(
+      "/roll_setpoint", 10,
+      std::bind(&ElkapodGaitController::rollCallback, this, std::placeholders::_1));
+
+  pitch_sub_ = get_node()->create_subscription<FloatMsg>(
+      "/pitch_setpoint", 10,
+      std::bind(&ElkapodGaitController::pitchCallback, this, std::placeholders::_1));
+
+  return controller_interface::CallbackReturn::SUCCESS;
+}
+
+controller_interface::CallbackReturn ElkapodGaitController::on_activate(
+    const rclcpp_lifecycle::State &) {
+  reset();
+  RCLCPP_INFO(get_node()->get_logger(), "Elkapod gait controller activated!");
+  return controller_interface::CallbackReturn::SUCCESS;
+}
+
+controller_interface::CallbackReturn ElkapodGaitController::on_deactivate(
+    const rclcpp_lifecycle::State &) {
+  if (state_ == State::WALKING) {
+    return controller_interface::CallbackReturn::FAILURE;
+  } else {
+    halt();
+    state_ = State::DISABLED;
+    RCLCPP_INFO(get_node()->get_logger(), "Elkapod gait controller deactivated!");
+    return controller_interface::CallbackReturn::SUCCESS;
+  }
+}
+
+controller_interface::CallbackReturn ElkapodGaitController::on_cleanup(
+    const rclcpp_lifecycle::State &) {
+  return controller_interface::CallbackReturn::SUCCESS;
+}
+
+controller_interface::CallbackReturn ElkapodGaitController::on_error(
+    const rclcpp_lifecycle::State &) {
+  return controller_interface::CallbackReturn::SUCCESS;
+}
+
+controller_interface::return_type ElkapodGaitController::update(const rclcpp::Time &time,
+                                                                const rclcpp::Duration &period) {
   auto logger = get_node()->get_logger();
 
   ema_filter_alfa_ = 1. - std::exp(-period.seconds() / EMA_FILTER_TAU);
@@ -68,9 +195,9 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
   auto status = leg_path_gen_->updateBasicParameters(step_length_, step_height_);
   if (status.has_value()) {
     leg_path_gen_->updateBasicParameters(0.0, 0.0);
-    // RCLCPP_ERROR_THROTTLE(
-    //     logger, *get_clock(), 500,
-    //     "Error setting new step_length and step_height! Fallback to zero values...");
+    RCLCPP_ERROR_THROTTLE(
+        logger, *(get_node()->get_clock()), 500,
+        "Error setting new step_length and step_height! Fallback to zero values...");
   }
 
   if (state_ == State::IDLE) {
@@ -79,8 +206,7 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
       leg_clock_[leg_nb] = 0.0;
     }
   } else {
-    rclcpp::Time now = get_node()->now();
-    double elapsed_time_sec = (now - init_time_).nanoseconds() / 1e9;
+    double elapsed_time_sec = (time - init_time_).nanoseconds() / 1e9;
     for (int leg_nb = 0; leg_nb < 6; ++leg_nb) {
       clockFunction(elapsed_time_sec, cycle_time_, phase_offset_[leg_nb], leg_nb);
     }
@@ -120,18 +246,8 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
   double e_roll = set_roll_ - roll_;
   double u_roll = roll_pid_->compute_command(e_roll, period);
 
-  // RCLCPP_DEBUG_THROTTLE(
-  //     get_logger(), *get_clock(), 500,
-  //     std::format("PID roll u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_roll, e_roll, set_roll_)
-  //         .c_str());
-
   double e_pitch = set_pitch_ - pitch_;
   double u_pitch = pitch_pid_->compute_command(e_pitch, period);
-
-  // RCLCPP_DEBUG_THROTTLE(
-  //     get_logger(), *get_clock(), 500,
-  //     std::format("PID pitch u: {:.3f}\te: {:.3f}\ty_zad: {:.3f}", u_pitch, e_pitch, set_pitch_)
-  //         .c_str());
 
   for (size_t i = 0; i < 6; ++i) {
     auto p = last_leg_position_relative_[i];
@@ -161,129 +277,38 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
   return controller_interface::return_type::OK;
 }
 
-controller_interface::CallbackReturn ElkapodGaitController::on_configure(
-    const rclcpp_lifecycle::State &) {
-  auto logger = get_node()->get_logger();
-  
-  leg_path_gen_ = std::make_unique<elkapod_leg_paths::BasicPathBezier>(0.0, step_height_);
-
-  base_link_rotations_ = {0.63973287, -0.63973287, M_PI / 2., -M_PI / 2., 2.38414364, -2.38414364};
-  base_link_translations_ = {{0.17841, 0.13276, -0.025},  {0.17841, -0.13276, -0.025},
-                             {0.0138, 0.1643, -0.025},    {0.0138, -0.1643, -0.025},
-                             {-0.15903, 0.15038, -0.025}, {-0.15903, -0.15038, -0.025}};
-
-  leg_clock_ = std::vector<double>(kLegsNb, 0.);
-  leg_phase_ = std::vector<int>(kLegsNb, 0);
-  leg_phase_shift_ = std::vector<double>(kLegsNb, 0.);
-  phase_offset_ = std::vector<double>(kLegsNb, 0.);
-
-  current_velocity_ = std::vector<Eigen::Vector2d>(kLegsNb, {0.0, 0.0});
-  last_leg_position_ = std::vector<Eigen::Vector3d>(kLegsNb, {0.0, 0.0, 0.0});
-  last_leg_position_relative_ = std::vector<Eigen::Vector3d>(kLegsNb, {0.0, 0.0, 0.0});
-
-  fsr_data_ = std::vector<double>(6, 0.);
-
-  if (param_listener_->try_update_params(params_)) {
-    RCLCPP_INFO(logger, "Parameters were updated");
-  }
-
-  min_swing_time_sec_ = params_.gait.min_swing_time_sec;
-  phase_lag_ = params_.gait.default_phase_lag;
-
-  leg_spacing_ = params_.leg_spacing.default_leg_spacing;
-  step_height_ = params_.gait.step.height.default_step_height;
-
-  base_height_ = params_.base_height.default_base_height;  
-  base_height_min_ = params_.base_height.min_base_height;  
-  base_height_max_ = params_.base_height.max_base_height;  
-  set_base_height_ = base_height_;
-
-  const double k_roll = params_.roll.pid.k;
-  const double ti_roll = params_.roll.pid.ti;
-  const double td_roll = params_.roll.pid.td;
-  const double cmd_lo_roll = params_.roll.pid.cmd_lo;
-  const double cmd_hi_roll = params_.roll.pid.cmd_hi;
-  roll_limit_ = params_.roll.max_rad;
-
-  const double k_pitch = params_.pitch.pid.k;
-  const double ti_pitch = params_.pitch.pid.ti;
-  const double td_pitch = params_.pitch.pid.td;
-  const double cmd_lo_pitch = params_.pitch.pid.cmd_lo;
-  const double cmd_hi_pitch = params_.pitch.pid.cmd_hi;
-  pitch_limit_ = params_.pitch.max_rad;
-
-  roll_pid_ = std::make_unique<control_toolbox::Pid>(k_roll, ti_roll, td_roll, cmd_hi_roll, cmd_lo_roll);
-  pitch_pid_ = std::make_unique<control_toolbox::Pid>(k_pitch, ti_pitch, td_pitch, cmd_hi_pitch, cmd_lo_pitch);
-
-  // Subscriptions
-  velocity_sub_ = get_node()->create_subscription<VelCmd>(
-      "/cmd_vel", 10, std::bind(&ElkapodGaitController::velocityCallback, this, std::placeholders::_1));
-
-  param_sub_ = get_node()->create_subscription<FloatMsg>(
-      "/cmd_base_height", 10,
-      std::bind(&ElkapodGaitController::baseHeightCallback, this, std::placeholders::_1));
-
-  gait_type_sub_ = get_node()->create_subscription<IntMsg>(
-      "/cmd_gait_type", 10,
-      std::bind(&ElkapodGaitController::gaitTypeCallback, this, std::placeholders::_1));
-
-  imu_sub_ = get_node()->create_subscription<IMUMsg>(
-      "/imu", 10, std::bind(&ElkapodGaitController::imuCallback, this, std::placeholders::_1));
-
-  roll_sub_ = get_node()->create_subscription<FloatMsg>(
-      "/roll_setpoint", 10, std::bind(&ElkapodGaitController::rollCallback, this, std::placeholders::_1));
-
-  pitch_sub_ = get_node()->create_subscription<FloatMsg>(
-      "/pitch_setpoint", 10,
-      std::bind(&ElkapodGaitController::pitchCallback, this, std::placeholders::_1));
-
-  fsr_sub_ = get_node()->create_subscription<Int8ArrayMsg>(
-      "/legs/fsr_contact", 10,
-      std::bind(&ElkapodGaitController::fsrCallback, this, std::placeholders::_1));
-
-  return controller_interface::CallbackReturn::SUCCESS;
-}
-
-controller_interface::CallbackReturn ElkapodGaitController::on_activate(
-    const rclcpp_lifecycle::State &) {
+bool ElkapodGaitController::reset() {
   leg_path_gen_->init();
   changeGait();
-  init_time_ = this->get_node()->now();
+  init_time_ = get_node()->now();
   state_ = State::IDLE;
-  // RCLCPP_INFO(this->get_logger(), "Elkapod gait generator started.");
 
-  RCLCPP_DEBUG(get_node()->get_logger(), "Subscriber and publisher are now active.");
-  return controller_interface::CallbackReturn::SUCCESS;
+  received_vel_command_ = VelCmd();
+  set_base_height_ = default_base_height_;
+
+  set_roll_ = 0.0;
+  set_pitch_ = 0.0;
+
+  return true;
 }
-
-controller_interface::CallbackReturn ElkapodGaitController::on_deactivate(
-    const rclcpp_lifecycle::State &) {
-  // subscriber_is_active_ = false;
-  if (state_ == State::WALKING) {
-    return controller_interface::CallbackReturn::FAILURE;
-  } else {
-      state_ = State::DISABLED;
-    return controller_interface::CallbackReturn::SUCCESS;
-  }
-}
-
-controller_interface::CallbackReturn ElkapodGaitController::on_cleanup(
-    const rclcpp_lifecycle::State &) {
-  return controller_interface::CallbackReturn::SUCCESS;
-}
-
-controller_interface::CallbackReturn ElkapodGaitController::on_error(
-    const rclcpp_lifecycle::State &) {
-  return controller_interface::CallbackReturn::SUCCESS;
-}
-
-bool ElkapodGaitController::reset() { return true; }
 
 void ElkapodGaitController::reset_buffers() {}
 
-void ElkapodGaitController::halt() {}
+void ElkapodGaitController::halt() {
+  for (size_t i = 0; i < kLegsNb; ++i) {
+    Eigen::Vector3d p;
 
-void ElkapodGaitController::baseHeightCallback(const FloatMsg::SharedPtr msg){
+    p = Eigen::Vector3d::Zero();
+    p = rotZ(-base_link_rotations_[i]) * p;
+    p += Eigen::Vector3d(leg_spacing_, 0.0, -base_height_ + base_link_translations_[i][2]);
+
+    (void)command_interfaces_[i * 3 + 0].set_value(p[0]);
+    (void)command_interfaces_[i * 3 + 1].set_value(p[1]);
+    (void)command_interfaces_[i * 3 + 2].set_value(p[2]);
+  }
+}
+
+void ElkapodGaitController::baseHeightCallback(const FloatMsg::SharedPtr msg) {
   if (msg->data >= base_height_min_ && msg->data <= base_height_max_) {
     set_base_height_ = msg->data;
   } else {
@@ -292,7 +317,7 @@ void ElkapodGaitController::baseHeightCallback(const FloatMsg::SharedPtr msg){
   }
 }
 
-void ElkapodGaitController::gaitTypeCallback(const IntMsg::SharedPtr msg){
+void ElkapodGaitController::gaitTypeCallback(const IntMsg::SharedPtr msg) {
   auto logger = get_node()->get_logger();
   if (state_ == State::IDLE) {
     if (msg->data == 0) {
@@ -311,7 +336,7 @@ void ElkapodGaitController::gaitTypeCallback(const IntMsg::SharedPtr msg){
   }
 }
 
-void ElkapodGaitController::velocityCallback(const VelCmd::SharedPtr msg){
+void ElkapodGaitController::velocityCallback(const VelCmd::SharedPtr msg) {
   if ((!is_close(msg->linear.x, 0.0, INPUT_VEL_TOL) ||
        !is_close(msg->linear.y, 0.0, INPUT_VEL_TOL)) &&
       !is_close(msg->angular.z, 0.0, INPUT_VEL_TOL)) {
@@ -319,18 +344,19 @@ void ElkapodGaitController::velocityCallback(const VelCmd::SharedPtr msg){
                          "Invalid Twist message! Cannot apply both linear and angular velocities!");
   } else {
     received_vel_command_ = *msg;
+    RCLCPP_INFO(get_node()->get_logger(), "Received command!");
   }
 }
 
-void ElkapodGaitController::imuCallback(const IMUMsg::SharedPtr msg){
+void ElkapodGaitController::imuCallback(const IMUMsg::SharedPtr msg) {
   tf2::fromMsg(msg->orientation, q_);
   q_.normalize();
   tf2::Matrix3x3(q_).getRPY(roll_, pitch_, yaw_);
 }
 
-void ElkapodGaitController::rollCallback(const FloatMsg::SharedPtr msg){
+void ElkapodGaitController::rollCallback(const FloatMsg::SharedPtr msg) {
   auto x = std::pow(msg->data, 2) / std::pow(roll_limit_, 2) +
-          std::pow(set_pitch_, 2) / std::pow(pitch_limit_, 2);
+           std::pow(set_pitch_, 2) / std::pow(pitch_limit_, 2);
 
   if (x <= 1.0) {
     set_roll_ = msg->data;
@@ -339,9 +365,9 @@ void ElkapodGaitController::rollCallback(const FloatMsg::SharedPtr msg){
   }
 }
 
-void ElkapodGaitController::pitchCallback(const FloatMsg::SharedPtr msg){
+void ElkapodGaitController::pitchCallback(const FloatMsg::SharedPtr msg) {
   auto x = std::pow(set_roll_, 2) / std::pow(roll_limit_, 2) +
-          std::pow(msg->data, 2) / std::pow(pitch_limit_, 2);
+           std::pow(msg->data, 2) / std::pow(pitch_limit_, 2);
 
   if (x <= 1.0) {
     set_pitch_ = msg->data;
@@ -350,11 +376,7 @@ void ElkapodGaitController::pitchCallback(const FloatMsg::SharedPtr msg){
   }
 }
 
-void ElkapodGaitController::fsrCallback(const Int8ArrayMsg::SharedPtr msg){
-    std::copy(msg->data.cbegin(), msg->data.cend(), fsr_data_.begin());
-}
-
-void ElkapodGaitController::changeGait(){
+void ElkapodGaitController::changeGait() {
   max_vel_ = max_vel_dict_[gait_type_];
   max_angular_vel_ = max_angular_vel_dict_[gait_type_];
   cycle_time_ = cycle_time_dict_[gait_type_];
@@ -379,7 +401,7 @@ void ElkapodGaitController::changeGait(){
   }
 }
 
-void ElkapodGaitController::clockFunction(double t, double T, double phase_shift, int leg_nb){
+void ElkapodGaitController::clockFunction(double t, double T, double phase_shift, int leg_nb) {
   leg_phase_shift_[leg_nb] = phase_shift;
 
   const double t_mod = std::fmod((t + leg_phase_shift_[leg_nb]), T);
@@ -406,11 +428,10 @@ void ElkapodGaitController::clockFunction(double t, double T, double phase_shift
   }
 }
 
-void ElkapodGaitController::updateVelocityCommand(){
+void ElkapodGaitController::updateVelocityCommand() {
   Eigen::Vector2d vel_command =
-    Eigen::Vector2d({received_vel_command_.linear.x, received_vel_command_.linear.y});
+      Eigen::Vector2d({received_vel_command_.linear.x, received_vel_command_.linear.y});
   double angular_vel = received_vel_command_.angular.z;
-
 
   velocityDeadzone(vel_command, angular_vel);
   velocityClamp(vel_command, angular_vel);
@@ -421,7 +442,7 @@ void ElkapodGaitController::updateVelocityCommand(){
       current_angular_velocity_ + ema_filter_alfa_ * (angular_vel - current_angular_velocity_);
 
   if (!is_close(angular_vel, 0.0, VEL_TOL)) {
-    for (auto& leg_vel : current_velocity_) {
+    for (auto &leg_vel : current_velocity_) {
       leg_vel.setZero();
     }
 
@@ -429,7 +450,7 @@ void ElkapodGaitController::updateVelocityCommand(){
     const double R = leg_spacing_ + kBaseToLegMountDist;
     step_length_ = cycle_time_ * duty_factor_ * R * std::fabs(angular_vel);
   } else {
-    for (auto& leg_vel : current_velocity_) {
+    for (auto &leg_vel : current_velocity_) {
       leg_vel = current_vel_command_;
     }
 
@@ -442,9 +463,10 @@ void ElkapodGaitController::updateVelocityCommand(){
     }
   }
 
-  RCLCPP_DEBUG(get_node()->get_logger(), std::format("Current velocity: {:.4f} m/s\tAngular: {:.4f} rad/s",
-                                         current_vel_scalar_, current_angular_velocity_)
-                                 .c_str());
+  RCLCPP_DEBUG_THROTTLE(get_node()->get_logger(), *(get_node()->get_clock()), 100,
+              std::format("Current velocity: {:.4f} m/s\tAngular: {:.4f} rad/s",
+                          current_vel_scalar_, current_angular_velocity_)
+                  .c_str());
 
   if (is_close(current_vel_scalar_, 0.0, VEL_TOL) &&
       is_close(current_angular_velocity_, 0.0, VEL_TOL) && state_ == State::WALKING) {
@@ -460,7 +482,7 @@ void ElkapodGaitController::updateVelocityCommand(){
   }
 }
 
-void ElkapodGaitController::velocityDeadzone(Eigen::Vector2d& vel, double& angular_vel){
+void ElkapodGaitController::velocityDeadzone(Eigen::Vector2d &vel, double &angular_vel) {
   const double linear_vel = vel.norm();
   if (linear_vel < deadzone_d_) {
     vel.setZero();
@@ -471,7 +493,7 @@ void ElkapodGaitController::velocityDeadzone(Eigen::Vector2d& vel, double& angul
   }
 }
 
-void ElkapodGaitController::velocityClamp(Eigen::Vector2d& vel, double& angular_vel){
+void ElkapodGaitController::velocityClamp(Eigen::Vector2d &vel, double &angular_vel) {
   const double linear_vel = vel.norm();
   if (linear_vel > max_vel_ && linear_vel > 0) {
     vel *= max_vel_ / linear_vel;
@@ -493,7 +515,7 @@ void ElkapodGaitController::velocityClamp(Eigen::Vector2d& vel, double& angular_
   }
 }
 
-}  // namespace elkapod_ik_controller
+}  // namespace elkapod_gait_controller
 
 #include "pluginlib/class_list_macros.hpp"
 

@@ -3,6 +3,10 @@ controller_manager:
     update_rate: 50
 
     hardware_components_initial_state:
+      inactive:
+        - "ElkapodGaitController"
+
+    hardware_components_initial_state:
       shutdown_on_initial_state_failure: true
 
     enforce_command_limits: true
@@ -15,9 +19,12 @@ controller_manager:
     
     elkapod_gait_controller:
       type: elkapod_gait_controller/ElkapodGaitController
+      state: inactive
 
     imu_broadcaster:
       type: imu_sensor_broadcaster/IMUSensorBroadcaster
+
+    
 
 elkapod_ik_controller:
   ros__parameters:

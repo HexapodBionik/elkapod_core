@@ -3,7 +3,7 @@
          type="elkapod_ik_controller::ElkapodIKController"
          base_class_type="controller_interface::ChainableControllerInterface">
     <description>
-      TODO Complete the description
+      Inverse kinematics controller used in Elkapod walking robot
     </description>
   </class>
 </library>

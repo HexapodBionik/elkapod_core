@@ -4,7 +4,7 @@
 
 using namespace elkapod_core_lib::control;
 
-PID::PID(double K, double Ti, double Td, double T) {
+PID::PID(const double K, const double Ti, const double Td, const double T) {
   updateCoefficients(K, Ti, Td, T);
   e_[0] = 0.0;
   e_[1] = 0.0;
@@ -12,19 +12,19 @@ PID::PID(double K, double Ti, double Td, double T) {
   ukm1_ = 0.0;
 }
 
-void PID::setCommandLimits(double lo, double hi) {
+void PID::setCommandLimits(const double lo, const double hi) {
   command_lo_limit_ = lo;
   command_hi_limit_ = hi;
 }
 
-void PID::updateCoefficients(double K, double Ti, double Td, double T) {
+void PID::updateCoefficients(const double K, const double Ti, const double Td, const double T) {
   T_ = T;
   r2_ = K * Td / T;
   r1_ = K * (T / (2 * Ti) - 2 * Td / T - 1);
   r0_ = K * (1 + T / (2 * Ti) + Td / T);
 }
 
-double PID::update(double e) {
+double PID::update(const double e) {
   e_[2] = e_[1];
   e_[1] = e_[0];
   e_[0] = e;

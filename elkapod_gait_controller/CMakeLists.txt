@@ -17,7 +17,6 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   pluginlib
   rclcpp
   rclcpp_lifecycle
-  elkapod_core_lib
   tf2
   tf2_geometry_msgs
 )
@@ -45,11 +44,6 @@ add_library(
 
 target_compile_features(elkapod_gait_controller PUBLIC cxx_std_20)
 
-# ament_target_dependencies(
-#         elkapod_gait_controller
-#         "elkapod_core_lib"
-# )
-
 target_include_directories(elkapod_gait_controller PUBLIC
 $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
 $<INSTALL_INTERFACE:include/elkapod_gait_controller>
@@ -65,7 +59,6 @@ target_link_libraries(elkapod_gait_controller PUBLIC
   realtime_tools::realtime_tools
   rclcpp::rclcpp
   rclcpp_lifecycle::rclcpp_lifecycle
-  elkapod_core_lib::elkapod_core_lib
   tf2::tf2
   tf2_geometry_msgs::tf2_geometry_msgs
 )

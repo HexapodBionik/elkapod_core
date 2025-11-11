@@ -9,13 +9,8 @@
 #define ELKAPOD_LEG_CONTROLLER_HPP
 
 #include <chrono>
-#include <functional>
-#include <memory>
-#include <rclcpp/rclcpp.hpp>
-#include <std_msgs/msg/float64_multi_array.hpp>
-#include <string>
-#include <chrono>
 #include <eigen3/Eigen/Eigen>
+#include <functional>
 #include <geometry_msgs/msg/twist.hpp>
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
@@ -23,29 +18,24 @@
 #include <std_msgs/msg/float64.hpp>
 #include <std_msgs/msg/float64_multi_array.hpp>
 #include <std_msgs/msg/int32.hpp>
-#include <std_msgs/msg/int8_multi_array.hpp>
 #include <string>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <unordered_map>
 
+#include "control_toolbox/pid_ros.hpp"
 #include "controller_interface/controller_interface.hpp"
 #include "elkapod_gait_controller/elkapod_gait_controller_parameters.hpp"
+#include "leg_path.hpp"
 #include "rclcpp_lifecycle/state.hpp"
 #include "realtime_tools/realtime_publisher.hpp"
 #include "realtime_tools/realtime_thread_safe_box.hpp"
 
-#include "elkapod_core_lib/control.hpp"
-#include "leg_path.hpp"
-#include "control_toolbox/pid_ros.hpp"
-
 namespace elkapod_gait_controller {
 using FloatArrayMsg = std_msgs::msg::Float64MultiArray;
-using Int8ArrayMsg = std_msgs::msg::Int8MultiArray;
 using FloatMsg = std_msgs::msg::Float64;
 using IntMsg = std_msgs::msg::Int32;
 using VelCmd = geometry_msgs::msg::Twist;
 using IMUMsg = sensor_msgs::msg::Imu;
-using PID = elkapod_core_lib::control::PID;
 
 class ElkapodGaitController : public controller_interface::ControllerInterface {
  public:
@@ -55,8 +45,8 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
 
   controller_interface::InterfaceConfiguration state_interface_configuration() const override;
 
-  controller_interface::return_type update(
-    const rclcpp::Time & time, const rclcpp::Duration & period) override;
+  controller_interface::return_type update(const rclcpp::Time& time,
+                                           const rclcpp::Duration& period) override;
 
   controller_interface::CallbackReturn on_init() override;
 
@@ -76,23 +66,17 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
       const rclcpp_lifecycle::State& previous_state) override;
 
  private:
-  std_msgs::msg::Float64MultiArray command_msg_;
-
   std::shared_ptr<ParamListener> param_listener_;
   Params params_;
 
-  rclcpp::Time previous_update_timestamp_{0};
-
   bool reset();
   void halt();
-
   void reset_buffers();
 
   enum class State { IDLE = 0, WALKING = 1, DISABLED = 2 };
   enum class GaitType { WAVE = 0, RIPPLE = 1, TRIPOD = 2 };
   inline static constexpr size_t kLegsNb = 6;
   inline static constexpr size_t kJointsNum = 18;
-
 
   // Callbacks
   void baseHeightCallback(const FloatMsg::SharedPtr msg);
@@ -101,7 +85,6 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
   void imuCallback(const IMUMsg::SharedPtr msg);
   void rollCallback(const FloatMsg::SharedPtr msg);
   void pitchCallback(const FloatMsg::SharedPtr msg);
-  void fsrCallback(const Int8ArrayMsg::SharedPtr msg);
 
   // Gait logic
   void changeGait();
@@ -119,7 +102,6 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
   rclcpp::Subscription<FloatMsg>::SharedPtr roll_sub_;
   rclcpp::Subscription<FloatMsg>::SharedPtr pitch_sub_;
   rclcpp::Subscription<IntMsg>::SharedPtr gait_type_sub_;
-  rclcpp::Subscription<Int8ArrayMsg>::SharedPtr fsr_sub_;
 
   // Variables
   State state_ = State::DISABLED;
@@ -129,6 +111,7 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
   double set_base_height_, cycle_time_, duty_factor_;
   double current_vel_scalar_, current_angular_velocity_;
 
+  double default_base_height_;
   double base_height_;
   double base_height_min_;
   double base_height_max_;
@@ -137,12 +120,8 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
   VelCmd received_vel_command_;
   Eigen::Vector2d current_vel_command_;
 
-  std::unordered_map<GaitType, double> max_vel_dict_ = {
-      {GaitType::TRIPOD, 0.2}, {GaitType::RIPPLE, 0.15}, {GaitType::WAVE, 0.05}};
-
-  // TODO to be validated later
-  std::unordered_map<GaitType, double> max_angular_vel_dict_ = {
-      {GaitType::TRIPOD, 0.5}, {GaitType::RIPPLE, 0.5}, {GaitType::WAVE, 0.5}};
+  std::unordered_map<GaitType, double> max_vel_dict_;
+  std::unordered_map<GaitType, double> max_angular_vel_dict_;
 
   std::unordered_map<GaitType, double> cycle_time_dict_ = {
       {GaitType::TRIPOD, 1.2}, {GaitType::RIPPLE, 1.2}, {GaitType::WAVE, 2.0}};
@@ -172,11 +151,8 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
   double set_pitch_ = 0.0;
   double roll_limit_ = 0.0;
   double pitch_limit_ = 0.0;
-
-  std::vector<double> fsr_data_;
 };
 
-}  // namespace elkapod_ik_controller
+}  // namespace elkapod_gait_controller
 
 #endif  // ELKAPOD_LEG_CONTROLLER_HPP
-

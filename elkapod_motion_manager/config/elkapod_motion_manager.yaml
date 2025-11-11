@@ -18,8 +18,8 @@
       ripple: 0.1
     max_angular_vel:
       tripod: 0.5
-      wave: 0.5
-      ripple: 0.5
+      wave: 0.1
+      ripple: 0.25
 
 elkapod_gait:
   ros__parameters:

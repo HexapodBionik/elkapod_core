@@ -15,6 +15,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(elkapod_core_lib REQUIRED)
+find_package(controller_manager_msgs REQUIRED)
 include_directories(include)
 FILE(GLOB_RECURSE INCLUDE_FILES "include/elkapod_motion_manager/*.hpp")
 
@@ -36,6 +37,7 @@ ament_target_dependencies(
         "std_srvs"
         "std_msgs"
         "elkapod_core_lib"
+        "controller_manager_msgs"
 )
 
 install(TARGETS elkapod_motion_manager

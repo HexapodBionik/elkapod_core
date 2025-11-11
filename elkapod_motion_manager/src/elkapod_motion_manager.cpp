@@ -50,6 +50,10 @@ ElkapodMotionManager::ElkapodMotionManager() : Node("elkapod_motion_manager") {
   this->gait_disable_publisher_ =
       this->create_client<std_srvs::srv::Trigger>("/gait_gen_disable", 10, my_group_);
 
+  switch_controller_publisher_ =
+      this->create_client<controller_manager_msgs::srv::SwitchController>(
+          "/controller_manager/switch_controller", 10, my_group_);
+
   this->leg_positions_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
       "/elkapod_ik_controller/elkapod_leg_positions", 10);
 
@@ -140,23 +144,30 @@ void ElkapodMotionManager::walkEnableServiceCallback(
     [[maybe_unused]] const std::shared_ptr<std_srvs::srv::Trigger_Request> request,
     std::shared_ptr<std_srvs::srv::Trigger_Response> response) {
   if (!executor_enable_ && state_ == State::IDLE) {
-    auto gait_request = std::make_shared<std_srvs::srv::Trigger::Request>();
+    auto enable_request =
+        std::make_shared<controller_manager_msgs::srv::SwitchController::Request>();
+    enable_request->activate_asap = true;
+    enable_request->activate_controllers = {"elkapod_gait_controller"};
+    enable_request->strictness = 2;  // STRICT
+    auto timeout = builtin_interfaces::msg::Duration();
+    timeout.sec = 5;
+    enable_request->timeout = timeout;
 
-    while (!this->gait_enable_publisher_->wait_for_service(std::chrono::seconds(1s))) {
+    while (!switch_controller_publisher_->wait_for_service(std::chrono::seconds(1s))) {
       if (!rclcpp::ok()) {
         RCLCPP_WARN(this->get_logger(), "Interrupted. Exiting.");
       }
       RCLCPP_INFO(this->get_logger(), "service not available, waiting...");
     }
 
-    auto future = this->gait_enable_publisher_->async_send_request(gait_request);
+    auto future = switch_controller_publisher_->async_send_request(enable_request);
 
-    if (future.wait_for(5s) == std::future_status::ready && future.get()->success) {
+    if (future.wait_for(5s) == std::future_status::ready && future.get()->ok) {
       RCLCPP_INFO(this->get_logger(), "Successfully transitioned to WALKING state");
       response->success = true;
       state_ = State::WALKING;
     } else {
-      this->gait_enable_publisher_->remove_pending_request(future);
+      this->switch_controller_publisher_->remove_pending_request(future);
       RCLCPP_WARN(this->get_logger(),
                   "Gait generator hasn't been enabled due to some error! "
                   "Staying in IDLE state.");
@@ -174,22 +185,28 @@ void ElkapodMotionManager::walkDisableServiceCallback(
     [[maybe_unused]] const std::shared_ptr<std_srvs::srv::Trigger_Request> request,
     std::shared_ptr<std_srvs::srv::Trigger_Response> response) {
   if (!executor_enable_ && state_ == State::WALKING) {
-    auto gait_request = std::make_shared<std_srvs::srv::Trigger::Request>();
+    auto disable_request =
+        std::make_shared<controller_manager_msgs::srv::SwitchController::Request>();
+    disable_request->deactivate_controllers = {"elkapod_gait_controller"};
+    disable_request->strictness = 2;  // STRICT
+    auto timeout = builtin_interfaces::msg::Duration();
+    timeout.sec = 5;
+    disable_request->timeout = timeout;
 
-    while (!this->gait_disable_publisher_->wait_for_service(std::chrono::seconds(1s))) {
+    while (!switch_controller_publisher_->wait_for_service(std::chrono::seconds(1s))) {
       if (!rclcpp::ok()) {
         RCLCPP_WARN(this->get_logger(), "Interrupted. Exiting.");
       }
       RCLCPP_INFO(this->get_logger(), "service not available, waiting...");
     }
 
-    auto future = this->gait_disable_publisher_->async_send_request(gait_request);
-    if (future.wait_for(5s) == std::future_status::ready && future.get()->success) {
+    auto future = switch_controller_publisher_->async_send_request(disable_request);
+    if (future.wait_for(5s) == std::future_status::ready && future.get()->ok) {
       RCLCPP_INFO(this->get_logger(), "Successfully transitioned to IDLE state");
       response->success = true;
       state_ = State::IDLE;
     } else {
-      this->gait_disable_publisher_->remove_pending_request(future);
+      switch_controller_publisher_->remove_pending_request(future);
       RCLCPP_WARN(this->get_logger(),
                   "Gait generator hasn't been disabled due to some error! "
                   "Staying in WALKING state.");

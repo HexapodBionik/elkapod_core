@@ -19,6 +19,7 @@
 #include <std_srvs/srv/trigger.hpp>
 #include <string>
 
+#include "controller_manager_msgs/srv/switch_controller.hpp"
 #include "elkapod_core_lib/trajectory.hpp"
 #include "elkapod_msgs/action/motion_manager_trigger.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -67,6 +68,9 @@ class ElkapodMotionManager : public rclcpp::Node {
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr walk_disable_service_;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr gait_enable_publisher_;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr gait_disable_publisher_;
+
+  rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedPtr
+      switch_controller_publisher_;
 
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr leg_positions_pub_;
   rclcpp::TimerBase::SharedPtr timer_;

@@ -12,6 +12,18 @@ def generate_launch_description():
         'elkapod.gazebo.launch.py'
     )
 
+    rsp = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([os.path.join(
+            get_package_share_directory("elkapod_bringup"), 'launch', 'rsp.launch.py'
+        )]), launch_arguments={'sim_mode': 'true'}.items()
+    )
+
+    ros2_control_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([os.path.join(
+            get_package_share_directory("elkapod_bringup"), 'launch', 'controllers.launch.py'
+        )]), launch_arguments={'sim_mode': 'true'}.items()
+    )
+
     motion_manager_launch_path = os.path.join(
         get_package_share_directory('elkapod_motion_manager'),
         'launch',
@@ -35,5 +47,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         gazebo_launch,
+        rsp,
+        ros2_control_launch,
         delayed_actions
     ])

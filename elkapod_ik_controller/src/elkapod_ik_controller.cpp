@@ -61,7 +61,7 @@ controller_interface::return_type ElkapodIKController::update_reference_from_sub
 
   if (current_ref_op.has_value()) {
     auto input_cmd = current_ref_op.value().data;
-    if(input_cmd.size() == 18){
+    if (input_cmd.size() == 18) {
       std::copy_n(input_cmd.begin(), 18, reference_interfaces_.begin());
     }
   }
@@ -72,7 +72,9 @@ controller_interface::return_type ElkapodIKController::update_reference_from_sub
 controller_interface::return_type ElkapodIKController::update_and_write_commands(
     const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/) {
   auto logger = get_node()->get_logger();
-  if (reference_interfaces_.size() < 18 || std::all_of(reference_interfaces_.cbegin(), reference_interfaces_.cend(), [](double value){return value == 0.0;})) {
+  if (reference_interfaces_.size() < 18 ||
+      std::all_of(reference_interfaces_.cbegin(), reference_interfaces_.cend(),
+                  [](double value) { return value == 0.0; })) {
     return controller_interface::return_type::OK;
   }
 
