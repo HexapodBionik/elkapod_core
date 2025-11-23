@@ -122,10 +122,10 @@ controller_interface::CallbackReturn ElkapodGaitController::on_configure(
   current_angular_velocity_ = 0.0;
   current_vel_scalar_ = 0.0;
 
-  roll_pid_ =
-      std::make_unique<control_toolbox::Pid>(k_roll, ti_roll, td_roll, cmd_hi_roll, cmd_lo_roll);
-  pitch_pid_ = std::make_unique<control_toolbox::Pid>(k_pitch, ti_pitch, td_pitch, cmd_hi_pitch,
-                                                      cmd_lo_pitch);
+  roll_pid_ = std::make_unique<control_toolbox::Pid>(k_roll, k_roll / ti_roll, k_roll * td_roll,
+                                                     cmd_hi_roll, cmd_lo_roll);
+  pitch_pid_ = std::make_unique<control_toolbox::Pid>(
+      k_pitch, k_pitch / ti_pitch, k_pitch * td_pitch, cmd_hi_pitch, cmd_lo_pitch);
 
   // Subscriptions
   velocity_sub_ = get_node()->create_subscription<VelCmd>(
@@ -190,7 +190,11 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
   ema_filter_alfa_ = 1. - std::exp(-period.seconds() / EMA_FILTER_TAU);
   base_height_ema_filter_alfa_ = 1. - std::exp(-period.seconds() / EMA_FILTER_TAU_BASE_HEIGHT);
 
-  updateVelocityCommand();
+  auto input_vel_cmd_op = input_vel_command_.try_get();
+  if (input_vel_cmd_op.has_value()) {
+    received_vel_command_ = input_vel_cmd_op.value();
+    updateVelocityCommand();
+  }
 
   auto status = leg_path_gen_->updateBasicParameters(step_length_, step_height_);
   if (status.has_value()) {
@@ -343,8 +347,7 @@ void ElkapodGaitController::velocityCallback(const VelCmd::SharedPtr msg) {
     RCLCPP_WARN_THROTTLE(get_node()->get_logger(), *(get_node()->get_clock()), 500,
                          "Invalid Twist message! Cannot apply both linear and angular velocities!");
   } else {
-    received_vel_command_ = *msg;
-    RCLCPP_INFO(get_node()->get_logger(), "Received command!");
+    input_vel_command_.set(*msg);
   }
 }
 
@@ -464,9 +467,9 @@ void ElkapodGaitController::updateVelocityCommand() {
   }
 
   RCLCPP_DEBUG_THROTTLE(get_node()->get_logger(), *(get_node()->get_clock()), 100,
-              std::format("Current velocity: {:.4f} m/s\tAngular: {:.4f} rad/s",
-                          current_vel_scalar_, current_angular_velocity_)
-                  .c_str());
+                        std::format("Current velocity: {:.4f} m/s\tAngular: {:.4f} rad/s",
+                                    current_vel_scalar_, current_angular_velocity_)
+                            .c_str());
 
   if (is_close(current_vel_scalar_, 0.0, VEL_TOL) &&
       is_close(current_angular_velocity_, 0.0, VEL_TOL) && state_ == State::WALKING) {

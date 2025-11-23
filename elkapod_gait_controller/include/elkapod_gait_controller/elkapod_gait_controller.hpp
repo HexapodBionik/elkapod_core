@@ -117,6 +117,7 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
   double base_height_max_;
   double base_height_ema_filter_alfa_ = 0.0;
 
+  realtime_tools::RealtimeThreadSafeBox<VelCmd> input_vel_command_;
   VelCmd received_vel_command_;
   Eigen::Vector2d current_vel_command_;
 
