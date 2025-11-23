@@ -78,7 +78,8 @@ controller_interface::return_type ElkapodIKController::update_and_write_commands
     return controller_interface::return_type::OK;
   }
 
-  std::array<double, 18> output;
+  std::vector<Eigen::Vector3d> results;
+  results.resize(6, Eigen::Vector3d::Zero());
 
   Eigen::Vector3d input;
   for (int i = 0; i < 6; ++i) {
@@ -86,28 +87,27 @@ controller_interface::return_type ElkapodIKController::update_and_write_commands
     input[1] = reference_interfaces_[i * 3 + 1];
     input[2] = reference_interfaces_[i * 3 + 2];
 
-    Eigen::Vector3d anglesDeg = solver_->inverse(input);
+    const Eigen::Vector3d angles_deg = solver_->inverse(input);
 
-    if (anglesDeg.array().isNaN().any()) {
+    if (angles_deg.array().isNaN().any()) {
       RCLCPP_ERROR(logger, "Inverse kinematics error while processing input for leg %d", i + 1);
       RCLCPP_ERROR(
           logger, std::format("Input: {:.3f} {:.3f} {:.3f}", input[0], input[1], input[2]).c_str());
-    } else {
-      output[i * 3] = anglesDeg[0];
-      output[i * 3 + 1] = anglesDeg[1];
-      output[i * 3 + 2] = anglesDeg[2];
+      return controller_interface::return_type::OK;
+    }
+    results[i] = angles_deg;
+  }
 
-      std::string msg2 =
-          std::format("Angles for leg {} theta0: {:.3f} theta1: {:.3f} theta2: {:.3f}", i + 1,
-                      output[i * 3], output[i * 3 + 1], output[i * 3 + 2]);
-      RCLCPP_DEBUG(logger, msg2.c_str());
+  for (size_t i = 0; i < 6; ++i) {
+    auto leg_angles = results[i];
+    RCLCPP_DEBUG(
+        logger, std::format("Angles for leg {} theta0: {:.3f} theta1: {:.3f} theta2: {:.3f}", i + 1,
+                            leg_angles[0], leg_angles[1], leg_angles[2])
+                    .c_str());
+    for (size_t j = 0; j < 3; ++j) {
+      (void)command_interfaces_[i * 3 + j].set_value(leg_angles[j]);
     }
   }
-
-  for (size_t i = 0; i < 18; ++i) {
-    (void)command_interfaces_[i].set_value(output[i]);
-  }
-
   return controller_interface::return_type::OK;
 }
 
@@ -115,7 +115,7 @@ controller_interface::CallbackReturn ElkapodIKController::on_configure(
     const rclcpp_lifecycle::State &) {
   auto logger = get_node()->get_logger();
 
-  reference_interfaces_.resize(18);
+  reference_interfaces_.resize(18, 0.0);
 
   // update parameters if they have changed
   if (param_listener_->try_update_params(params_)) {
