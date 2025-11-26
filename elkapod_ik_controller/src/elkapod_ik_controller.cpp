@@ -115,7 +115,7 @@ controller_interface::return_type ElkapodIKController::update_and_write_commands
       // 0.02s when dt = period.seconds() is used clamping is not working. After velocity clamping
       // there should be a lowPass filtering
       // ========================================================================================
-      const double dt = period.seconds();
+      // const double dt = period.seconds();
       double desired_velocity = (leg_angles[j] - current_joint_positions_[i * 3 + j]) / 0.02;
 
       double limited_velocity = std::clamp(desired_velocity, -7.0, 7.0);
