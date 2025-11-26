@@ -34,6 +34,8 @@ controller_interface::CallbackReturn ElkapodIKController::on_init() {
   Eigen::Vector3d a3(params_.a3[0], params_.a3[1], params_.a3[2]);
 
   input_cmd_ = std::vector<double>(18, 0.0);
+  current_joint_positions_ = std::vector<double>(18, 0.0);
+  reference_interfaces_.resize(18, 0.0);
 
   const std::vector<Eigen::Vector3d> input = {m1, a1, a2, a3};
   solver_ = std::make_shared<KinematicsSolver>(input);
@@ -70,7 +72,10 @@ controller_interface::return_type ElkapodIKController::update_reference_from_sub
 }
 
 controller_interface::return_type ElkapodIKController::update_and_write_commands(
-    const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/) {
+    const rclcpp::Time & /*time*/, const rclcpp::Duration &period) {
+  if (period.seconds() == 0) {
+    return controller_interface::return_type::OK;
+  }
   auto logger = get_node()->get_logger();
   if (reference_interfaces_.size() < 18 ||
       std::all_of(reference_interfaces_.cbegin(), reference_interfaces_.cend(),
@@ -87,15 +92,15 @@ controller_interface::return_type ElkapodIKController::update_and_write_commands
     input[1] = reference_interfaces_[i * 3 + 1];
     input[2] = reference_interfaces_[i * 3 + 2];
 
-    const Eigen::Vector3d angles_deg = solver_->inverse(input);
+    const Eigen::Vector3d angles = solver_->inverse(input);
 
-    if (angles_deg.array().isNaN().any()) {
+    if (angles.array().isNaN().any()) {
       RCLCPP_ERROR(logger, "Inverse kinematics error while processing input for leg %d", i + 1);
       RCLCPP_ERROR(
           logger, std::format("Input: {:.3f} {:.3f} {:.3f}", input[0], input[1], input[2]).c_str());
       return controller_interface::return_type::OK;
     }
-    results[i] = angles_deg;
+    results[i] = angles;
   }
 
   for (size_t i = 0; i < 6; ++i) {
@@ -104,8 +109,24 @@ controller_interface::return_type ElkapodIKController::update_and_write_commands
         logger, std::format("Angles for leg {} theta0: {:.3f} theta1: {:.3f} theta2: {:.3f}", i + 1,
                             leg_angles[0], leg_angles[1], leg_angles[2])
                     .c_str());
+
     for (size_t j = 0; j < 3; ++j) {
-      (void)command_interfaces_[i * 3 + j].set_value(leg_angles[j]);
+      // Change this fragment into separate velocity clamping function, for now dt is hardcoded to
+      // 0.02s when dt = period.seconds() is used clamping is not working. After velocity clamping
+      // there should be a lowPass filtering
+      // ========================================================================================
+      const double dt = period.seconds();
+      double desired_velocity = (leg_angles[j] - current_joint_positions_[i * 3 + j]) / 0.02;
+
+      double limited_velocity = std::clamp(desired_velocity, -7.0, 7.0);
+      double limited_delta = limited_velocity * 0.02;
+      double target_position = current_joint_positions_[i * 3 + j] + limited_delta;
+      current_joint_positions_[i * 3 + j] = target_position;
+      // ========================================================================================
+
+      if (!std::isnan(current_joint_positions_[i * 3 + j])) {
+        (void)command_interfaces_[i * 3 + j].set_value(current_joint_positions_[i * 3 + j]);
+      }
     }
   }
   return controller_interface::return_type::OK;
@@ -114,8 +135,6 @@ controller_interface::return_type ElkapodIKController::update_and_write_commands
 controller_interface::CallbackReturn ElkapodIKController::on_configure(
     const rclcpp_lifecycle::State &) {
   auto logger = get_node()->get_logger();
-
-  reference_interfaces_.resize(18, 0.0);
 
   // update parameters if they have changed
   if (param_listener_->try_update_params(params_)) {

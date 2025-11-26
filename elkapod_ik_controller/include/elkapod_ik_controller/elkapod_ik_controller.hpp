@@ -74,6 +74,7 @@ class ElkapodIKController : public controller_interface::ChainableControllerInte
   Params params_;
 
   rclcpp::Time previous_update_timestamp_{0};
+  std::vector<double> current_joint_positions_;
 
   std::shared_ptr<KinematicsSolver> solver_;
 

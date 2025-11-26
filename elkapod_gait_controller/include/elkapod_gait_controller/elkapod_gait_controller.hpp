@@ -152,6 +152,8 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
   double set_pitch_ = 0.0;
   double roll_limit_ = 0.0;
   double pitch_limit_ = 0.0;
+
+  bool configured_ = false;
 };
 
 }  // namespace elkapod_gait_controller

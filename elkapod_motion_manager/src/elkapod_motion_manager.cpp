@@ -236,7 +236,7 @@ void ElkapodMotionManager::initPlanning() {
 void ElkapodMotionManager::standUpPlanning() {
   const double lift_time = 1.0;
   const double leg_move_time = 0.8;
-  const int steps = 10;
+  const int steps = 5;
   const double leg_second_spacing_waypoint = 0.175;
 
   double spacing_step =

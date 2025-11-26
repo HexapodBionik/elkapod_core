@@ -1,5 +1,6 @@
 #include "elkapod_gait_controller/elkapod_gait_controller.hpp"
 
+#include <algorithm>
 #include <eigen3/Eigen/Eigen>
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
@@ -61,8 +62,6 @@ controller_interface::CallbackReturn ElkapodGaitController::on_configure(
     const rclcpp_lifecycle::State &) {
   auto logger = get_node()->get_logger();
 
-  leg_path_gen_ = std::make_unique<elkapod_leg_paths::BasicPathBezier>(0.0, step_height_);
-
   base_link_rotations_ = {0.63973287, -0.63973287, M_PI / 2., -M_PI / 2., 2.38414364, -2.38414364};
   base_link_translations_ = {{0.17841, 0.13276, -0.025},  {0.17841, -0.13276, -0.025},
                              {0.0138, 0.1643, -0.025},    {0.0138, -0.1643, -0.025},
@@ -121,11 +120,14 @@ controller_interface::CallbackReturn ElkapodGaitController::on_configure(
 
   current_angular_velocity_ = 0.0;
   current_vel_scalar_ = 0.0;
+  received_vel_command_ = VelCmd();
 
   roll_pid_ = std::make_unique<control_toolbox::Pid>(k_roll, k_roll / ti_roll, k_roll * td_roll,
                                                      cmd_hi_roll, cmd_lo_roll);
   pitch_pid_ = std::make_unique<control_toolbox::Pid>(
       k_pitch, k_pitch / ti_pitch, k_pitch * td_pitch, cmd_hi_pitch, cmd_lo_pitch);
+
+  leg_path_gen_ = std::make_unique<elkapod_leg_paths::BasicPathBezier>(0.0, step_height_);
 
   // Subscriptions
   velocity_sub_ = get_node()->create_subscription<VelCmd>(
@@ -151,6 +153,7 @@ controller_interface::CallbackReturn ElkapodGaitController::on_configure(
       "/pitch_setpoint", 10,
       std::bind(&ElkapodGaitController::pitchCallback, this, std::placeholders::_1));
 
+  configured_ = true;
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -185,6 +188,9 @@ controller_interface::CallbackReturn ElkapodGaitController::on_error(
 
 controller_interface::return_type ElkapodGaitController::update(const rclcpp::Time &time,
                                                                 const rclcpp::Duration &period) {
+  if (!configured_) {
+    return controller_interface::return_type::OK;
+  }
   auto logger = get_node()->get_logger();
 
   ema_filter_alfa_ = 1. - std::exp(-period.seconds() / EMA_FILTER_TAU);
@@ -221,7 +227,7 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
 
   if (state_ == State::WALKING || state_ == State::IDLE) {
     for (size_t leg_nb = 0; leg_nb < kLegsNb; ++leg_nb) {
-      Eigen::Vector3d p;
+      Eigen::Vector3d p = Eigen::Vector3d::Zero();
 
       if (state_ == State::WALKING) {
         p = leg_path_gen_->eval(leg_clock_[leg_nb], leg_phase_[leg_nb])
@@ -235,8 +241,6 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
 
         double angle = std::atan2(vel2D[1], vel2D[0]);
         p = rotZ(angle) * p;
-      } else {
-        p = Eigen::Vector3d::Zero();
       }
 
       p = rotZ(-base_link_rotations_[leg_nb]) * p;
@@ -272,6 +276,11 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
 
     last_leg_position_[i] = p_base_homogeneous.head<3>();
     last_leg_position_relative_[i] = p;
+
+    if (std::isnan(p[0]) || std::isnan(p[1]) || std::isnan(p[2])) {
+      RCLCPP_FATAL(logger, "Nan values in output!");
+      return controller_interface::return_type::OK;
+    }
 
     (void)command_interfaces_[i * 3 + 0].set_value(p[0]);
     (void)command_interfaces_[i * 3 + 1].set_value(p[1]);
@@ -393,14 +402,14 @@ void ElkapodGaitController::changeGait() {
     std::array<int, 6> order = {0, 3, 4, 1, 2, 5};
 
     for (size_t k = 0; k < 6; ++k) phase_offset_[order[k]] = k * cycle_time_ / 6.0;
-    if (gait_type_ == GaitType::WAVE) duty_factor_ = 5 / 6.;
+    duty_factor_ = 5 / 6.;
   } else if (gait_type_ == GaitType::RIPPLE) {
     phase_offset_.assign(6, 0.0);
     std::array<int, 6> order = {2, 1, 4, 3, 0, 5};
     for (size_t k = 0; k < 6; ++k) {
       phase_offset_[order[k]] = 0.15 * k * cycle_time_;
     }
-    if (gait_type_ == GaitType::RIPPLE) duty_factor_ = 0.75;
+    duty_factor_ = 0.75;
   }
 }
 
