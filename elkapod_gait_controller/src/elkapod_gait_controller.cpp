@@ -193,6 +193,28 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
   }
   auto logger = get_node()->get_logger();
 
+  if (param_listener_->is_old(params_)) {
+    params_ = param_listener_->get_params();
+
+    const double k_roll = params_.roll.pid.k;
+    const double ti_roll = params_.roll.pid.ti;
+    const double td_roll = params_.roll.pid.td;
+    const double cmd_lo_roll = params_.roll.pid.cmd_lo;
+    const double cmd_hi_roll = params_.roll.pid.cmd_hi;
+    roll_limit_ = params_.roll.max_rad;
+
+    const double k_pitch = params_.pitch.pid.k;
+    const double ti_pitch = params_.pitch.pid.ti;
+    const double td_pitch = params_.pitch.pid.td;
+    const double cmd_lo_pitch = params_.pitch.pid.cmd_lo;
+    const double cmd_hi_pitch = params_.pitch.pid.cmd_hi;
+    pitch_limit_ = params_.pitch.max_rad;
+
+    roll_pid_->set_gains(k_roll, k_roll / ti_roll, k_roll * td_roll, cmd_hi_roll, cmd_lo_roll, control_toolbox::AntiWindupStrategy());
+    pitch_pid_->set_gains(k_pitch, k_pitch / ti_pitch, k_pitch * td_pitch, cmd_hi_pitch, cmd_lo_pitch, control_toolbox::AntiWindupStrategy());
+    RCLCPP_INFO(logger, "Gait generator parameters updated!")
+  }
+
   ema_filter_alfa_ = 1. - std::exp(-period.seconds() / EMA_FILTER_TAU);
   base_height_ema_filter_alfa_ = 1. - std::exp(-period.seconds() / EMA_FILTER_TAU_BASE_HEIGHT);
 
