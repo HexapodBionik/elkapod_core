@@ -36,15 +36,15 @@ elkapod_gait:
           max: 0.6
     roll:
       pid:
-        k: 2.0
+        k: 0.3
         ti: 0.2
         td: 0.0
         cmd_lo: -0.1
         cmd_hi: 0.1
     pitch:
       pid:
-        k: 1.2
-        ti: 0.2
+        k: 0.3
+        ti: 0.1
         td: 0.0
         cmd_lo: -0.2
         cmd_hi: 0.2

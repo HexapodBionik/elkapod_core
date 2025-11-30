@@ -106,6 +106,10 @@ controller_interface::CallbackReturn ElkapodGaitController::on_configure(
   const double cmd_hi_pitch = params_.pitch.pid.cmd_hi;
   pitch_limit_ = params_.pitch.max_rad;
 
+  control_toolbox::AntiWindupStrategy aw_strategy_pitch, aw_strategy_roll;
+  aw_strategy_pitch.set_type("back_calculation");
+  aw_strategy_roll.set_type("back_calculation");
+
   max_vel_dict_ = {
       {GaitType::TRIPOD, params_.max_vel.tripod},
       {GaitType::RIPPLE, params_.max_vel.ripple},
@@ -123,9 +127,10 @@ controller_interface::CallbackReturn ElkapodGaitController::on_configure(
   received_vel_command_ = VelCmd();
 
   roll_pid_ = std::make_unique<control_toolbox::Pid>(k_roll, k_roll / ti_roll, k_roll * td_roll,
-                                                     cmd_hi_roll, cmd_lo_roll);
-  pitch_pid_ = std::make_unique<control_toolbox::Pid>(
-      k_pitch, k_pitch / ti_pitch, k_pitch * td_pitch, cmd_hi_pitch, cmd_lo_pitch);
+                                                     cmd_hi_roll, cmd_lo_roll, aw_strategy_roll);
+  pitch_pid_ =
+      std::make_unique<control_toolbox::Pid>(k_pitch, k_pitch / ti_pitch, k_pitch * td_pitch,
+                                             cmd_hi_pitch, cmd_lo_pitch, aw_strategy_pitch);
 
   leg_path_gen_ = std::make_unique<elkapod_leg_paths::BasicPathBezier>(0.0, step_height_);
 
@@ -188,7 +193,7 @@ controller_interface::CallbackReturn ElkapodGaitController::on_error(
 
 controller_interface::return_type ElkapodGaitController::update(const rclcpp::Time &time,
                                                                 const rclcpp::Duration &period) {
-  if (!configured_) {
+  if (!configured_ && state_ != State::DISABLED) {
     return controller_interface::return_type::OK;
   }
   auto logger = get_node()->get_logger();
@@ -210,9 +215,15 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
     const double cmd_hi_pitch = params_.pitch.pid.cmd_hi;
     pitch_limit_ = params_.pitch.max_rad;
 
-    roll_pid_->set_gains(k_roll, k_roll / ti_roll, k_roll * td_roll, cmd_hi_roll, cmd_lo_roll, control_toolbox::AntiWindupStrategy());
-    pitch_pid_->set_gains(k_pitch, k_pitch / ti_pitch, k_pitch * td_pitch, cmd_hi_pitch, cmd_lo_pitch, control_toolbox::AntiWindupStrategy());
-    RCLCPP_INFO(logger, "Gait generator parameters updated!")
+    control_toolbox::AntiWindupStrategy aw_strategy_pitch, aw_strategy_roll;
+    aw_strategy_pitch.set_type("back_calculation");
+    aw_strategy_roll.set_type("back_calculation");
+
+    roll_pid_->set_gains(k_roll, k_roll / ti_roll, k_roll * td_roll, cmd_hi_roll, cmd_lo_roll,
+                         aw_strategy_roll);
+    pitch_pid_->set_gains(k_pitch, k_pitch / ti_pitch, k_pitch * td_pitch, cmd_hi_pitch,
+                          cmd_lo_pitch, aw_strategy_pitch);
+    RCLCPP_INFO(logger, "Gait generator parameters updated!");
   }
 
   ema_filter_alfa_ = 1. - std::exp(-period.seconds() / EMA_FILTER_TAU);
@@ -292,10 +303,9 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
     double dz = 0.0;
     dz += -u_roll * p_base_homogeneous[1];
     dz += u_pitch * p_base_homogeneous[0];
-    p[2] += dz;
-    p[2] = std::clamp(-0.2, -0.11, p[2]);
-    p_base_homogeneous[2] = p[2];
+    const double pz = std::clamp(p[2] + dz, -0.2, -0.11);
 
+    p_base_homogeneous[2] = p[2];
     last_leg_position_[i] = p_base_homogeneous.head<3>();
     last_leg_position_relative_[i] = p;
 
@@ -306,17 +316,17 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
 
     (void)command_interfaces_[i * 3 + 0].set_value(p[0]);
     (void)command_interfaces_[i * 3 + 1].set_value(p[1]);
-    (void)command_interfaces_[i * 3 + 2].set_value(p[2]);
+    (void)command_interfaces_[i * 3 + 2].set_value(pz);
   }
 
   return controller_interface::return_type::OK;
 }
 
 bool ElkapodGaitController::reset() {
+  state_ = State::IDLE;
   leg_path_gen_->init();
   changeGait();
   init_time_ = get_node()->now();
-  state_ = State::IDLE;
 
   received_vel_command_ = VelCmd();
   set_base_height_ = default_base_height_;
