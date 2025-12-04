@@ -8,6 +8,7 @@
 #ifndef ELKAPOD_LEG_CONTROLLER_HPP
 #define ELKAPOD_LEG_CONTROLLER_HPP
 
+#include <builtin_interfaces/msg/duration.hpp>
 #include <chrono>
 #include <eigen3/Eigen/Eigen>
 #include <functional>
@@ -36,6 +37,7 @@ using FloatMsg = std_msgs::msg::Float64;
 using IntMsg = std_msgs::msg::Int32;
 using VelCmd = geometry_msgs::msg::Twist;
 using IMUMsg = sensor_msgs::msg::Imu;
+using DurationMsg = builtin_interfaces::msg::Duration;
 
 class ElkapodGaitController : public controller_interface::ControllerInterface {
  public:
@@ -118,6 +120,7 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
   double base_height_ema_filter_alfa_ = 0.0;
 
   realtime_tools::RealtimeThreadSafeBox<VelCmd> input_vel_command_;
+
   VelCmd received_vel_command_;
   Eigen::Vector2d current_vel_command_;
 
@@ -133,6 +136,7 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
   double ema_filter_alfa_ = 0.0;
 
   rclcpp::Time init_time_;
+  rclcpp::Time last_time_;
   std::vector<Eigen::Vector2d> current_velocity_;
   std::vector<Eigen::Vector3d> last_leg_position_;
   std::vector<Eigen::Vector3d> last_leg_position_relative_;
@@ -154,6 +158,14 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
   double pitch_limit_ = 0.0;
 
   bool configured_ = false;
+
+  // Debug info
+  std::unique_ptr<realtime_tools::RealtimePublisher<DurationMsg>> loop_exec_duration_publisher_rt_;
+  rclcpp::Publisher<DurationMsg>::SharedPtr loop_exec_duration_publisher_;
+  rclcpp::Time last_duration_msg_publish_time_;
+  bool publish_loop_execution_time_ = false;
+  inline static constexpr double duration_msg_publish_period_ = 0.05;  // 50 Hz
+  bool is_first_update_ = true;
 };
 
 }  // namespace elkapod_gait_controller

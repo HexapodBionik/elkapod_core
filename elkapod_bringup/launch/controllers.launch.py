@@ -19,6 +19,14 @@ def generate_launch_description():
         ]
     )
 
+    motion_manager_config = PathJoinSubstitution(
+        [
+            FindPackageShare("elkapod_motion_manager"),
+            "config",
+            "elkapod_motion_manager.yaml",
+        ]
+    )
+
     control_node = Node(
         package="controller_manager",
         executable="ros2_control_node",
@@ -53,13 +61,20 @@ def generate_launch_description():
         )
     ])
 
-    controllers_second_wave = TimerAction(period=8.0, actions=[Node(
+    controllers_second_wave = TimerAction(period=8.0, actions=[
+    Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["elkapod_gait_controller",  "--inactive"],
+        arguments=[
+            "elkapod_gait_controller",
+            "--inactive",
+            "--param-file", robot_controllers,
+            "--param-file", motion_manager_config,
+        ],
         output='screen',
         emulate_tty=True
-    )])
+    )
+])
 
     return LaunchDescription([
         sim_mode,

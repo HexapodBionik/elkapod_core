@@ -1,6 +1,7 @@
 #include "elkapod_gait_controller/elkapod_gait_controller.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <eigen3/Eigen/Eigen>
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
@@ -159,6 +160,16 @@ controller_interface::CallbackReturn ElkapodGaitController::on_configure(
       std::bind(&ElkapodGaitController::pitchCallback, this, std::placeholders::_1));
 
   configured_ = true;
+
+  std::cout << params_.publish_debug_info << std::endl;
+  std::cout << params_.pitch.pid.k << std::endl;
+  publish_loop_execution_time_ = params_.publish_debug_info;
+  loop_exec_duration_publisher_ = get_node()->create_publisher<DurationMsg>(
+      "/elkapod_gait_controller/loop_exec_time", rclcpp::SystemDefaultsQoS());
+  loop_exec_duration_publisher_rt_ =
+      std::make_unique<realtime_tools::RealtimePublisher<DurationMsg>>(
+          loop_exec_duration_publisher_);
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -193,6 +204,13 @@ controller_interface::CallbackReturn ElkapodGaitController::on_error(
 
 controller_interface::return_type ElkapodGaitController::update(const rclcpp::Time &time,
                                                                 const rclcpp::Duration &period) {
+  const auto start_time = std::chrono::steady_clock::now();
+  if (is_first_update_) {
+    last_duration_msg_publish_time_ = time;
+    is_first_update_ = false;
+    return controller_interface::return_type::OK;
+  }
+
   if (!configured_ && state_ != State::DISABLED) {
     return controller_interface::return_type::OK;
   }
@@ -319,6 +337,21 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
     (void)command_interfaces_[i * 3 + 2].set_value(pz);
   }
 
+  if (publish_loop_execution_time_ &&
+      (time - last_duration_msg_publish_time_).seconds() > duration_msg_publish_period_) {
+    const auto end_time = std::chrono::steady_clock::now();
+    const auto duration =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time).count();
+    RCLCPP_DEBUG_THROTTLE(
+        logger, *(get_node()->get_clock()), 100,
+        std::format("Gait generator loop time {:.3f} ms", static_cast<double>(duration) / 1e6)
+            .c_str());
+
+    rclcpp::Duration duration_obj = rclcpp::Duration::from_nanoseconds(duration);
+    builtin_interfaces::msg::Duration duration_msg = duration_obj;
+    loop_exec_duration_publisher_rt_->try_publish(duration_msg);
+    last_duration_msg_publish_time_ = time;
+  }
   return controller_interface::return_type::OK;
 }
 

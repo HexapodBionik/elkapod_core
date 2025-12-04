@@ -7,6 +7,10 @@ elkapod_gait_controller:
       not_empty<>: []
     }
   }
+  publish_debug_info:
+    type: bool
+    default_value: false
+    description: ""
   gait:
     min_swing_time_sec:
       type: double

@@ -21,34 +21,6 @@
       wave: 0.1
       ripple: 0.25
 
-elkapod_gait:
-  ros__parameters:
-    trajectory:
-      frequency_hz: 50.0
-
-    gait:
-      min_swing_time_sec: 0.42
-      default_phase_lag: 0.0
-      step:
-        height:             
-          default_step_height: 0.025
-          min: 0.015       
-          max: 0.6
-    roll:
-      pid:
-        k: 0.3
-        ti: 0.2
-        td: 0.0
-        cmd_lo: -0.1
-        cmd_hi: 0.1
-    pitch:
-      pid:
-        k: 0.3
-        ti: 0.1
-        td: 0.0
-        cmd_lo: -0.2
-        cmd_hi: 0.2
-
 elkapod_motion_manager:
   ros__parameters:
     standing_up:

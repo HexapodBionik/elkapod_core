@@ -83,18 +83,19 @@ elkapod_gait_controller:
           max: 0.15
     roll:
       pid:
-        k: 2.0
-        ti: 0.2
+        k: 0.3
+        ti: 10.0
         td: 0.0
         cmd_lo: -0.1
         cmd_hi: 0.1
     pitch:
       pid:
-        k: 1.2
-        ti: 0.2
+        k: 0.3
+        ti: 10.0
         td: 0.0
         cmd_lo: -0.2
         cmd_hi: 0.2
+    publish_debug_info: true
 
 imu_broadcaster:
   ros__parameters:

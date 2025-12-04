@@ -19,6 +19,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   rclcpp_lifecycle
   tf2
   tf2_geometry_msgs
+  builtin_interfaces
 )
 
 # find dependencies
@@ -61,6 +62,7 @@ target_link_libraries(elkapod_gait_controller PUBLIC
   rclcpp_lifecycle::rclcpp_lifecycle
   tf2::tf2
   tf2_geometry_msgs::tf2_geometry_msgs
+  ${builtin_interfaces_TARGETS}
 )
 pluginlib_export_plugin_description_file(controller_interface elkapod_gait_plugin.xml)
 
