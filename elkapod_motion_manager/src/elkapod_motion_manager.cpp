@@ -7,6 +7,18 @@ using std::placeholders::_2;
 using namespace std::literals::chrono_literals;
 using namespace elkapod_motion_manager;
 
+static std::string stateToString(const State& state) {
+  if (state == State::INIT) {
+    return "init";
+  } else if (state == State::IDLE_LOWERED) {
+    return "idle_lowered";
+  } else if (state == State::IDLE) {
+    return "idle";
+  } else {
+    return "walking";
+  }
+}
+
 ElkapodMotionManager::ElkapodMotionManager() : Node("elkapod_motion_manager") {
   base_height = this->declare_parameter<double>("base_height.default_base_height");
 
@@ -25,6 +37,10 @@ ElkapodMotionManager::ElkapodMotionManager() : Node("elkapod_motion_manager") {
   base_height_waypoint += 0.025;
 
   trajectory_freq_hz = this->declare_parameter<double>("trajectory.frequency_hz");
+
+  diag_pub_ = this->create_publisher<diagnostic_msgs::msg::DiagnosticArray>("/diagnostics", 10);
+  diag_timer_ = this->create_timer(std::chrono::duration<double>(diag_publish_period_),
+                                   std::bind(&ElkapodMotionManager::diagPublishCallback, this));
 
   this->transition_action_server_ = rclcpp_action::create_server<TriggerAction>(
       this, "motion_manager_transition",
@@ -70,6 +86,25 @@ ElkapodMotionManager::ElkapodMotionManager() : Node("elkapod_motion_manager") {
   this->executor_enable_ = false;
 }
 
+void ElkapodMotionManager::diagPublishCallback() {
+  diagnostic_msgs::msg::DiagnosticArray diag_array;
+  diag_array.header.stamp = this->now();
+
+  diagnostic_msgs::msg::DiagnosticStatus status;
+  status.name = "ElkapodMotionManager: State";
+  status.hardware_id = "WalkingStack";
+  status.level = 0;
+  status.message = "Current locomotion stack state";
+
+  diagnostic_msgs::msg::KeyValue state_key;
+  state_key.key = "state";
+  state_key.value = stateToString(state_);
+  status.values.push_back(state_key);
+
+  diag_array.status.push_back(status);
+  diag_pub_->publish(diag_array);
+}
+
 void ElkapodMotionManager::initNode() {
   RCLCPP_INFO(this->get_logger(), "Elkapod motion manager initialized!");
 }
@@ -88,14 +123,6 @@ rclcpp_action::GoalResponse ElkapodMotionManager::transition_action_handle_goal(
     RCLCPP_INFO(this->get_logger(), "Init goal accepted!");
     planning_method_ = std::bind(&ElkapodMotionManager::initPlanning, this);
     next_state_ = State::IDLE_LOWERED;
-  } else if (goal->transition == "init4" && state_ == State::INIT) {
-    RCLCPP_INFO(this->get_logger(), "Init on 4 legs accepted!");
-    planning_method_ = std::bind(&ElkapodMotionManager::init4Planning, this);
-    next_state_ = State::IDLE_4_LOWERED;
-  } else if (goal->transition == "stand_up_4" && state_ == State::IDLE_4_LOWERED) {
-    RCLCPP_INFO(this->get_logger(), "Stand up on 4 legs accepted!");
-    planning_method_ = std::bind(&ElkapodMotionManager::standUp4Planning, this);
-    next_state_ = State::IDLE_4;
   } else if (goal->transition == "stand_up" && state_ == State::IDLE_LOWERED) {
     RCLCPP_INFO(this->get_logger(), "Stand up goal accepted!");
     planning_method_ = std::bind(&ElkapodMotionManager::standUpPlanning, this);
@@ -351,147 +378,10 @@ void ElkapodMotionManager::standUpPlanning() {
   }
 }
 
-void ElkapodMotionManager::init4Planning() {
-  const double max_reach_x = 0.38;
-  const double movement_time_s = 2.5;
-
-  std::array<Trajectory, 6> step_trajs;
-  auto traj = hop_planner.plan({max_reach_x, 0.0, 0.0}, {leg_spacing_waypoint, 0.0, -0.02},
-                               movement_time_s, trajectory_freq_hz);
-  auto idle_traj = planner.plan({max_reach_x, 0.0, 0.0}, {max_reach_x, 0.0, 0.00}, movement_time_s,
-                                trajectory_freq_hz);
-
-  for (size_t i = 0; i < 6; ++i) {
-    step_trajs[i] = traj;
-
-    if (i == 2 || i == 3) {
-      step_trajs[i] = idle_traj;
-    }
-  }
-  trajs.push_back(step_trajs);
-}
-
-void ElkapodMotionManager::standUp4Planning() {
-  const double lift_time = 5.0;
-  const double leg_move_time = 1.5;
-  const double max_reach_x = 0.38;
-  const double first_leg_spacing_waypoint = 0.24;
-  const double first_base_height_waypoint = 0.02 + 0.03;
-  const double second_base_height_waypoint = 0.05 + 0.03;
-
-  std::array<Trajectory, 6> step_trajs;
-  // First step - lift up a little bit
-  auto traj = planner.plan({leg_spacing_waypoint, 0.0, -0.02},
-                           {leg_spacing_waypoint, 0.0, -first_base_height_waypoint}, lift_time,
-                           trajectory_freq_hz);
-
-  auto idle_traj = planner.plan({max_reach_x, 0.0, 0.0}, {max_reach_x, 0.0, 0.00}, leg_move_time,
-                                trajectory_freq_hz);
-
-  for (size_t i = 0; i < 6; ++i) {
-    step_trajs[i] = traj;
-
-    if (i == 2 || i == 3) {
-      step_trajs[i] = idle_traj;
-    }
-  }
-  trajs.push_back(step_trajs);
-
-  // Second step - hop each leg one at a time
-  std::array<size_t, 6> legs_move_order = {0, 5, 1, 4};
-  std::array<bool, 6> leg_moved = {false};
-
-  for (size_t i = 0; i < 4; ++i) {
-    for (size_t j = 0; j < 6; ++j) {
-      if (legs_move_order[i] == j && !leg_moved[j]) {
-        auto traj = hop_planner.plan({leg_spacing_waypoint, 0.0, -first_base_height_waypoint},
-                                     {first_leg_spacing_waypoint, 0.0, -first_base_height_waypoint},
-                                     leg_move_time, trajectory_freq_hz);
-
-        step_trajs[j] = traj;
-        leg_moved[j] = true;
-      } else if (legs_move_order[i] != j && leg_moved[j]) {
-        auto traj = planner.plan({first_leg_spacing_waypoint, 0.0, -first_base_height_waypoint},
-                                 {first_leg_spacing_waypoint, 0.0, -first_base_height_waypoint},
-                                 leg_move_time, trajectory_freq_hz);
-        step_trajs[j] = traj;
-      } else {
-        auto traj = planner.plan({leg_spacing_waypoint, 0.0, -first_base_height_waypoint},
-                                 {leg_spacing_waypoint, 0.0, -first_base_height_waypoint},
-                                 leg_move_time, trajectory_freq_hz);
-        step_trajs[j] = traj;
-      }
-
-      if (j == 2 || j == 3) {
-        step_trajs[j] = idle_traj;
-      }
-    }
-    trajs.push_back(step_trajs);
-  }
-
-  // Second lift up
-  auto second_traj = planner.plan({first_leg_spacing_waypoint, 0.0, -first_base_height_waypoint},
-                                  {first_leg_spacing_waypoint, 0.0, -second_base_height_waypoint},
-                                  lift_time, trajectory_freq_hz);
-
-  for (int i = 0; i < 6; ++i) {
-    step_trajs[i] = second_traj;
-
-    if (i == 2 || i == 3) {
-      step_trajs[i] = idle_traj;
-    }
-  }
-  trajs.push_back(step_trajs);
-
-  std::fill_n(leg_moved.begin(), 6, false);
-
-  for (size_t i = 0; i < 4; ++i) {
-    for (size_t j = 0; j < 6; ++j) {
-      if (legs_move_order[i] == j && !leg_moved[j]) {
-        auto traj = hop_planner.plan(
-            {first_leg_spacing_waypoint, 0.0, -second_base_height_waypoint},
-            {leg_spacing, 0.0, -second_base_height_waypoint}, leg_move_time, trajectory_freq_hz);
-
-        step_trajs[j] = traj;
-        leg_moved[j] = true;
-      } else if (legs_move_order[i] != j && leg_moved[j]) {
-        auto traj = planner.plan({leg_spacing, 0.0, -second_base_height_waypoint},
-                                 {leg_spacing, 0.0, -second_base_height_waypoint}, leg_move_time,
-                                 trajectory_freq_hz);
-        step_trajs[j] = traj;
-      } else {
-        auto traj = planner.plan({first_leg_spacing_waypoint, 0.0, -second_base_height_waypoint},
-                                 {first_leg_spacing_waypoint, 0.0, -second_base_height_waypoint},
-                                 leg_move_time, trajectory_freq_hz);
-        step_trajs[j] = traj;
-      }
-
-      if (j == 2 || j == 3) {
-        step_trajs[j] = idle_traj;
-      }
-    }
-    trajs.push_back(step_trajs);
-  }
-
-  // Final lift up
-  auto final_traj = planner.plan({leg_spacing, 0.0, -second_base_height_waypoint},
-                                 {leg_spacing, 0.0, -base_height}, lift_time, trajectory_freq_hz);
-
-  for (int i = 0; i < 6; ++i) {
-    step_trajs[i] = final_traj;
-
-    if (i == 2 || i == 3) {
-      step_trajs[i] = idle_traj;
-    }
-  }
-
-  trajs.push_back(step_trajs);
-}
-
 void ElkapodMotionManager::lowerDownPlanning() {
   const double lift_time = 1.0;
   const double leg_move_time = 0.8;
-  const int steps = 10;
+  const int steps = 5;
   const double spacing_step = (leg_spacing_waypoint - leg_spacing) / static_cast<double>(steps - 1);
   const double height_step = (base_height) / static_cast<double>(2 * (steps - 1));
 

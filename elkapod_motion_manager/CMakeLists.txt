@@ -14,6 +14,7 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
 find_package(elkapod_core_lib REQUIRED)
 find_package(controller_manager_msgs REQUIRED)
 include_directories(include)
@@ -38,6 +39,7 @@ ament_target_dependencies(
         "std_msgs"
         "elkapod_core_lib"
         "controller_manager_msgs"
+        "diagnostic_msgs"
 )
 
 install(TARGETS elkapod_motion_manager
