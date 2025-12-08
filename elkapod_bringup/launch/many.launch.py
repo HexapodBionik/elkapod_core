@@ -40,9 +40,8 @@ def generate_launch_description():
                     )]),
 
         Node(
-            package="elkapod_controller_gui",
-            executable="elkapod_controller_gui",
-            name='elkapod_gui',
+            package="elkapod_ui",
+            executable="elkapod_ui",
             output='screen',
             emulate_tty=True),
     ])
