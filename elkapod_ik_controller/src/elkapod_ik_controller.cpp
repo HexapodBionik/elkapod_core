@@ -7,7 +7,7 @@
 #include "rclcpp/logging.hpp"
 
 namespace {
-constexpr auto DEFAULT_COMMAND_TOPIC = "~/elkapod_leg_positions";
+constexpr auto DEFAULT_COMMAND_TOPIC = "~/leg_positions";
 static inline float deg2rad(float deg) { return deg / 180.f * M_PI; }
 }  // namespace
 

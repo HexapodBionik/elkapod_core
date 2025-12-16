@@ -60,14 +60,11 @@ class ElkapodMotionManager : public rclcpp::Node {
                                   std::shared_ptr<std_srvs::srv::Trigger_Response> response);
 
   void legControlCallback();
-
   void diagPublishCallback();
 
   rclcpp_action::Server<TriggerAction>::SharedPtr transition_action_server_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr walk_enable_service_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr walk_disable_service_;
-  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr gait_enable_publisher_;
-  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr gait_disable_publisher_;
 
   rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedPtr
       switch_controller_publisher_;
