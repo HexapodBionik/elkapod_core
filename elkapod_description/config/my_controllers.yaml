@@ -24,7 +24,6 @@ controller_manager:
     imu_broadcaster:
       type: imu_sensor_broadcaster/IMUSensorBroadcaster
 
-    
 
 elkapod_ik_controller:
   ros__parameters:
@@ -102,3 +101,6 @@ imu_broadcaster:
     type: imu_sensor_broadcaster/IMUSensorBroadcaster
     sensor_name: imu_sensor
     frame_id: imu_link
+    static_covariance_orientation: [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001]
+    static_covariance_angular_velocity: [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001]
+    static_covariance_linear_acceleration: [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001]
