@@ -8,6 +8,8 @@
 
 namespace {
 constexpr auto DEFAULT_COMMAND_TOPIC = "~/leg_positions";
+constexpr size_t SERVOS_NUM = 18;
+constexpr size_t LEGS_NUM = 6;
 static inline float deg2rad(float deg) { return deg / 180.f * M_PI; }
 }  // namespace
 
@@ -33,9 +35,9 @@ controller_interface::CallbackReturn ElkapodIKController::on_init() {
   Eigen::Vector3d a2(params_.a2[0], params_.a2[1], params_.a2[2]);
   Eigen::Vector3d a3(params_.a3[0], params_.a3[1], params_.a3[2]);
 
-  input_cmd_ = std::vector<double>(18, 0.0);
-  current_joint_positions_ = std::vector<double>(18, 0.0);
-  reference_interfaces_.resize(18, 0.0);
+  input_cmd_ = std::vector<double>(SERVOS_NUM, 0.0);
+  current_joint_positions_ = std::vector<double>(SERVOS_NUM, 0.0);
+  reference_interfaces_.resize(SERVOS_NUM, 0.0);
 
   const std::vector<Eigen::Vector3d> input = {m1, a1, a2, a3};
   solver_ = std::make_shared<KinematicsSolver>(input);
@@ -63,8 +65,8 @@ controller_interface::return_type ElkapodIKController::update_reference_from_sub
 
   if (current_ref_op.has_value()) {
     auto input_cmd = current_ref_op.value().data;
-    if (input_cmd.size() == 18) {
-      std::copy_n(input_cmd.begin(), 18, reference_interfaces_.begin());
+    if (input_cmd.size() == SERVOS_NUM) {
+      std::copy_n(input_cmd.begin(), SERVOS_NUM, reference_interfaces_.begin());
     }
   }
 
@@ -77,17 +79,17 @@ controller_interface::return_type ElkapodIKController::update_and_write_commands
     return controller_interface::return_type::OK;
   }
   auto logger = get_node()->get_logger();
-  if (reference_interfaces_.size() < 18 ||
+  if (reference_interfaces_.size() < SERVOS_NUM ||
       std::all_of(reference_interfaces_.cbegin(), reference_interfaces_.cend(),
                   [](double value) { return value == 0.0; })) {
     return controller_interface::return_type::OK;
   }
 
   std::vector<Eigen::Vector3d> results;
-  results.resize(6, Eigen::Vector3d::Zero());
+  results.resize(LEGS_NUM, Eigen::Vector3d::Zero());
 
   Eigen::Vector3d input;
-  for (int i = 0; i < 6; ++i) {
+  for (size_t i = 0; i < LEGS_NUM; ++i) {
     input[0] = reference_interfaces_[i * 3];
     input[1] = reference_interfaces_[i * 3 + 1];
     input[2] = reference_interfaces_[i * 3 + 2];
@@ -103,7 +105,7 @@ controller_interface::return_type ElkapodIKController::update_and_write_commands
     results[i] = angles;
   }
 
-  for (size_t i = 0; i < 6; ++i) {
+  for (size_t i = 0; i < LEGS_NUM; ++i) {
     auto leg_angles = results[i];
     RCLCPP_DEBUG(
         logger, std::format("Angles for leg {} theta0: {:.3f} theta1: {:.3f} theta2: {:.3f}", i + 1,
@@ -141,9 +143,13 @@ controller_interface::CallbackReturn ElkapodIKController::on_configure(
     RCLCPP_INFO(logger, "Parameters were updated");
   }
 
+  auto subscribers_qos = rclcpp::SystemDefaultsQoS();
+  subscribers_qos.keep_last(1);
+  subscribers_qos.best_effort();
+
   // initialize command subscriber
   position_command_subscriber_ = get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
-      DEFAULT_COMMAND_TOPIC, rclcpp::SystemDefaultsQoS(),
+      DEFAULT_COMMAND_TOPIC, subscribers_qos,
       [this](const std::shared_ptr<std_msgs::msg::Float64MultiArray> msg) -> void {
         if (!subscriber_is_active_) {
           RCLCPP_WARN(get_node()->get_logger(),

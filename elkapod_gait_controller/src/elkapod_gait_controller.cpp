@@ -131,6 +131,14 @@ controller_interface::CallbackReturn ElkapodGaitController::on_configure(
   current_vel_scalar_ = 0.0;
   received_vel_command_ = VelCmd();
 
+  auto subscribers_qos = rclcpp::SystemDefaultsQoS();
+  subscribers_qos.keep_last(1);
+  subscribers_qos.best_effort();
+
+  auto change_gait_qos = rclcpp::SystemDefaultsQoS();
+  change_gait_qos.reliable();
+  change_gait_qos.keep_last(5);
+
   roll_pid_ = std::make_unique<control_toolbox::Pid>(k_roll, k_roll / ti_roll, k_roll * td_roll,
                                                      cmd_hi_roll, cmd_lo_roll, aw_strategy_roll);
   pitch_pid_ =
@@ -141,26 +149,27 @@ controller_interface::CallbackReturn ElkapodGaitController::on_configure(
 
   // Subscriptions
   velocity_sub_ = get_node()->create_subscription<VelCmd>(
-      "/cmd_vel", 10,
+      "/cmd_vel", subscribers_qos,
       std::bind(&ElkapodGaitController::velocityCallback, this, std::placeholders::_1));
 
   param_sub_ = get_node()->create_subscription<FloatMsg>(
-      "/cmd_base_height", 10,
+      "/cmd_base_height", subscribers_qos,
       std::bind(&ElkapodGaitController::baseHeightCallback, this, std::placeholders::_1));
 
   gait_type_sub_ = get_node()->create_subscription<IntMsg>(
-      "/cmd_gait_type", 10,
+      "/cmd_gait_type", change_gait_qos,
       std::bind(&ElkapodGaitController::gaitTypeCallback, this, std::placeholders::_1));
 
   imu_sub_ = get_node()->create_subscription<IMUMsg>(
-      "/imu", 10, std::bind(&ElkapodGaitController::imuCallback, this, std::placeholders::_1));
+      "/imu", subscribers_qos,
+      std::bind(&ElkapodGaitController::imuCallback, this, std::placeholders::_1));
 
   roll_sub_ = get_node()->create_subscription<FloatMsg>(
-      "/roll_setpoint", 10,
+      "/roll_setpoint", subscribers_qos,
       std::bind(&ElkapodGaitController::rollCallback, this, std::placeholders::_1));
 
   pitch_sub_ = get_node()->create_subscription<FloatMsg>(
-      "/pitch_setpoint", 10,
+      "/pitch_setpoint", subscribers_qos,
       std::bind(&ElkapodGaitController::pitchCallback, this, std::placeholders::_1));
 
   if (params_.publish_debug_info) {

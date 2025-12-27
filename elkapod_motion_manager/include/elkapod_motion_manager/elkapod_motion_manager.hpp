@@ -1,5 +1,3 @@
-
-
 //
 // Created by Piotr Patek.
 //
