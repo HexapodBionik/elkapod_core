@@ -17,7 +17,7 @@ ImuRepublisher::ImuRepublisher() : Node("imu_republisher") {
   noise_dist_.push_back(std::normal_distribution<double>(yaw_noise_bias, yaw_noise_stddev));
 
   imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
-      "/imu_raw", 10, std::bind(&ImuRepublisher::imuCallback, this, std::placeholders::_1));
+      "/imu_broadcaster/imu", 10, std::bind(&ImuRepublisher::imuCallback, this, std::placeholders::_1));
 
   imu_pub_ = this->create_publisher<sensor_msgs::msg::Imu>("/imu", 10);
 
