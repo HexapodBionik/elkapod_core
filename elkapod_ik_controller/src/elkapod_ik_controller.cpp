@@ -97,7 +97,7 @@ controller_interface::return_type ElkapodIKController::update_and_write_commands
     const Eigen::Vector3d angles = solver_->inverse(input);
 
     if (angles.array().isNaN().any()) {
-      RCLCPP_ERROR(logger, "Inverse kinematics error while processing input for leg %d", i + 1);
+      RCLCPP_ERROR(logger, "Inverse kinematics error while processing input for leg %ld", i + 1);
       RCLCPP_ERROR(
           logger, std::format("Input: {:.3f} {:.3f} {:.3f}", input[0], input[1], input[2]).c_str());
       return controller_interface::return_type::OK;

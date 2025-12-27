@@ -80,20 +80,6 @@ elkapod_gait_controller:
           default_step_height: 0.025
           min: 0.05
           max: 0.15
-    roll:
-      pid:
-        k: 0.6
-        ti: 10.0
-        td: 0.0
-        cmd_lo: -0.1
-        cmd_hi: 0.1
-    pitch:
-      pid:
-        k: 0.6
-        ti: 10.0
-        td: 0.0
-        cmd_lo: -0.2
-        cmd_hi: 0.2
 
 imu_broadcaster:
   ros__parameters:

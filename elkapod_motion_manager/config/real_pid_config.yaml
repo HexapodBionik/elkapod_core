@@ -1,0 +1,16 @@
+elkapod_gait_controller:
+  ros__parameters:
+    roll:
+      pid:
+        k: 0.05
+        ti: 2.0
+        td: 0.0
+        cmd_lo: -0.1
+        cmd_hi: 0.1
+    pitch:
+      pid:
+        k: 0.05
+        ti: 2.0
+        td: 0.0
+        cmd_lo: -0.2
+        cmd_hi: 0.2

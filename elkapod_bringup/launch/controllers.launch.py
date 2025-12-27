@@ -1,9 +1,9 @@
 from launch import LaunchDescription
-from launch.actions import TimerAction, DeclareLaunchArgument
-from launch.substitutions import PathJoinSubstitution, LaunchConfiguration
-from launch_ros.substitutions import FindPackageShare
-from launch.conditions import UnlessCondition
+from launch.actions import DeclareLaunchArgument, TimerAction
+from launch.conditions import IfCondition, UnlessCondition
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
@@ -26,6 +26,22 @@ def generate_launch_description():
             FindPackageShare("elkapod_motion_manager"),
             "config",
             "elkapod_motion_manager.yaml",
+        ]
+    )
+
+    sim_pid_config = PathJoinSubstitution(
+        [
+            FindPackageShare("elkapod_motion_manager"),
+            "config",
+            "sim_pid_config.yaml",
+        ]
+    )
+
+    real_pid_config = PathJoinSubstitution(
+        [
+            FindPackageShare("elkapod_motion_manager"),
+            "config",
+            "real_pid_config.yaml",
         ]
     )
 
@@ -65,23 +81,47 @@ def generate_launch_description():
         ],
     )
 
+    gait_spawner_sim = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=[
+            "elkapod_gait_controller",
+            "--inactive",
+            "--param-file",
+            robot_controllers,
+            "--param-file",
+            motion_manager_config,
+            "--param-file",
+            sim_pid_config,
+        ],
+        output="screen",
+        emulate_tty=True,
+        condition=IfCondition(LaunchConfiguration("sim_mode")),
+    )
+
+    gait_spawner_real = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=[
+            "elkapod_gait_controller",
+            "--inactive",
+            "--param-file",
+            robot_controllers,
+            "--param-file",
+            motion_manager_config,
+            "--param-file",
+            real_pid_config,
+        ],
+        output="screen",
+        emulate_tty=True,
+        condition=UnlessCondition(LaunchConfiguration("sim_mode")),
+    )
+
     controllers_second_wave = TimerAction(
         period=8.0,
         actions=[
-            Node(
-                package="controller_manager",
-                executable="spawner",
-                arguments=[
-                    "elkapod_gait_controller",
-                    "--inactive",
-                    "--param-file",
-                    robot_controllers,
-                    "--param-file",
-                    motion_manager_config,
-                ],
-                output="screen",
-                emulate_tty=True,
-            )
+            gait_spawner_sim,
+            gait_spawner_real,
         ],
     )
 
