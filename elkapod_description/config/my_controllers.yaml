@@ -16,7 +16,7 @@ controller_manager:
 
     elkapod_ik_controller:
       type: elkapod_ik_controller/ElkapodIKController
-    
+
     elkapod_gait_controller:
       type: elkapod_gait_controller/ElkapodGaitController
       state: inactive
@@ -54,47 +54,46 @@ elkapod_ik_controller:
 elkapod_gait_controller:
   ros__parameters:
     joints:
-      - elkapod_ik_controller/leg1_x/point 
-      - elkapod_ik_controller/leg1_y/point 
-      - elkapod_ik_controller/leg1_z/point 
-      - elkapod_ik_controller/leg2_x/point 
-      - elkapod_ik_controller/leg2_y/point 
-      - elkapod_ik_controller/leg2_z/point 
-      - elkapod_ik_controller/leg3_x/point 
-      - elkapod_ik_controller/leg3_y/point 
-      - elkapod_ik_controller/leg3_z/point 
-      - elkapod_ik_controller/leg4_x/point 
-      - elkapod_ik_controller/leg4_y/point 
-      - elkapod_ik_controller/leg4_z/point 
-      - elkapod_ik_controller/leg5_x/point 
-      - elkapod_ik_controller/leg5_y/point 
-      - elkapod_ik_controller/leg5_z/point 
-      - elkapod_ik_controller/leg6_x/point 
-      - elkapod_ik_controller/leg6_y/point 
-      - elkapod_ik_controller/leg6_z/point 
+      - elkapod_ik_controller/leg1_x/point
+      - elkapod_ik_controller/leg1_y/point
+      - elkapod_ik_controller/leg1_z/point
+      - elkapod_ik_controller/leg2_x/point
+      - elkapod_ik_controller/leg2_y/point
+      - elkapod_ik_controller/leg2_z/point
+      - elkapod_ik_controller/leg3_x/point
+      - elkapod_ik_controller/leg3_y/point
+      - elkapod_ik_controller/leg3_z/point
+      - elkapod_ik_controller/leg4_x/point
+      - elkapod_ik_controller/leg4_y/point
+      - elkapod_ik_controller/leg4_z/point
+      - elkapod_ik_controller/leg5_x/point
+      - elkapod_ik_controller/leg5_y/point
+      - elkapod_ik_controller/leg5_z/point
+      - elkapod_ik_controller/leg6_x/point
+      - elkapod_ik_controller/leg6_y/point
+      - elkapod_ik_controller/leg6_z/point
     gait:
       min_swing_time_sec: 0.42
       default_phase_lag: 0.0
       step:
-        height:             
+        height:
           default_step_height: 0.025
-          min: 0.05       
+          min: 0.05
           max: 0.15
     roll:
       pid:
-        k: 0.3
+        k: 0.6
         ti: 10.0
         td: 0.0
         cmd_lo: -0.1
         cmd_hi: 0.1
     pitch:
       pid:
-        k: 0.3
+        k: 0.6
         ti: 10.0
         td: 0.0
         cmd_lo: -0.2
         cmd_hi: 0.2
-    publish_debug_info: true
 
 imu_broadcaster:
   ros__parameters:

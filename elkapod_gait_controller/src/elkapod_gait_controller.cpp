@@ -88,8 +88,12 @@ controller_interface::CallbackReturn ElkapodGaitController::on_configure(
   step_height_ = params_.gait.step.height.default_step_height;
 
   default_base_height_ = params_.base_height.default_base_height;
+  base_height_offset_ = params_.base_height.base_link_offset;
+  kinematics_m1_ = params_.kinematics.m1;
   base_height_min_ = params_.base_height.min_base_height;
   base_height_max_ = params_.base_height.max_base_height;
+
+  default_base_height_ += kinematics_m1_[2] - base_height_offset_;
   base_height_ = default_base_height_;
   set_base_height_ = default_base_height_;
 
@@ -159,16 +163,18 @@ controller_interface::CallbackReturn ElkapodGaitController::on_configure(
       "/pitch_setpoint", 10,
       std::bind(&ElkapodGaitController::pitchCallback, this, std::placeholders::_1));
 
-  configured_ = true;
+  if (params_.publish_debug_info) {
+    // TODO print essential parameters
+  }
 
-  std::cout << params_.publish_debug_info << std::endl;
-  std::cout << params_.pitch.pid.k << std::endl;
   publish_loop_execution_time_ = params_.publish_debug_info;
   loop_exec_duration_publisher_ = get_node()->create_publisher<DurationMsg>(
       "/elkapod_gait_controller/loop_exec_time", rclcpp::SystemDefaultsQoS());
   loop_exec_duration_publisher_rt_ =
       std::make_unique<realtime_tools::RealtimePublisher<DurationMsg>>(
           loop_exec_duration_publisher_);
+
+  configured_ = true;
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -295,7 +301,7 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
       }
 
       p = rotZ(-base_link_rotations_[leg_nb]) * p;
-      p += Eigen::Vector3d(leg_spacing_, 0.0, -base_height_ + base_link_translations_[leg_nb][2]);
+      p += Eigen::Vector3d(leg_spacing_, 0.0, -base_height_);
 
       last_leg_position_relative_[leg_nb] = p;
     }
@@ -378,7 +384,7 @@ void ElkapodGaitController::halt() {
 
     p = Eigen::Vector3d::Zero();
     p = rotZ(-base_link_rotations_[i]) * p;
-    p += Eigen::Vector3d(leg_spacing_, 0.0, -base_height_ + base_link_translations_[i][2]);
+    p += Eigen::Vector3d(leg_spacing_, 0.0, -base_height_);
 
     (void)command_interfaces_[i * 3 + 0].set_value(p[0]);
     (void)command_interfaces_[i * 3 + 1].set_value(p[1]);
@@ -388,7 +394,7 @@ void ElkapodGaitController::halt() {
 
 void ElkapodGaitController::baseHeightCallback(const FloatMsg::SharedPtr msg) {
   if (msg->data >= base_height_min_ && msg->data <= base_height_max_) {
-    set_base_height_ = msg->data;
+    set_base_height_ = msg->data + kinematics_m1_[2] - base_height_offset_;
   } else {
     RCLCPP_WARN(this->get_node()->get_logger(),
                 "Couldn't set new base height goal - value out of allowed range");

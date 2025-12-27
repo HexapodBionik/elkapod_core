@@ -114,6 +114,8 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
   double current_vel_scalar_, current_angular_velocity_;
 
   double default_base_height_;
+  double base_height_offset_;
+  std::vector<double> kinematics_m1_;
   double base_height_;
   double base_height_min_;
   double base_height_max_;

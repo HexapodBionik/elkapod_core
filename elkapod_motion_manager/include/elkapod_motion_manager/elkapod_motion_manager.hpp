@@ -88,6 +88,8 @@ class ElkapodMotionManager : public rclcpp::Node {
 
   // Height variables
   double base_height;
+  double base_height_offset_;
+  std::vector<double> kinematics_m1_;
   double base_height_min;
   double base_height_max;
 
