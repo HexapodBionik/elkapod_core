@@ -25,10 +25,15 @@
   <xacro:leg_right leg_name="leg6" parent="base_link" pos_x="-0.15903" pos_y="-0.15038" pos_z="-0.03" roll="0" pitch="0" yaw="-2.384143643587"/>
 
   <!-- Sensors -->
+  <xacro:arg name="lidar_mode" default="minimal"/>
+   <xacro:arg name="lidar_rate" default="10"/>
   <xacro:include filename="$(find elkapod_description)/urdf/sensors/lidar.xacro" />
   <xacro:include filename="$(find elkapod_description)/urdf/sensors/depth_camera.xacro" />
 
-  <xacro:elkapod_sensors_lidar sim_mode="$(arg sim_mode)"/>
+  <xacro:elkapod_sensors_lidar 
+      sim_mode="$(arg sim_mode)"
+      lidar_mode="$(arg lidar_mode)" 
+      lidar_rate="$(arg lidar_rate)"/>
   <xacro:elkapod_sensors_fron_camera sim_mode="$(arg sim_mode)"/>
   
   <!-- ros2_control -->

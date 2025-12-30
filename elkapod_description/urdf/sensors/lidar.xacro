@@ -38,47 +38,47 @@
         <axis xyz="0 0 0" />
     </joint>
 
-    <xacro:macro name="elkapod_sensors_lidar" params="sim_mode:=^|false">
+    <xacro:macro name="elkapod_sensors_lidar"
+     params="sim_mode:=^|false lidar_mode:=minimal lidar_rate:=5">
         <xacro:if value="${sim_mode}">
-            <gazebo reference="lidar_optical">
-                <sensor name="lidar" type="gpu_lidar">
-                    <always_on>true</always_on>
-                    <!-- Downgraded values, so your GPU doesn't melt -->
-                    <!-- <update_rate>10</update_rate> -->
-                    <update_rate>3</update_rate>
+            <xacro:unless value="${lidar_mode == 'off'}">
 
-                    <visualize>true</visualize>
-                    <topic>lidar_data</topic>
-                    <lidar>
-                        <scan>
-                            <horizontal>
-                                <!-- Downgraded values, so your GPU doesn't melt -->
-                                <!-- <samples>900</samples> -->
-                                <samples>90</samples>
+                <xacro:property name="h_samples" value="${600 if lidar_mode == 'full' else 120}"/>
+                <xacro:property name="v_samples" value="${95 if lidar_mode == 'full' else 25}"/>
 
-                                <resolution>1</resolution>
-                                <min_angle>-3.14</min_angle>
-                                <max_angle>3.14</max_angle>
-                            </horizontal>
-                            <vertical>
-                                <!-- Downgraded values, so your GPU doesn't melt -->
-                                <samples>25</samples>
-                                <!-- <samples>95</samples> -->
+                <gazebo reference="lidar_optical">
+                    <sensor name="lidar" type="gpu_lidar">
+                        <always_on>true</always_on>
+                        <update_rate>${lidar_rate}</update_rate>
 
-                                <resolution>1</resolution>
-                                <min_angle>0</min_angle>
-                                <max_angle>1.57079633</max_angle>
-                            </vertical>
-                        </scan>
-                        <range>
-                            <min>0.1</min>
-                            <max>30</max>
-                            <resolution>0.01</resolution>
-                        </range>
-                    </lidar>
-                    <gz_frame_id>lidar_optical</gz_frame_id>
-                </sensor>
-            </gazebo>
+                        <visualize>true</visualize>
+                        <topic>lidar_data</topic>
+                        <lidar>
+                            <scan>
+                                <horizontal>
+                                    <samples>${h_samples}</samples>
+
+                                    <resolution>1</resolution>
+                                    <min_angle>-3.14</min_angle>
+                                    <max_angle>3.14</max_angle>
+                                </horizontal>
+                                <vertical>
+                                    <samples>${v_samples}</samples>
+                                    <resolution>1</resolution>
+                                    <min_angle>0</min_angle>
+                                    <max_angle>1.57079633</max_angle>
+                                </vertical>
+                            </scan>
+                            <range>
+                                <min>0.1</min>
+                                <max>30</max>
+                                <resolution>0.01</resolution>
+                            </range>
+                        </lidar>
+                        <gz_frame_id>lidar_optical</gz_frame_id>
+                    </sensor>
+                </gazebo>
+            </xacro:unless>
         </xacro:if>
     </xacro:macro>
 </robot>
