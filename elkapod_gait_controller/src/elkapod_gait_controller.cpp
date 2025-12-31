@@ -323,6 +323,11 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
   double e_pitch = set_pitch_ - pitch_;
   double u_pitch = pitch_pid_->compute_command(e_pitch, period);
 
+  if (state_ != State::IDLE) {
+    u_roll = 0.0;
+    u_pitch = 0.0;
+  }
+
   for (size_t i = 0; i < 6; ++i) {
     auto p = last_leg_position_relative_[i];
     const double rot_z = base_link_rotations_[i];
@@ -528,6 +533,11 @@ void ElkapodGaitController::updateVelocityCommand() {
   velocityDeadzone(vel_command, angular_vel);
   velocityClamp(vel_command, angular_vel);
 
+  if (!vel_command.isZero() || std::abs(angular_vel) > 1e-6) {
+    set_roll_ = 0.0;
+    set_pitch_ = 0.0;
+  }
+
   current_vel_command_ =
       current_vel_command_ + ema_filter_alfa_ * (vel_command - current_vel_command_);
   current_angular_velocity_ =
@@ -563,6 +573,12 @@ void ElkapodGaitController::updateVelocityCommand() {
   if (is_close(current_vel_scalar_, 0.0, VEL_TOL) &&
       is_close(current_angular_velocity_, 0.0, VEL_TOL) && state_ == State::WALKING) {
     RCLCPP_INFO(get_node()->get_logger(), "Going to IDLE state");
+    if (roll_pid_ != nullptr) {
+      roll_pid_->reset(false);
+    }
+    if (pitch_pid_ != nullptr) {
+      pitch_pid_->reset(false);
+    }
     state_ = State::IDLE;
   } else if ((!is_close(current_vel_scalar_, 0.0, VEL_TOL) ||
               !is_close(current_angular_velocity_, 0.0, VEL_TOL)) &&
@@ -575,12 +591,11 @@ void ElkapodGaitController::updateVelocityCommand() {
 }
 
 void ElkapodGaitController::velocityDeadzone(Eigen::Vector2d &vel, double &angular_vel) {
-  const double linear_vel = vel.norm();
-  if (linear_vel < deadzone_d_) {
+  if (vel.squaredNorm() < deadzone_d_ * deadzone_d_) {
     vel.setZero();
   }
 
-  if (std::fabs(angular_vel) < deadzone_d_) {
+  if (std::abs(angular_vel) < deadzone_d_) {
     angular_vel = 0.0;
   }
 }
