@@ -16,6 +16,12 @@ class OrientationDemo(Node):
         )
 
         self.declare_parameter(
+            "publish_period",
+            0.02,
+            descriptor=ParameterDescriptor(description="Orientation msg period, by default 0.02s -> 50Hz"),
+        )
+
+        self.declare_parameter(
             "setpoints",
             default_trajectory,
             descriptor=ParameterDescriptor(description="Setpoints trajectory given in degrees"),
@@ -24,12 +30,13 @@ class OrientationDemo(Node):
         self._roll_setpoints_deg = self.get_parameter("setpoints").get_parameter_value().double_array_value.tolist()
         self._roll_setpoints_deg.append(0.0)
         self._change_interval_sec = self.get_parameter("change_interval").get_parameter_value().double_value
+        self._publish_period = self.get_parameter("publish_period").get_parameter_value().double_value
 
         self._generator = self._setpoints()
         self._current_setpoint = 0.0
 
         self._start_clock = self.get_clock().now().seconds_nanoseconds()[0]
-        self._my_timer = self.create_timer(0.02, self._run)
+        self._my_timer = self.create_timer(self._publish_period, self._run)
         self.get_logger().info("Node started!")
 
     def _send_setpoint(self, setpoint: float):

@@ -5,7 +5,7 @@ from .orientation_demo import OrientationDemo
 
 
 def main():
-    default_trajectory = [0.0, 1.0, 3.0, 2.0, 1.5, 0.0, 0.0, -1.0, -3.0, -2.0, -1.5, 0.0, 0.0]
+    default_trajectory = [1.0, 3.0, 2.0, 1.5, 0.0, 0.0, -1.0, -3.0, -2.0, -1.5]
     rclpy.init()
     node = OrientationDemo("roll_demo", "/roll_setpoint", default_trajectory)
     executor = SingleThreadedExecutor()
