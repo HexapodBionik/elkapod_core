@@ -131,26 +131,6 @@ Eigen::Vector3d ElkapodOdom::findBaseFootprintCoords(Eigen::Vector4d plane) {
 
 void ElkapodOdom::tfCallback() {
   auto now = this->get_clock()->now();
-
-  geometry_msgs::msg::TransformStamped odom_tf;
-  odom_tf.header.stamp = now;
-  odom_tf.header.frame_id = "odom";
-  odom_tf.child_frame_id = "base_footprint";
-
-  odom_tf.transform.translation.x = odom_pose_(0, 3);
-  odom_tf.transform.translation.y = odom_pose_(1, 3);
-  odom_tf.transform.translation.z = 0.0;
-
-  Eigen::Matrix3d rotation = odom_pose_.block<3, 3>(0, 0);
-  Eigen::Vector3d euler = rotation.eulerAngles(0, 1, 2);
-  tf2::Quaternion q_odom;
-  q_odom.setRPY(0, 0, euler[2]);
-  odom_tf.transform.rotation.x = q_odom.x();
-  odom_tf.transform.rotation.y = q_odom.y();
-  odom_tf.transform.rotation.z = q_odom.z();
-  odom_tf.transform.rotation.w = q_odom.w();
-
-  tf_broadcaster_->sendTransform(odom_tf);
   geometry_msgs::msg::TransformStamped t;
   t.header.stamp = now;
   t.header.frame_id = "base_footprint";
