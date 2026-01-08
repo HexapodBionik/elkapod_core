@@ -22,6 +22,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'back_and_forth = elkapod_examples.back_and_forth:main',
             'rot_waypoints = elkapod_examples.rot_waypoints:main',
             'rectangle_drawer = elkapod_examples.rectangle_drawer:main',
             'rectangle_drawer_error = elkapod_examples.rectangle_drawer_error:main',
