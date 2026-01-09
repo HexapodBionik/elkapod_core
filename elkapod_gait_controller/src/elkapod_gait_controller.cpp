@@ -127,6 +127,11 @@ controller_interface::CallbackReturn ElkapodGaitController::on_configure(
       {GaitType::WAVE, params_.max_angular_vel.wave},
   };
 
+  roll_ = 0.0;
+  pitch_ = 0.0;
+  yaw_ = 0.0;
+  current_vel_command_ = Eigen::Vector2d::Zero();
+
   current_angular_velocity_ = 0.0;
   current_vel_scalar_ = 0.0;
   received_vel_command_ = VelCmd();
@@ -219,6 +224,11 @@ controller_interface::CallbackReturn ElkapodGaitController::on_error(
 
 controller_interface::return_type ElkapodGaitController::update(const rclcpp::Time &time,
                                                                 const rclcpp::Duration &period) {
+
+  if(period.seconds() <= 0.0 || !imu_received_){
+    return controller_interface::return_type::OK;
+  }
+
   const auto start_time = std::chrono::steady_clock::now();
   if (is_first_update_) {
     last_duration_msg_publish_time_ = time;
@@ -383,9 +393,14 @@ bool ElkapodGaitController::reset() {
 
   received_vel_command_ = VelCmd();
   set_base_height_ = default_base_height_;
+  current_vel_command_.setZero();
 
   set_roll_ = 0.0;
   set_pitch_ = 0.0;
+  imu_received_ = false;
+
+  roll_pid_->reset();
+  pitch_pid_->reset();
 
   return true;
 }
@@ -449,6 +464,7 @@ void ElkapodGaitController::imuCallback(const IMUMsg::SharedPtr msg) {
   tf2::fromMsg(msg->orientation, q_);
   q_.normalize();
   tf2::Matrix3x3(q_).getRPY(roll_, pitch_, yaw_);
+  imu_received_ = true;
 }
 
 void ElkapodGaitController::rollCallback(const FloatMsg::SharedPtr msg) {

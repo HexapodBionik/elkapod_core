@@ -109,22 +109,29 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
   State state_ = State::DISABLED;
   GaitType gait_type_ = GaitType::TRIPOD;
   double min_swing_time_sec_;
-  double leg_spacing_, step_length_, step_height_, phase_lag_;
-  double set_base_height_, cycle_time_, duty_factor_;
-  double current_vel_scalar_, current_angular_velocity_;
+  double leg_spacing_ = 0.0;
+  double phase_lag_ = 0.0;
+  double set_base_height_ = 0.0;
+  double duty_factor_ = 0.0;
+  double cycle_time_ = 0.0;
+  double current_vel_scalar_ = 0.0;
+  double step_length_ = 0.0;
+  double step_height_ = 0.0;
+  double current_angular_velocity_ = 0.0;
 
-  double default_base_height_;
-  double base_height_offset_;
+
+  double default_base_height_ = 0.0;
+  double base_height_offset_ = 0.0;
   std::vector<double> kinematics_m1_;
-  double base_height_;
-  double base_height_min_;
-  double base_height_max_;
+  double base_height_ = 0.0;
+  double base_height_min_ = 0.0;
+  double base_height_max_ = 0.0;
   double base_height_ema_filter_alfa_ = 0.0;
 
   realtime_tools::RealtimeThreadSafeBox<VelCmd> input_vel_command_;
 
-  VelCmd received_vel_command_;
-  Eigen::Vector2d current_vel_command_;
+  VelCmd received_vel_command_ = geometry_msgs::msg::Twist();
+  Eigen::Vector2d current_vel_command_ = Eigen::Vector2d::Zero();
 
   std::unordered_map<GaitType, double> max_vel_dict_;
   std::unordered_map<GaitType, double> max_angular_vel_dict_;
@@ -153,12 +160,14 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
   std::unique_ptr<control_toolbox::Pid> pitch_pid_;
 
   tf2::Quaternion q_;
-  double roll_, pitch_, yaw_;
+  double roll_ = 0.0;
+  double pitch_ = 0.0;
+  double yaw_ = 0.0;
   double set_roll_ = 0.0;
   double set_pitch_ = 0.0;
   double roll_limit_ = 0.0;
   double pitch_limit_ = 0.0;
-
+  bool imu_received_ = false;
   bool configured_ = false;
 
   // Debug info

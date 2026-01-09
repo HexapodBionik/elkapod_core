@@ -3,14 +3,14 @@ elkapod_gait_controller:
     roll:
       pid:
         k: 0.05
-        ti: 2.0
+        ti: 0.1
         td: 0.0
         cmd_lo: -0.1
         cmd_hi: 0.1
     pitch:
       pid:
         k: 0.05
-        ti: 2.0
+        ti: 0.1
         td: 0.0
         cmd_lo: -0.2
         cmd_hi: 0.2

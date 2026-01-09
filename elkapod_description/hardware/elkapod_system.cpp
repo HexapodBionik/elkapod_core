@@ -188,7 +188,7 @@ hardware_interface::CallbackReturn ElkapodSystemHardware::on_configure(
       battery_msg.header.stamp = time_stamp;
       battery_msg.percentage = battery_percentage_;
       battery_msg.voltage = battery_voltage_;
-      battery_msg.present = battery_present_;
+      battery_msg.present = true;
       battery_pub_->publish(battery_msg);
     });
 
