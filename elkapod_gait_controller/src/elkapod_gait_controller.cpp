@@ -165,7 +165,7 @@ controller_interface::CallbackReturn ElkapodGaitController::on_configure(
 
   // Subscriptions
   velocity_sub_ = get_node()->create_subscription<VelCmd>(
-      "/cmd_vel", subscribers_qos,
+      "/cmd_vel_out", subscribers_qos,
       std::bind(&ElkapodGaitController::velocityCallback, this, std::placeholders::_1));
 
   param_sub_ = get_node()->create_subscription<FloatMsg>(
