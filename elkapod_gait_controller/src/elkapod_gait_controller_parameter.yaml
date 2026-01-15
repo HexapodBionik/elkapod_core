@@ -115,6 +115,11 @@ elkapod_gait_controller:
       type: double_array
       default_value: [0.0, 0.0, 0.025]
       description: ""
+    leg_tf:
+      mounting_rot: {type: double_array, description: ""}
+      mounting_trans_x: {type: double_array, description: ""}
+      mounting_trans_y: {type: double_array, description: ""}
+      mounting_trans_z: {type: double_array, description: ""}
 
   base_height:
     default_base_height:

@@ -17,14 +17,13 @@ constexpr auto EMA_FILTER_TAU_BASE_HEIGHT = 0.15;
 
 }  // namespace
 
-static bool is_close(double a, double b, double atol = 1e-8, double rtol = 1e-5) {
+static bool is_close(const double a, const double b, const double atol = 1e-8,
+                     const double rtol = 1e-5) {
   return std::abs(a - b) <= (atol + rtol * std::abs(b));
 }
 
-static Eigen::Matrix3d rotZ(double theta) {
-  Eigen::Matrix3d m;
-  m << std::cos(theta), -std::sin(theta), 0., std::sin(theta), std::cos(theta), 0., 0., 0., 1.;
-  return m;
+static Eigen::Matrix3d rotZ(const double theta) {
+  return Eigen::AngleAxisd(theta, Eigen::Vector3d::UnitZ()).toRotationMatrix();
 }
 
 namespace elkapod_gait_controller {
@@ -59,14 +58,24 @@ InterfaceConfiguration ElkapodGaitController::state_interface_configuration() co
   return {interface_configuration_type::NONE, {}};
 }
 
+void ElkapodGaitController::fillLegsTransformationsVect() {
+  const std::vector<double> &mounting_rot = params_.kinematics.leg_tf.mounting_rot;
+  const std::vector<double> &mounting_trans_x = params_.kinematics.leg_tf.mounting_trans_x;
+  const std::vector<double> &mounting_trans_y = params_.kinematics.leg_tf.mounting_trans_y;
+  const std::vector<double> &mounting_trans_z = params_.kinematics.leg_tf.mounting_trans_z;
+
+  for (size_t i = 0; i < kLegsNb; ++i) {
+    Eigen::Isometry3d tf = Eigen::Isometry3d::Identity();
+    tf.translation() << mounting_trans_x[i], mounting_trans_y[i], mounting_trans_z[i];
+
+    tf.linear() = rotZ(mounting_rot[i]);
+    leg_transformations_[i] = tf;
+  }
+}
+
 controller_interface::CallbackReturn ElkapodGaitController::on_configure(
     const rclcpp_lifecycle::State &) {
   auto logger = get_node()->get_logger();
-
-  base_link_rotations_ = {0.63973287, -0.63973287, M_PI / 2., -M_PI / 2., 2.38414364, -2.38414364};
-  base_link_translations_ = {{0.17841, 0.13276, -0.025},  {0.17841, -0.13276, -0.025},
-                             {0.0138, 0.1643, -0.025},    {0.0138, -0.1643, -0.025},
-                             {-0.15903, 0.15038, -0.025}, {-0.15903, -0.15038, -0.025}};
 
   leg_clock_ = std::vector<double>(kLegsNb, 0.);
   leg_phase_ = std::vector<int>(kLegsNb, 0);
@@ -80,6 +89,8 @@ controller_interface::CallbackReturn ElkapodGaitController::on_configure(
   if (param_listener_->try_update_params(params_)) {
     RCLCPP_INFO(logger, "Parameters were updated");
   }
+
+  fillLegsTransformationsVect();
 
   min_swing_time_sec_ = params_.gait.min_swing_time_sec;
   phase_lag_ = params_.gait.default_phase_lag;
@@ -224,8 +235,7 @@ controller_interface::CallbackReturn ElkapodGaitController::on_error(
 
 controller_interface::return_type ElkapodGaitController::update(const rclcpp::Time &time,
                                                                 const rclcpp::Duration &period) {
-
-  if(period.seconds() <= 0.0 || !imu_received_){
+  if (period.seconds() <= 0.0 || !imu_received_) {
     return controller_interface::return_type::OK;
   }
 
@@ -319,7 +329,7 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
         p = rotZ(angle) * p;
       }
 
-      p = rotZ(-base_link_rotations_[leg_nb]) * p;
+      p = leg_transformations_[leg_nb].linear().transpose() * p;
       p += Eigen::Vector3d(leg_spacing_, 0.0, -base_height_);
 
       last_leg_position_relative_[leg_nb] = p;
@@ -327,10 +337,10 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
   }
 
   // Pitch && Roll PIDs
-  double e_roll = set_roll_ - roll_;
+  const double e_roll = set_roll_ - roll_;
   double u_roll = roll_pid_->compute_command(e_roll, period);
 
-  double e_pitch = set_pitch_ - pitch_;
+  const double e_pitch = set_pitch_ - pitch_;
   double u_pitch = pitch_pid_->compute_command(e_pitch, period);
 
   if (state_ != State::IDLE) {
@@ -338,15 +348,10 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
     u_pitch = 0.0;
   }
 
-  for (size_t i = 0; i < 6; ++i) {
+  for (size_t i = 0; i < kLegsNb; ++i) {
     auto p = last_leg_position_relative_[i];
-    const double rot_z = base_link_rotations_[i];
-    Eigen::Matrix4d H = Eigen::Matrix4d::Identity();
-    H.block<3, 3>(0, 0) = Eigen::AngleAxisd(rot_z, Eigen::Vector3d::UnitZ()).toRotationMatrix();
-    H.block<3, 1>(0, 3) = base_link_translations_[i];
-
-    Eigen::Vector4d p_homogeneous(p[0], p[1], p[2], 1.0);
-    Eigen::Vector4d p_base_homogeneous = H * p_homogeneous;
+    const Eigen::Vector4d p_homogeneous(p[0], p[1], p[2], 1.0);
+    Eigen::Vector4d p_base_homogeneous = leg_transformations_[i] * p_homogeneous;
 
     double dz = 0.0;
     dz += -u_roll * p_base_homogeneous[1];
@@ -412,7 +417,7 @@ void ElkapodGaitController::halt() {
     Eigen::Vector3d p;
 
     p = Eigen::Vector3d::Zero();
-    p = rotZ(-base_link_rotations_[i]) * p;
+    p = leg_transformations_[i].linear().transpose() * p;
     p += Eigen::Vector3d(leg_spacing_, 0.0, -base_height_);
 
     (void)command_interfaces_[i * 3 + 0].set_value(p[0]);

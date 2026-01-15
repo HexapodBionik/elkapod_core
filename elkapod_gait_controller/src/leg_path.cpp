@@ -14,11 +14,10 @@ void BasicPath::init() {
 
   z_func_swing_ = [this](double s) {
     double a = 0.0;
-    
+
     if (step_length_ > 0) {
       a = -(step_height_) / pow(step_length_ / 2, 2);
     }
-
 
     const double x = -step_length_ / 2.0 + step_length_ * s;
     return a * (x - step_length_ / 2) * (x + step_length_ / 2);

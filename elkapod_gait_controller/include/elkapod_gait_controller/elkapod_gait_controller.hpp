@@ -96,6 +96,8 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
   void velocityDeadzone(Eigen::Vector2d& vel, double& angular_vel);
   void velocityClamp(Eigen::Vector2d& vel, double& angular_vel);
 
+  void fillLegsTransformationsVect();
+
   // ROS interfaces
   rclcpp::TimerBase::SharedPtr leg_clock_timer_;
   rclcpp::Subscription<VelCmd>::SharedPtr velocity_sub_;
@@ -118,7 +120,6 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
   double step_length_ = 0.0;
   double step_height_ = 0.0;
   double current_angular_velocity_ = 0.0;
-
 
   double default_base_height_ = 0.0;
   double base_height_offset_ = 0.0;
@@ -152,8 +153,7 @@ class ElkapodGaitController : public controller_interface::ControllerInterface {
   std::vector<double> phase_offset_, leg_phase_shift_;
   std::vector<int> leg_phase_;
   std::vector<double> leg_clock_;
-  std::array<double, kLegsNb> base_link_rotations_;
-  std::vector<Eigen::Vector3d> base_link_translations_;
+  std::array<Eigen::Isometry3d, kLegsNb> leg_transformations_;
   std::unique_ptr<elkapod_leg_paths::BasicPathBezier> leg_path_gen_;
 
   std::unique_ptr<control_toolbox::Pid> roll_pid_;
