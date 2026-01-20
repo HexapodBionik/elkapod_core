@@ -1,21 +1,23 @@
+import math
+import threading
+import time
+
 import rclpy
-from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from rclpy.executors import SingleThreadedExecutor
+from rclpy.node import Node
 from scipy.spatial.transform import Rotation as R
-import threading
-import time
-import math
 
 
 def quaternion_to_yaw(qx, qy, qz, qw):
     rotation = R.from_quat([qx, qy, qz, qw])
 
-    _, _, yaw = rotation.as_euler('xyz', degrees=True)
+    _, _, yaw = rotation.as_euler("xyz", degrees=True)
 
     yaw_normalized = yaw % 360
     return yaw_normalized
+
 
 class RectangleDrawer(Node):
     def __init__(self):
@@ -25,7 +27,7 @@ class RectangleDrawer(Node):
         self.declare_parameter("clockwise", value=False)
 
         self._true_position_subscriber = self.create_subscription(Odometry, "/odometry/filtered", self._update_odom, 10)
-        self._publisher = self.create_publisher(Twist, "/cmd_vel", 10)
+        self._publisher = self.create_publisher(Twist, "/nav_vel", 10)
 
         self._start_clock = 0
 
@@ -108,10 +110,9 @@ class RectangleDrawer(Node):
                         rotation_angle += 360
                     self._rotate_angle(rotation_angle)
 
-            self.get_logger().info(f"Loop {k+1} completed!")
+            self.get_logger().info(f"Loop {k + 1} completed!")
 
         self.get_logger().info("Finished")
-
 
 
 def main():
@@ -127,7 +128,7 @@ def main():
 
     try:
         time.sleep(2)
-        node.run()  
+        node.run()
     except KeyboardInterrupt:
         pass
     finally:
@@ -138,5 +139,5 @@ def main():
         rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

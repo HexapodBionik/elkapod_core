@@ -15,20 +15,17 @@ qos = QoSProfile(
 )
 
 def quaternion_to_yaw(qx, qy, qz, qw):
-    # Create a rotation object from the quaternion
     rotation = R.from_quat([qx, qy, qz, qw])
 
-    # Convert to Euler angles (roll, pitch, yaw)
-    roll, pitch, yaw = rotation.as_euler('xyz', degrees=True)
+    _, _, yaw = rotation.as_euler('xyz', degrees=True)
 
-    # Normalize yaw to 0-360 range
     yaw_normalized = yaw % 360
     return yaw_normalized
 
 class RotationWaypointsFollower(Node):
     def __init__(self):
         super().__init__(node_name="rotation_waypoints_follower")
-        self._velocity_pub = self.create_publisher(Twist, "/cmd_vel", qos_profile=10)
+        self._velocity_pub = self.create_publisher(Twist, "/nav_vel", qos_profile=10)
         self._velocity_sub = self.create_subscription(Odometry, "/ground_truth_odom", self._update_odom, qos_profile=10)
 
         self._x = 0

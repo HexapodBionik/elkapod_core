@@ -1,35 +1,33 @@
+import threading
+import time
+
 import rclpy
-from rclpy.node import Node
-from rclpy.executors import MultiThreadedExecutor
-from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
-from scipy.spatial.transform import Rotation as R
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
-import time
-import threading
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
+from scipy.spatial.transform import Rotation as R
 
-qos = QoSProfile(
-    reliability=ReliabilityPolicy.RELIABLE,
-    durability=DurabilityPolicy.VOLATILE,
-    depth=10
-)
+qos = QoSProfile(reliability=ReliabilityPolicy.RELIABLE, durability=DurabilityPolicy.VOLATILE, depth=10)
+
 
 def quaternion_to_yaw(qx, qy, qz, qw):
-    # Create a rotation object from the quaternion
     rotation = R.from_quat([qx, qy, qz, qw])
 
-    # Convert to Euler angles (roll, pitch, yaw)
-    roll, pitch, yaw = rotation.as_euler('xyz', degrees=True)
+    _, _, yaw = rotation.as_euler("xyz", degrees=True)
 
-    # Normalize yaw to 0-360 range
     yaw_normalized = yaw % 360
     return yaw_normalized
+
 
 class RotationWaypointsFollower(Node):
     def __init__(self):
         super().__init__(node_name="rotation_waypoints_follower")
-        self._velocity_pub = self.create_publisher(Twist, "/cmd_vel", qos_profile=10)
-        self._ground_truth_sub = self.create_subscription(Odometry, "/ground_truth_odom", self._update_ground_odom, qos_profile=10)
+        self._velocity_pub = self.create_publisher(Twist, "/nav_vel", qos_profile=10)
+        self._ground_truth_sub = self.create_subscription(
+            Odometry, "/ground_truth_odom", self._update_ground_odom, qos_profile=10
+        )
         self._odom_sub = self.create_subscription(Odometry, "/odometry/filtered", self._update_odom, qos_profile=10)
 
         self._x = 0
@@ -59,22 +57,22 @@ class RotationWaypointsFollower(Node):
             time.sleep(0.01)
 
     def _update_ground_odom(self, msg: Odometry):
-
         self._x = msg.pose.pose.position.x
         self._y = msg.pose.pose.position.y
 
         quat = msg.pose.pose.orientation
-        self._angle = quaternion_to_yaw(quat.x, quat.y, quat.z, quat.w)\
-    
-    def _update_odom(self, msg: Odometry):
+        self._angle = quaternion_to_yaw(quat.x, quat.y, quat.z, quat.w)
 
+    def _update_odom(self, msg: Odometry):
         self._x = msg.pose.pose.position.x
         self._y = msg.pose.pose.position.y
 
         quat = msg.pose.pose.orientation
         angle = quaternion_to_yaw(quat.x, quat.y, quat.z, quat.w)
         error = pow(self._angle - angle, 2)
-        self.get_logger().info(f"Current angle: {self._angle:.3f} deg\tMeasured angle: {angle:.3f} deg\tError: {error:.3f}")
+        self.get_logger().info(
+            f"Current angle: {self._angle:.3f} deg\tMeasured angle: {angle:.3f} deg\tError: {error:.3f}"
+        )
         self._rot_error.append(error)
 
     def run(self):
@@ -84,7 +82,7 @@ class RotationWaypointsFollower(Node):
         for angle in angles:
             self._rotate_angle(angle)
             self.get_logger().info("Angle achieved!")
-            self.get_logger().info(f"MSE after rotation {sum(self._rot_error)/len(self._rot_error):.3f}")
+            self.get_logger().info(f"MSE after rotation {sum(self._rot_error) / len(self._rot_error):.3f}")
             time.sleep(5)
 
         self.get_logger().info("Finished")
@@ -109,5 +107,5 @@ def main():
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

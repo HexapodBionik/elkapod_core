@@ -23,7 +23,7 @@ class BackAndForth(Node):
         self.declare_parameter("distance", value=1.0)
 
         self._true_position_subscriber = self.create_subscription(Odometry, "/odometry/filtered", self._update_odom, 10)
-        self._publisher = self.create_publisher(Twist, "/cmd_vel", 10)
+        self._publisher = self.create_publisher(Twist, "/nav_vel", 10)
 
         self._x = 0
         self._y = 0

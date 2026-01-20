@@ -33,7 +33,7 @@ class RectangleDrawer(Node):
 
         self._odom_subscriber = self.create_subscription(Odometry, "/leg_odom", self._update_odom, 10)
         self._true_position_subscriber = self.create_subscription(Odometry, "/ground_truth_odom", self._update_true_odom, 10)
-        self._publisher = self.create_publisher(Twist, "/cmd_vel", 10)
+        self._publisher = self.create_publisher(Twist, "/nav_vel", 10)
 
         self.create_timer(10, self._update_error)
         self._start_clock = 0
