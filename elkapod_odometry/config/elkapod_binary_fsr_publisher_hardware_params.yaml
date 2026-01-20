@@ -1,4 +1,4 @@
 elkapod_binary_fsr_publisher:
   ros__parameters:
-    threshold: 0.08
-    reset_delay: 0.02
+    threshold: 0.5
+    reset_delay: 0.01

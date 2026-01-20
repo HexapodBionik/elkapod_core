@@ -1,10 +1,11 @@
-from launch import LaunchDescription
-from launch_ros.actions import Node
-from ament_index_python.packages import get_package_share_directory
-from launch.substitutions import LaunchConfiguration, PythonExpression
-from launch.conditions import IfCondition
-from launch.actions import TimerAction
 import os
+
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch.actions import TimerAction
+from launch.conditions import IfCondition, UnlessCondition
+from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
 
 
 def generate_launch_description():
@@ -12,17 +13,13 @@ def generate_launch_description():
 
     elkapod_odometry_dir = get_package_share_directory("elkapod_odometry")
     ekf_config = os.path.join(elkapod_odometry_dir, "config", "ekf_config.yaml")
-    odom_config = os.path.join(
-        elkapod_odometry_dir, "config", "elkapod_odometry_params.yaml"
-    )
-    fsr_publisher_sim = os.path.join(
+    odom_config = os.path.join(elkapod_odometry_dir, "config", "elkapod_odometry_params.yaml")
+    fsr_publisher_hardware = os.path.join(
         elkapod_odometry_dir,
         "config",
         "elkapod_binary_fsr_publisher_hardware_params.yaml",
     )
-    fsr_publisher_hardware = os.path.join(
-        elkapod_odometry_dir, "config", "elkapod_binary_fsr_publisher_sim_params.yaml"
-    )
+    fsr_publisher_sim = os.path.join(elkapod_odometry_dir, "config", "elkapod_binary_fsr_publisher_sim_params.yaml")
 
     relay_node = Node(
         package="elkapod_odometry",
@@ -33,25 +30,28 @@ def generate_launch_description():
         condition=IfCondition(use_sim_time),
     )
 
-    binary_fsr_publisher_node = Node(
+    binary_fsr_publisher_node_sim = Node(
         package="elkapod_odometry",
         executable="elkapod_binary_fsr_publisher",
         parameters=[
             {"use_sim_time": use_sim_time},
-            PythonExpression(
-                [
-                    "'",
-                    fsr_publisher_sim,
-                    "' if ",
-                    use_sim_time,
-                    " == 'true' else '",
-                    fsr_publisher_hardware,
-                    "'",
-                ]
-            ),
+            fsr_publisher_sim,
         ],
         output="screen",
         emulate_tty=True,
+        condition=IfCondition(use_sim_time),
+    )
+
+    binary_fsr_publisher_node_hardware = Node(
+        package="elkapod_odometry",
+        executable="elkapod_binary_fsr_publisher",
+        parameters=[
+            {"use_sim_time": use_sim_time},
+            fsr_publisher_hardware,
+        ],
+        output="screen",
+        emulate_tty=True,
+        condition=UnlessCondition(use_sim_time),
     )
 
     odom_node = Node(
@@ -75,4 +75,6 @@ def generate_launch_description():
         actions=[odom_node, ekf_node],
     )
 
-    return LaunchDescription([relay_node, binary_fsr_publisher_node, delayed_actions])
+    return LaunchDescription(
+        [relay_node, binary_fsr_publisher_node_sim, binary_fsr_publisher_node_hardware, delayed_actions]
+    )
