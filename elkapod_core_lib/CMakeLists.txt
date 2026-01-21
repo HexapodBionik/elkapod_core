@@ -1,36 +1,43 @@
 cmake_minimum_required(VERSION 3.20)
 project(elkapod_core_lib)
 
+if(POLICY CMP0167)
+  cmake_policy(SET CMP0167 NEW)
+endif()
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-find_package(Eigen3 REQUIRED)
 find_package(ament_cmake REQUIRED)
-FILE(GLOB_RECURSE SRC "src/*.cpp")
+find_package(Eigen3 REQUIRED)
 
-add_library(elkapod_core_lib STATIC ${SRC})
-target_compile_features(elkapod_core_lib PUBLIC c_std_99 cxx_std_20)
-set_target_properties(elkapod_core_lib PROPERTIES POSITION_INDEPENDENT_CODE ON)
+file(GLOB_RECURSE SRC "src/*.cpp")
 
-target_include_directories(elkapod_core_lib PUBLIC
+add_library(${PROJECT_NAME} ${SRC})
+
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
+set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+  $<INSTALL_INTERFACE:include>
 )
 
-install(
-  DIRECTORY include/
-  DESTINATION include/${PROJECT_NAME}
-)
+target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen)
 
-install(
-  TARGETS elkapod_core_lib
+install(TARGETS ${PROJECT_NAME}
   EXPORT export_${PROJECT_NAME}
-  LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
 
+install(DIRECTORY include/
+  DESTINATION include
+)
+
+ament_export_include_directories(include)
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 ament_export_dependencies(Eigen3)
 
