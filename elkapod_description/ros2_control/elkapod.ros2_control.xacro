@@ -49,11 +49,12 @@
                     <odom_frame>base_link</odom_frame>
                     <robot_base_frame>base_link</robot_base_frame>
                     <odom_publish_frequency>50</odom_publish_frequency>
+                    <dimensions>3</dimensions>
                 </plugin>
             </gazebo>
 
             <!-- Joints setup -->
-            <ros2_control name="GazeboSimSystem" type="system">
+            <ros2_control name="ElkapodSimHardwareInterface" type="system">
                 <hardware>
                     <plugin>gz_ros2_control/GazeboSimSystem</plugin>
                 </hardware>
@@ -92,23 +93,33 @@
                 <xacro:sim_fcp_joint_interface name="leg5_FCP_joint"/>
                 <xacro:sim_fcp_joint_interface name="leg6_FCP_joint"/>
 
+                <!-- Sensors -->
+                <sensor name="imu_sensor" type="imu">
+                    <param name="frame_id">imu_link</param>
+                    <param name="update_rate">50.0</param>
+                    <state_interface name="orientation.x"/>
+                    <state_interface name="orientation.y"/>
+                    <state_interface name="orientation.z"/>
+                    <state_interface name="orientation.w"/>
+                    <state_interface name="angular_velocity.x"/>
+                    <state_interface name="angular_velocity.y"/>
+                    <state_interface name="angular_velocity.z"/>
+                    <state_interface name="linear_acceleration.x"/>
+                    <state_interface name="linear_acceleration.y"/>
+                    <state_interface name="linear_acceleration.z"/>
+                </sensor>
+
             </ros2_control>
 
             <!-- IMU simulation setup -->
             <gazebo reference="imu_link">
                 <sensor name="imu_sensor" type="imu">
                     <plugin filename="libgz-sim-imu-system.so" name="gz::sim::systems::Imu">
-                        <ros>
-                            <namespace>/demo</namespace>
-                            <remapping>~/out:=imu</remapping>
-                        </ros>
                         <initial_orientation_as_reference>false</initial_orientation_as_reference>
-
                     </plugin>
                     <always_on>true</always_on>
                     <update_rate>100</update_rate>
                     <visualize>true</visualize>
-                    <topic>imu</topic>
                     <imu>
                         <angular_velocity>
                             <x>
@@ -168,7 +179,7 @@
         </xacro:if>
 
         <xacro:unless value="${sim_mode}">
-            <ros2_control name="ElkapodSystemHardware" type="system">
+            <ros2_control name="ElkapodHardwareInterface" type="system">
                 <hardware>
                     <plugin>elkapod_description/elkapod_system_hardware</plugin>
                     <param name="uart_device">/dev/ttyAMA1</param>

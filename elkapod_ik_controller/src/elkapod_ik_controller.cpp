@@ -7,7 +7,9 @@
 #include "rclcpp/logging.hpp"
 
 namespace {
-constexpr auto DEFAULT_COMMAND_TOPIC = "~/elkapod_leg_positions";
+constexpr auto DEFAULT_COMMAND_TOPIC = "~/leg_positions";
+constexpr size_t SERVOS_NUM = 18;
+constexpr size_t LEGS_NUM = 6;
 static inline float deg2rad(float deg) { return deg / 180.f * M_PI; }
 }  // namespace
 
@@ -32,6 +34,10 @@ controller_interface::CallbackReturn ElkapodIKController::on_init() {
   Eigen::Vector3d a1(params_.a1[0], params_.a1[1], params_.a1[2]);
   Eigen::Vector3d a2(params_.a2[0], params_.a2[1], params_.a2[2]);
   Eigen::Vector3d a3(params_.a3[0], params_.a3[1], params_.a3[2]);
+
+  input_cmd_ = std::vector<double>(SERVOS_NUM, 0.0);
+  current_joint_positions_ = std::vector<double>(SERVOS_NUM, 0.0);
+  reference_interfaces_.resize(SERVOS_NUM, 0.0);
 
   const std::vector<Eigen::Vector3d> input = {m1, a1, a2, a3};
   solver_ = std::make_shared<KinematicsSolver>(input);
@@ -58,49 +64,73 @@ controller_interface::return_type ElkapodIKController::update_reference_from_sub
   auto current_ref_op = received_position_msg_.try_get();
 
   if (current_ref_op.has_value()) {
-    command_msg_ = current_ref_op.value();
+    auto input_cmd = current_ref_op.value().data;
+    if (input_cmd.size() == SERVOS_NUM) {
+      std::copy_n(input_cmd.begin(), SERVOS_NUM, reference_interfaces_.begin());
+    }
   }
 
   return controller_interface::return_type::OK;
 }
 
 controller_interface::return_type ElkapodIKController::update_and_write_commands(
-    const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/) {
+    const rclcpp::Time & /*time*/, const rclcpp::Duration &period) {
+  if (period.seconds() == 0) {
+    return controller_interface::return_type::OK;
+  }
   auto logger = get_node()->get_logger();
-  if (command_msg_.data.size() < 18) {
+  if (reference_interfaces_.size() < SERVOS_NUM ||
+      std::all_of(reference_interfaces_.cbegin(), reference_interfaces_.cend(),
+                  [](double value) { return value == 0.0; })) {
     return controller_interface::return_type::OK;
   }
 
-  std::array<double, 18> output;
+  std::vector<Eigen::Vector3d> results;
+  results.resize(LEGS_NUM, Eigen::Vector3d::Zero());
 
   Eigen::Vector3d input;
-  for (int i = 0; i < 6; ++i) {
-    input[0] = command_msg_.data[i * 3];
-    input[1] = command_msg_.data[i * 3 + 1];
-    input[2] = command_msg_.data[i * 3 + 2];
+  for (size_t i = 0; i < LEGS_NUM; ++i) {
+    input[0] = reference_interfaces_[i * 3];
+    input[1] = reference_interfaces_[i * 3 + 1];
+    input[2] = reference_interfaces_[i * 3 + 2];
 
-    Eigen::Vector3d anglesDeg = solver_->inverse(input);
+    const Eigen::Vector3d angles = solver_->inverse(input);
 
-    if (anglesDeg.array().isNaN().any()) {
-      RCLCPP_ERROR(logger, "Inverse kinematics error while processing input for leg %d", i + 1);
+    if (angles.array().isNaN().any()) {
+      RCLCPP_ERROR(logger, "Inverse kinematics error while processing input for leg %ld", i + 1);
       RCLCPP_ERROR(
           logger, std::format("Input: {:.3f} {:.3f} {:.3f}", input[0], input[1], input[2]).c_str());
-    } else {
-      output[i * 3] = anglesDeg[0];
-      output[i * 3 + 1] = anglesDeg[1];
-      output[i * 3 + 2] = anglesDeg[2];
+      return controller_interface::return_type::OK;
+    }
+    results[i] = angles;
+  }
 
-      std::string msg2 =
-          std::format("Angles for leg {} theta0: {:.3f} theta1: {:.3f} theta2: {:.3f}", i + 1,
-                      output[i * 3], output[i * 3 + 1], output[i * 3 + 2]);
-      RCLCPP_DEBUG(logger, msg2.c_str());
+  for (size_t i = 0; i < LEGS_NUM; ++i) {
+    auto leg_angles = results[i];
+    RCLCPP_DEBUG(
+        logger, std::format("Angles for leg {} theta0: {:.3f} theta1: {:.3f} theta2: {:.3f}", i + 1,
+                            leg_angles[0], leg_angles[1], leg_angles[2])
+                    .c_str());
+
+    for (size_t j = 0; j < 3; ++j) {
+      // Change this fragment into separate velocity clamping function, for now dt is hardcoded to
+      // 0.02s when dt = period.seconds() is used clamping is not working. After velocity clamping
+      // there should be a lowPass filtering
+      // ========================================================================================
+      // const double dt = period.seconds();
+      double desired_velocity = (leg_angles[j] - current_joint_positions_[i * 3 + j]) / 0.02;
+
+      double limited_velocity = std::clamp(desired_velocity, -7.0, 7.0);
+      double limited_delta = limited_velocity * 0.02;
+      double target_position = current_joint_positions_[i * 3 + j] + limited_delta;
+      current_joint_positions_[i * 3 + j] = target_position;
+      // ========================================================================================
+
+      if (!std::isnan(current_joint_positions_[i * 3 + j])) {
+        (void)command_interfaces_[i * 3 + j].set_value(current_joint_positions_[i * 3 + j]);
+      }
     }
   }
-
-  for (size_t i = 0; i < 18; ++i) {
-    (void)command_interfaces_[i].set_value(output[i]);
-  }
-
   return controller_interface::return_type::OK;
 }
 
@@ -113,9 +143,13 @@ controller_interface::CallbackReturn ElkapodIKController::on_configure(
     RCLCPP_INFO(logger, "Parameters were updated");
   }
 
+  auto subscribers_qos = rclcpp::SystemDefaultsQoS();
+  subscribers_qos.keep_last(1);
+  subscribers_qos.best_effort();
+
   // initialize command subscriber
   position_command_subscriber_ = get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
-      DEFAULT_COMMAND_TOPIC, rclcpp::SystemDefaultsQoS(),
+      DEFAULT_COMMAND_TOPIC, subscribers_qos,
       [this](const std::shared_ptr<std_msgs::msg::Float64MultiArray> msg) -> void {
         if (!subscriber_is_active_) {
           RCLCPP_WARN(get_node()->get_logger(),
@@ -162,7 +196,7 @@ void ElkapodIKController::reset_buffers() {}
 
 void ElkapodIKController::halt() {}
 
-bool ElkapodIKController::on_set_chained_mode(bool /*chained_mode*/) { return false; }
+bool ElkapodIKController::on_set_chained_mode(bool /*chained_mode*/) { return true; }
 
 std::vector<hardware_interface::CommandInterface>
 ElkapodIKController::on_export_reference_interfaces() {

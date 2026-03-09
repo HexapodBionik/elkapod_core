@@ -2,16 +2,17 @@
 ![ROS2 distro](https://img.shields.io/badge/ros--version-jazzy-blue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Python Version](https://img.shields.io/badge/python-3.12-g.svg)
-[![elkapod](https://github.com/HexapodBionik/Elkapod/actions/workflows/main.yml/badge.svg?branch=elkapod_comm)](https://github.com/HexapodBionik/Elkapod/actions/workflows/main.yml)
+[![elkapod](https://github.com/HexapodBionik/elkapod_core/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/HexapodBionik/elkapod_core/actions/workflows/main.yml)
 
 ## List of packages
-- `elkapod_core_bringup`
+- `elkapod_bringup`
+- `elkapod_core_lib`
 - `elkapod_description`
-- `elkapod_gait_gen_cpp`
-- `elkapod_gait_gen_py`
-- `elkapod_kinematics`
-- `elkapod_locomotion_examples`
+- `elkapod_examples`
+- `elkapod_gait_controller`
+- `elkapod_ik_controller`
 - `elkapod_motion_manager`
+- `elkapod_odometry`
 
 ## Installation and workspace setup
 For installation and workspace setup please follow the steps from the [elkapod_stack](https://github.com/HexapodBionik/elkapod_stack) repository.
@@ -21,7 +22,7 @@ For installation and workspace setup please follow the steps from the [elkapod_s
 After building and sourcing run the following command
 
 ```bash
-ros2 launch elkapod_core_bringup elkapod_core_bringup_sim.launch.py
+ros2 launch elkapod_bringup many.launch.py
 ```
 
 then when you see that the entire motion stack has successfully started like this
@@ -45,12 +46,8 @@ ros2 action send_goal /motion_manager_transition elkapod_msgs/action/MotionManag
 ```
 3. Finally enable the gait generator
 ```bash
-ros2 service call /motion_manager_walk_enable std_srvs/srv/Trigger 
+ros2 service call /motion_manager_walk_enable std_srvs/srv/Trigger
 ```
 
-Now you can start using the walking stack by publishing velocity commands of type `geometry_msgs/msg/Twist` at the `/cmd_vel` topic. For example you can use the `teleop_twist_keyboard`
-
-```bash
-ros2 run teleop_twist_keyboard teleop_twist_keyboard
-```
+Now you can start using the walking stack by publishing velocity commands of type `geometry_msgs/msg/Twist` at different twist mux topics.
 

@@ -25,11 +25,14 @@
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_broadcaster.h"
 
+#define EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
 using namespace std::chrono_literals;
 using KinematicsSolver = elkapod_core_lib::kinematics::KinematicsSolver;
 
 class ElkapodOdom : public rclcpp::Node {
  public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   ElkapodOdom();
 
  private:

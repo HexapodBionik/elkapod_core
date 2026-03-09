@@ -1,13 +1,15 @@
 /**:
   ros__parameters:
+    publish_debug_info: true
     base_height:
-      default: 0.11
-      min: 0.09
-      max: 0.16
+      default_base_height: 0.166
+      base_link_offset: 0.056
+      min_base_height: 0.146
+      max_base_height: 0.216
     leg_spacing:
-      default: 0.1
+      default_leg_spacing: 0.1
       min: 0.1
-      max: 0.2
+      max: 0.15
     roll:
       max_rad: 0.05236
     pitch:
@@ -18,41 +20,44 @@
       ripple: 0.1
     max_angular_vel:
       tripod: 0.5
-      wave: 0.5
-      ripple: 0.5
-
-elkapod_gait:
-  ros__parameters:
-    trajectory:
-      frequency_hz: 50.0
-
-    gait:
-      min_swing_time_sec: 0.42
-      default_phase_lag: 0.0
-      step:
-        height:             # parametry min i max do doprecyzowania
-          default: 0.025
-          min: 0.05       
-          max: 0.15
-    roll:
-      pid:
-        k: 2.0
-        ti: 0.2
-        td: 0.0
-        cmd_lo: -0.1
-        cmd_hi: 0.1
-    pitch:
-      pid:
-        k: 1.2
-        ti: 0.2
-        td: 0.0
-        cmd_lo: -0.2
-        cmd_hi: 0.2
+      wave: 0.1
+      ripple: 0.25
+    kinematics:
+      m1: [0.0, 0.0, 0.025]
+      a1: [0.0676, 0.0, 0.0]
+      a2: [0.09237, 0.0, 0.0]
+      a3: [0.22524, 0.0, 0.0]
+      leg_tf:
+        mounting_rot: [0.63973287, -0.63973287, 1.570796327, -1.570796327, 2.38414364, -2.38414364]
+        mounting_trans_x: [0.17841, 0.17841, 0.0138, 0.0138, -0.15903, -0.15903]
+        mounting_trans_y: [0.13276, -0.13276, 0.1643, -0.1643, 0.15038, -0.15038]
+        mounting_trans_z: [-0.025, -0.025, -0.025, -0.025, -0.025, -0.025]
+      joint_info:
+        j1:
+          position_limits:
+            lower: -1.57079633
+            upper: 1.57079633
+          offsets:
+            software: 0.0
+            hardware: 0.0
+        j2:
+          position_limits:
+            lower: -1.57079633
+            upper: 1.57079633
+          offsets:
+            software: 3.1
+            hardware: 14.4
+        j3:
+          position_limits:
+            lower: -3.14159265
+            upper: 0.0
+          offsets:
+            software: -2.5
+            hardware: 43.2
 
 elkapod_motion_manager:
   ros__parameters:
     standing_up:
-      base_height_waypoint: 0.12
       leg_spacing_waypoint: 0.275
 
     trajectory:

@@ -1,0 +1,30 @@
+twist_mux:
+  ros__parameters:
+    use_stamped: false
+    topics:
+      navigation:
+        topic   : "nav_vel"
+        timeout : 0.5
+        priority: 10
+      joystick:
+        topic   : "joy_vel"
+        timeout : 0.5
+        priority: 110
+      keyboard:
+        topic   : "key_vel"
+        timeout : 0.5
+        priority: 90
+      tablet:
+        topic   : "app_vel"
+        timeout : 0.5
+        priority: 100
+      emergency:
+        topic   : "emergency_vel"
+        timeout : 0.2
+        priority: 255
+
+    locks:
+      e_stop:
+        topic   : "e_stop_lock"
+        timeout : 0.0
+        priority: 255

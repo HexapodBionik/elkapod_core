@@ -3,6 +3,10 @@ controller_manager:
     update_rate: 50
 
     hardware_components_initial_state:
+      inactive:
+        - "ElkapodGaitController"
+
+    hardware_components_initial_state:
       shutdown_on_initial_state_failure: true
 
     enforce_command_limits: true
@@ -13,11 +17,13 @@ controller_manager:
     elkapod_ik_controller:
       type: elkapod_ik_controller/ElkapodIKController
 
-    passthrough_controller:          
-      type: passthrough_controller/PassthroughController
+    elkapod_gait_controller:
+      type: elkapod_gait_controller/ElkapodGaitController
+      state: inactive
 
     imu_broadcaster:
       type: imu_sensor_broadcaster/IMUSensorBroadcaster
+
 
 elkapod_ik_controller:
   ros__parameters:
@@ -45,8 +51,41 @@ elkapod_ik_controller:
     a2: [0.09237, 0.0, 0.0]
     a3: [0.22524, 0.0, 0.0]
 
+elkapod_gait_controller:
+  ros__parameters:
+    joints:
+      - elkapod_ik_controller/leg1_x/point
+      - elkapod_ik_controller/leg1_y/point
+      - elkapod_ik_controller/leg1_z/point
+      - elkapod_ik_controller/leg2_x/point
+      - elkapod_ik_controller/leg2_y/point
+      - elkapod_ik_controller/leg2_z/point
+      - elkapod_ik_controller/leg3_x/point
+      - elkapod_ik_controller/leg3_y/point
+      - elkapod_ik_controller/leg3_z/point
+      - elkapod_ik_controller/leg4_x/point
+      - elkapod_ik_controller/leg4_y/point
+      - elkapod_ik_controller/leg4_z/point
+      - elkapod_ik_controller/leg5_x/point
+      - elkapod_ik_controller/leg5_y/point
+      - elkapod_ik_controller/leg5_z/point
+      - elkapod_ik_controller/leg6_x/point
+      - elkapod_ik_controller/leg6_y/point
+      - elkapod_ik_controller/leg6_z/point
+    gait:
+      min_swing_time_sec: 0.42
+      default_phase_lag: 0.0
+      step:
+        height:
+          default_step_height: 0.025
+          min: 0.05
+          max: 0.15
+
 imu_broadcaster:
   ros__parameters:
     type: imu_sensor_broadcaster/IMUSensorBroadcaster
     sensor_name: imu_sensor
     frame_id: imu_link
+    static_covariance_orientation: [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001]
+    static_covariance_angular_velocity: [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001]
+    static_covariance_linear_acceleration: [0.001, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.001]

@@ -77,6 +77,9 @@ ElkapodOdom::ElkapodOdom() : Node("elkapod_odom") {
 
   const std::vector<Eigen::Vector3d> input = {m1, a1, a2, a3};
   solver_ = std::make_shared<KinematicsSolver>(input);
+
+  joint_states_initialized_ = false;
+  position_initialized_ = false;
 }
 
 void ElkapodOdom::collisionSubCallback(const std_msgs::msg::Int8MultiArray::SharedPtr contacts) {
@@ -127,8 +130,9 @@ Eigen::Vector3d ElkapodOdom::findBaseFootprintCoords(Eigen::Vector4d plane) {
 }
 
 void ElkapodOdom::tfCallback() {
+  auto now = this->get_clock()->now();
   geometry_msgs::msg::TransformStamped t;
-  t.header.stamp = this->get_clock()->now();
+  t.header.stamp = now;
   t.header.frame_id = "base_footprint";
   t.child_frame_id = "base_link";
 
@@ -158,13 +162,13 @@ nav_msgs::msg::Odometry ElkapodOdom::fillOdomMsg(const Eigen::Matrix4d odom_pose
   auto position = geometry_msgs::msg::Point();
 
   const Eigen::Quaterniond q(odom_pose.block<3, 3>(0, 0));
-  q.normalized();
+  Eigen::Quaterniond q_norm = q.normalized();
 
   geometry_msgs::msg::Quaternion orientation;
-  orientation.x = q.x();
-  orientation.y = q.y();
-  orientation.z = q.z();
-  orientation.w = q.w();
+  orientation.x = q_norm.x();
+  orientation.y = q_norm.y();
+  orientation.z = q_norm.z();
+  orientation.w = q_norm.w();
 
   position.x = odom_pose(0, 3);
   position.y = odom_pose(1, 3);
@@ -216,10 +220,15 @@ void ElkapodOdom::odomCallback() {
     if (contact_cache_[i] == 1) {
       Eigen::Vector3d angles = {leg_angles_[i * 3], leg_angles_[i * 3 + 1], leg_angles_[i * 3 + 2]};
       current_leg_config_[i] = angles;
-      auto point =
-          Eigen::AngleAxis(base_link_rotations_[i], Eigen::Vector3d::UnitZ()).toRotationMatrix() *
-              solver_->forward(angles) +
-          base_link_translations_[i];
+      Eigen::Matrix3d rot_matrix =
+          Eigen::AngleAxis(base_link_rotations_[i], Eigen::Vector3d::UnitZ()).toRotationMatrix();
+
+      Eigen::Vector3d fk_pos = solver_->forward(angles);
+
+      if (fk_pos.hasNaN()) {
+        continue;
+      }
+      auto point = (rot_matrix * fk_pos) + base_link_translations_[i];
       current_leg_positions[i] = point;
     }
   }

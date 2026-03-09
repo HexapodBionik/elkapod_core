@@ -10,7 +10,9 @@
   <depend>rclcpp</depend>
   <depend>elkapod_core_lib</depend>
   <depend>topic_tools</depend>
-  
+  <depend>diagnostic_msgs</depend>
+  <depend>twist_mux</depend>
+
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>std_srvs</exec_depend>
   <exec_depend>elkapod_msgs</exec_depend>

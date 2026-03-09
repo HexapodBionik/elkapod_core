@@ -1,0 +1,9 @@
+<library path="elkapod_gait_controller">
+  <class name="elkapod_gait_controller/ElkapodGaitController"
+         type="elkapod_gait_controller::ElkapodGaitController"
+         base_class_type="controller_interface::ControllerInterface">
+    <description>
+      Basic gait controller for Elkapod walking robot
+    </description>
+  </class>
+</library>

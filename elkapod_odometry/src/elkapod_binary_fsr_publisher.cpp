@@ -8,12 +8,13 @@ ElkapodBinaryFsrPublisher::ElkapodBinaryFsrPublisher() : Node("elkapod_binary_fs
   threshold_ = declare_parameter<double>("threshold");
   reset_delay_ = declare_parameter<double>("reset_delay");
 
-  std::cout << threshold_ << "\t" << reset_delay_ << std::endl;
-
   my_publisher_ = this->create_publisher<std_msgs::msg::Int8MultiArray>("/legs/fsr_contact", 10);
 
   last_contact_ = {0.};
   RCLCPP_INFO(get_logger(), "Elkapod binary fsr publisher started!");
+  RCLCPP_INFO(
+      get_logger(),
+      std::format("Threshold: {:.5f}\tReset delay: {:.5f}s", threshold_, reset_delay_).c_str());
 }
 
 void ElkapodBinaryFsrPublisher::fsrCallback(

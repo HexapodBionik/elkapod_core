@@ -116,6 +116,8 @@ ament_target_dependencies(
         imu_republisher
         "rclcpp"
         "sensor_msgs"
+        "tf2"
+        "tf2_geometry_msgs"
 )
 
 # Install the executable

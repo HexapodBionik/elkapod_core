@@ -1,87 +1,51 @@
-name: elkapod
+name: elkapod CI
+
 on:
   push:
   pull_request:
-    branches:
-      - "main"
-    types: [opened]
+    branches: ["main"]
+    types: [opened, synchronized, reopened]
 
 jobs:
   linting:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
-      - name: Setup workspace
+      - uses: actions/checkout@v4
+      - name: Run Ruff
         run: |
-          mkdir -p ros_ws/src
-      - uses: actions/checkout@v3
-        with:
-          path: ros_ws/src
-      - name: Configure linter
-        run: |
-          sudo apt update
-          pip3 install ruff
-          cd ros_ws/src/
-          echo $(pwd)
-          ruff check . --select C4 --select SIM --select TCH
+          pip install ruff
+          ruff check . --select C4,SIM,TCH
 
   build:
-    # Create a container of the latest Ubuntu, other values could be
-    # ubuntu-latest, ubuntu-22.04, etc.
     needs: linting
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/hexapodbionik/elkapod_sim:latest
 
     steps:
-      # Install some system pacakges
-      - name: Install ROS 2 Jazzy packages && dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y software-properties-common libserial-dev
-          sudo add-apt-repository -y universe
-          sudo apt update && sudo apt install -y curl
-          sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
-          sudo apt update
-          sudo apt install -y ros-jazzy-ros-base python3-colcon-common-extensions ros-dev-tools
-          sudo apt install -y lcov
-          sudo apt install -y python3-vcstool
-
-      - name: Build ros2_control_ws
-        run: |
-          source /opt/ros/jazzy/setup.bash
-          mkdir -p ws_ros2_control/src/
-          git clone https://github.com/ros-controls/ros2_control.git ws_ros2_control/src/
-          cd ws_ros2_control/src/
-          git checkout tags/5.5.0
-          cd ../../
-          sudo rosdep init
-          rosdep update --rosdistro=jazzy
-          sudo apt-get update
-          cd ws_ros2_control/
-          rosdep install --from-paths src --ignore-src -r -y
-          colcon build --symlink-install
-          source install/setup.bash
-
       - name: Setup Workspace
-        run: |
-          mkdir -p ros_ws/src
+        run: mkdir -p ros_ws/src
 
-      # We want to use GitHub CI checkout version 3 for checking out the branch
-      - uses: actions/checkout@v3
+      - name: Checkout elkapod
+        uses: actions/checkout@v4
         with:
-          path: ros_ws/src
+          path: ros_ws/src/elkapod
 
-      - name: Clone elkapod_msgs package
+      - name: Clone msgs
         run: |
-          cd ros_ws/
-          git clone https://github.com/HexapodBionik/elkapod_msgs.git -b main src/elkapod_msgs/
+          git clone https://github.com/HexapodBionik/elkapod_msgs.git -b main ros_ws/src/elkapod_msgs
 
-      # Build for test coverage
-      - name: Configure CMake flags and build exectables
+      - name: Rosdep Update
+        shell: bash
+        run: |
+          sudo apt update
+          rosdep update
+          cd ros_ws
+          rosdep install --from-paths src --ignore-src -y --rosdistro jazzy
+
+      - name: Build
+        shell: bash
         run: |
           source /opt/ros/jazzy/setup.bash
-          source ws_ros2_control/install/setup.bash 
-          sudo apt install python3-rosdep
-          rosdep update --rosdistro=jazzy
           cd ros_ws
-          rosdep install --from-paths src -y --ignore-src
-          colcon build --cmake-args -DCMAKE_CXX_FLAGS="-Werror"
+          colcon build --symlink-install --cmake-args -DCMAKE_CXX_FLAGS="-Werror"

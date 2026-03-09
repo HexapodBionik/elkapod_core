@@ -1,5 +1,3 @@
-
-
 //
 // Created by Piotr Patek.
 //
@@ -19,12 +17,14 @@
 #include <std_srvs/srv/trigger.hpp>
 #include <string>
 
+#include "controller_manager_msgs/srv/switch_controller.hpp"
+#include "diagnostic_msgs/msg/diagnostic_array.hpp"
 #include "elkapod_core_lib/trajectory.hpp"
 #include "elkapod_msgs/action/motion_manager_trigger.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 
 namespace elkapod_motion_manager {
-enum class State { INIT, IDLE_LOWERED, IDLE_4_LOWERED, IDLE_4, IDLE, WALKING };
+enum class State { INIT, IDLE_LOWERED, IDLE, WALKING };
 
 using LinearLegPlanner = elkapod_core_lib::trajectory::LinearLegPlanner;
 using HopLegPlanner = elkapod_core_lib::trajectory::HopLegPlanner;
@@ -44,9 +44,6 @@ class ElkapodMotionManager : public rclcpp::Node {
   void standUpPlanning();
   void initPlanning();
 
-  void init4Planning();
-  void standUp4Planning();
-
   rclcpp::CallbackGroup::SharedPtr my_group_;
 
   rclcpp_action::GoalResponse transition_action_handle_goal(
@@ -61,12 +58,14 @@ class ElkapodMotionManager : public rclcpp::Node {
                                   std::shared_ptr<std_srvs::srv::Trigger_Response> response);
 
   void legControlCallback();
+  void diagPublishCallback();
 
   rclcpp_action::Server<TriggerAction>::SharedPtr transition_action_server_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr walk_enable_service_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr walk_disable_service_;
-  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr gait_enable_publisher_;
-  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr gait_disable_publisher_;
+
+  rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedPtr
+      switch_controller_publisher_;
 
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr leg_positions_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
@@ -87,6 +86,8 @@ class ElkapodMotionManager : public rclcpp::Node {
 
   // Height variables
   double base_height;
+  double base_height_offset_;
+  std::vector<double> kinematics_m1_;
   double base_height_min;
   double base_height_max;
 
@@ -97,6 +98,11 @@ class ElkapodMotionManager : public rclcpp::Node {
 
   // Trajectory variables
   double trajectory_freq_hz;
+
+  // Diagnostics
+  rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diag_pub_;
+  inline static double diag_publish_period_ = 1.0;  // 1 Hz
+  rclcpp::TimerBase::SharedPtr diag_timer_;
 };
 };  // namespace elkapod_motion_manager
 
