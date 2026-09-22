@@ -16,6 +16,8 @@
   <depend>rclcpp</depend>
   <depend>rclcpp_lifecycle</depend>
   <depend>elkapod_msgs</depend>
+  <!-- hardware/elkapod_comm.cpp links against libserial -->
+  <depend>libserial-dev</depend>
 
   <exec_depend>joint_state_publisher</exec_depend>
   <exec_depend>xacro</exec_depend>
