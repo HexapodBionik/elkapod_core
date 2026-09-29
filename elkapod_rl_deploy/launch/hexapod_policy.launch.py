@@ -10,6 +10,7 @@ def generate_launch_description():
 
     checkpoint_arg = DeclareLaunchArgument(
         "checkpoint_path",
+        default_value=PathJoinSubstitution([pkg_share, "config", "best_agent.pt"]),
         description="Absolute path to the skrl .pt checkpoint",
     )
     config_arg = DeclareLaunchArgument(
@@ -19,7 +20,7 @@ def generate_launch_description():
     )
     rate_arg = DeclareLaunchArgument(
         "control_rate_hz",
-        default_value="0.0",
+        default_value="50.0",
         description=(
             "Inference loop frequency (Hz). 0 = use the value from the YAML "
             "config (which must match 1/(sim.dt*decimation) from training)."
@@ -29,7 +30,7 @@ def generate_launch_description():
     node = Node(
         package="elkapod_rl_deploy",
         executable="policy_node",
-        name="hexapod_policy_node",
+        name="elkapod_policy_node",
         output="screen",
         emulate_tty=True,
         parameters=[{

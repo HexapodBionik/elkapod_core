@@ -1,8 +1,9 @@
 import os
+
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.substitutions import LaunchConfiguration, Command
 from launch.actions import DeclareLaunchArgument
+from launch.substitutions import Command, LaunchConfiguration
 from launch_ros.actions import Node
 
 
@@ -12,7 +13,7 @@ def generate_launch_description():
     # Process the URDF file
     pkg_path = os.path.join(get_package_share_directory('elkapod_description'))
     xacro_file = os.path.join(pkg_path, 'urdf','elkapod.urdf.xacro')
-    robot_description_config = Command(['xacro ', xacro_file, ' sim_mode:=', sim_mode])
+    robot_description_config = Command(['xacro ', xacro_file, ' sim_mode:=', sim_mode, ' fcp_joint_type:=fixed'])
 
     params = {'robot_description': robot_description_config, 'sim_mode': sim_mode}
     node_robot_state_publisher = Node(
