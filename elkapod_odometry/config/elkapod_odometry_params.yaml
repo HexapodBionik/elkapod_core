@@ -1,4 +1,4 @@
-elkapod_odom:
+/**:
   ros__parameters:
     kinematics_solver:
       m1:

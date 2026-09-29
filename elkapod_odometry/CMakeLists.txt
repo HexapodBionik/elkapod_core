@@ -101,6 +101,34 @@ install(TARGETS elkapod_odom
         DESTINATION lib/${PROJECT_NAME}
 )
 
+add_executable(elkapod_base_footprint_publisher src/elkapod_base_footprint_publisher_init.cpp src/elkapod_base_footprint_publisher.cpp)
+target_sources(elkapod_base_footprint_publisher PRIVATE ${INCLUDE_FILES})
+
+target_include_directories(elkapod_base_footprint_publisher PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/elkapod_odometry
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>)
+
+
+target_compile_features(elkapod_base_footprint_publisher PUBLIC c_std_99 cxx_std_20)  # Require C99 and C++20
+ament_target_dependencies(
+        elkapod_base_footprint_publisher
+        "rclcpp"
+        "geometry_msgs"
+        "sensor_msgs"
+        "tf2"
+        "tf2_geometry_msgs"
+        "tf2_eigen"
+        "tf2_ros"
+        "elkapod_core_lib"
+)
+
+# Install the executable
+install(TARGETS elkapod_base_footprint_publisher
+        DESTINATION lib/${PROJECT_NAME}
+)
+
 add_executable(imu_republisher src/imu_republisher.cpp src/imu_republisher_init.cpp)
 target_sources(imu_republisher PRIVATE ${INCLUDE_FILES})
 

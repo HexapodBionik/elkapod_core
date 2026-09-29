@@ -3,6 +3,8 @@
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
 
+#include <algorithm>
+#include <cstdio>
 #include <format>
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose_with_covariance.hpp>
@@ -87,14 +89,24 @@ void ElkapodOdom::collisionSubCallback(const std_msgs::msg::Int8MultiArray::Shar
 }
 
 void ElkapodOdom::jointStatesCallback(const sensor_msgs::msg::JointState::SharedPtr joint_states) {
-  int j = 0;
-  for (size_t i = 0; i < 24; ++i) {
-    if (i % 4 != 0) {
-      leg_angles_[j] = joint_states->position[i];
-      ++j;
+  // Map joints by name ("leg<N>_J<K>" -> leg_angles_[(N-1)*3 + (K-1)]), the message order is not fixed
+  const size_t count = std::min(joint_states->name.size(), joint_states->position.size());
+  std::array<bool, 18> received{};
+  for (size_t i = 0; i < count; ++i) {
+    int leg = 0, joint = 0;
+    if (std::sscanf(joint_states->name[i].c_str(), "leg%d_J%d", &leg, &joint) != 2 || leg < 1 || leg > 6 ||
+        joint < 1 || joint > 3) {
+      continue;
     }
+    const size_t idx = (leg - 1) * 3 + (joint - 1);
+    leg_angles_[idx] = joint_states->position[i];
+    received[idx] = true;
   }
-  joint_states_initialized_ = true;
+
+  if (!joint_states_initialized_ &&
+      std::all_of(received.begin(), received.end(), [](bool r) { return r; })) {
+    joint_states_initialized_ = true;
+  }
 }
 
 Eigen::Vector4d ElkapodOdom::findPlane(const Eigen::Matrix3Xd contact_points) {
@@ -133,12 +145,12 @@ void ElkapodOdom::tfCallback() {
   auto now = this->get_clock()->now();
   geometry_msgs::msg::TransformStamped t;
   t.header.stamp = now;
-  t.header.frame_id = "base_footprint";
-  t.child_frame_id = "base_link";
+  t.header.frame_id = "base_link";
+  t.child_frame_id = "base_footprint";
 
   t.transform.translation.x = base_footprint_[0];
   t.transform.translation.y = base_footprint_[1];
-  t.transform.translation.z = -base_footprint_[2];
+  t.transform.translation.z = base_footprint_[2];
 
   tf2::Quaternion q;
   q.setRPY(0, 0, 0);
@@ -156,7 +168,7 @@ nav_msgs::msg::Odometry ElkapodOdom::fillOdomMsg(const Eigen::Matrix4d odom_pose
   auto time = get_clock()->now();
   odom_msg.header.frame_id = "odom";
   odom_msg.header.stamp = time;
-  odom_msg.child_frame_id = "base_footprint";
+  odom_msg.child_frame_id = "base_link";
 
   auto pose = geometry_msgs::msg::PoseWithCovariance();
   auto position = geometry_msgs::msg::Point();
