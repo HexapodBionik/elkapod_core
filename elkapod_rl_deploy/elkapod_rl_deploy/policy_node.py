@@ -6,7 +6,7 @@ Runs an skrl-trained policy on state from Isaac Sim's ROS2 bridge and
 publishes joint position targets.
 
 Observation layout (must match the training ObservationsCfg declaration order):
-    [base_lin_vel(3), base_ang_vel(3), gait_phase(2), projected_gravity(3),
+    [base_lin_vel(3), base_ang_vel(3), gait_phase(2 or 2*6), projected_gravity(3),
      joint_pos(N), joint_vel(N), commands(3), last_action(N_act)]
 
 Actions are joint offsets: target = default_joint_pos + action_scale * action.
@@ -102,8 +102,8 @@ class RunningStandardScaler:
 
 
 class HexapodPolicyNode(Node):
-    def __init__(self):
-        super().__init__("hexapod_policy_node")
+    def __init__(self, node_name: str = "hexapod_policy_node"):
+        super().__init__(node_name)
 
         # Isaac Sim runs slower than real time, so the control loop must follow /clock.
         self.set_parameters([Parameter("use_sim_time", Parameter.Type.BOOL, True)])
@@ -163,7 +163,7 @@ class HexapodPolicyNode(Node):
         self.joint_vel_relative = bool(self.cfg.get("joint_vel_relative", False))
         self.rotate_odom_to_body = bool(self.cfg.get("rotate_odom_to_body", False))
         # Diagnostic only: feeds zero velocity observations to the policy.
-        self.debug_zero_velocities = bool(self.cfg.get("debug_zero_velocities", True))
+        self.debug_zero_velocities = bool(self.cfg.get("debug_zero_velocities", False))
         self.debug_obs_dump = bool(self.cfg.get("debug_obs_dump", True))
         self.debug_obs_dump_every_n_steps = int(
             self.cfg.get("debug_obs_dump_every_n_steps", 0)
@@ -171,6 +171,14 @@ class HexapodPolicyNode(Node):
 
         self.use_gait_phase = bool(self.cfg.get("use_gait_phase", True))
         self.gait_freq = float(self.cfg.get("gait_freq", 1.5))
+        # "global": [sin, cos] of one phase (mdp.gait_clock).
+        # "per_leg": [sin x6, cos x6] of each leg's phase (mdp.gait_leg_clock).
+        self.gait_clock = str(self.cfg.get("gait_clock", "global"))
+        if self.gait_clock not in ("global", "per_leg"):
+            raise ValueError(f"gait_clock must be 'global' or 'per_leg', got '{self.gait_clock}'")
+        self.gait_phase_offsets = np.array(
+            self.cfg.get("gait_phase_offsets", [0.0, 0.5, 0.5, 0.0, 0.0, 0.5]), dtype=np.float32
+        )
         # Must equal the training env.step_dt (sim.dt * decimation).
         self.gait_step_dt = float(self.cfg.get("gait_step_dt", 1.0 / self.control_rate))
         self._gait_step = 0
@@ -184,56 +192,16 @@ class HexapodPolicyNode(Node):
             if name in action_name_to_default:
                 self.default_joint_pos_in_obs[i] = action_name_to_default[name]
 
-        self.gait_phase_dim = 2 if self.use_gait_phase else 0
-        self.num_obs = (
-            3
-            + 3
-            + self.gait_phase_dim
-            + 3
-            + 2 * self.num_obs_joints
-            + 3
-            + self.num_action_joints
-        )
+        if not self.use_gait_phase:
+            self.gait_phase_dim = 0
+        elif self.gait_clock == "per_leg":
+            self.gait_phase_dim = 2 * len(self.gait_phase_offsets)
+        else:
+            self.gait_phase_dim = 2
+        self.num_obs = self._compute_num_obs()
         self.num_actions = self.num_action_joints
 
-        hidden_sizes = list(self.cfg.get("hidden_sizes", [512, 256, 128]))
-        # Read real layer sizes from the checkpoint; skrl may or may not save
-        # the action head as a separate policy_layer.
-        layer_sizes = self._infer_layer_sizes(ckpt_path, hidden_sizes)
-        self.get_logger().info(f"Inferred network layer output sizes: {layer_sizes}")
-
-        ckpt_obs_dim = self._infer_checkpoint_obs_dim(ckpt_path)
-        if ckpt_obs_dim is not None and ckpt_obs_dim != self.num_obs:
-            raise RuntimeError(
-                f"Observation size mismatch: checkpoint expects {ckpt_obs_dim}, "
-                f"this config builds {self.num_obs}.\n"
-                f"  base_lin_vel        3\n"
-                f"  base_ang_vel        3\n"
-                f"  gait_phase          {self.gait_phase_dim}"
-                f"   (use_gait_phase={self.use_gait_phase})\n"
-                f"  projected_gravity   3\n"
-                f"  joint_pos          {self.num_obs_joints}"
-                f"   (len(obs_joint_names))\n"
-                f"  joint_vel          {self.num_obs_joints}\n"
-                f"  commands            3\n"
-                f"  last_action        {self.num_action_joints}"
-                f"   (len(action_joint_names))\n"
-                f"  -------------------------\n"
-                f"  TOTAL              {self.num_obs}\n"
-                f"Check obs_joint_names (FIXED joints carry 0 DOF and must NOT "
-                f"be listed) and use_gait_phase in the YAML."
-            )
-
-        self.policy = PolicyMLP(
-            num_obs=self.num_obs,
-            layer_sizes=layer_sizes,
-            activation=self.cfg.get("activation", "elu"),
-        ).to(self.device)
-
-        self.state_preprocessor = RunningStandardScaler(
-            self.num_obs, device=self.device
-        )
-        self._load_skrl_checkpoint(ckpt_path)
+        self._setup_policy(ckpt_path)
         self.policy.eval()
 
         self.base_lin_vel = np.zeros(3, dtype=np.float32)
@@ -276,6 +244,59 @@ class HexapodPolicyNode(Node):
             f"rate={self.control_rate} Hz, "
             f"preprocessor={'on' if self.state_preprocessor.enabled else 'off'}"
         )
+
+    def _compute_num_obs(self) -> int:
+        """Proprioceptive observation size (see module docstring for the layout)."""
+        return (
+            3
+            + 3
+            + self.gait_phase_dim
+            + 3
+            + 2 * self.num_obs_joints
+            + 3
+            + self.num_action_joints
+        )
+
+    def _setup_policy(self, ckpt_path: str):
+        """Build self.policy and self.state_preprocessor from the checkpoint."""
+        hidden_sizes = list(self.cfg.get("hidden_sizes", [512, 256, 128]))
+        # Read real layer sizes from the checkpoint; skrl may or may not save
+        # the action head as a separate policy_layer.
+        layer_sizes = self._infer_layer_sizes(ckpt_path, hidden_sizes)
+        self.get_logger().info(f"Inferred network layer output sizes: {layer_sizes}")
+
+        ckpt_obs_dim = self._infer_checkpoint_obs_dim(ckpt_path)
+        if ckpt_obs_dim is not None and ckpt_obs_dim != self.num_obs:
+            raise RuntimeError(
+                f"Observation size mismatch: checkpoint expects {ckpt_obs_dim}, "
+                f"this config builds {self.num_obs}.\n"
+                f"  base_lin_vel        3\n"
+                f"  base_ang_vel        3\n"
+                f"  gait_phase          {self.gait_phase_dim}"
+                f"   (use_gait_phase={self.use_gait_phase}, gait_clock={self.gait_clock})\n"
+                f"  projected_gravity   3\n"
+                f"  joint_pos          {self.num_obs_joints}"
+                f"   (len(obs_joint_names))\n"
+                f"  joint_vel          {self.num_obs_joints}\n"
+                f"  commands            3\n"
+                f"  last_action        {self.num_action_joints}"
+                f"   (len(action_joint_names))\n"
+                f"  -------------------------\n"
+                f"  TOTAL              {self.num_obs}\n"
+                f"Check obs_joint_names (FIXED joints carry 0 DOF and must NOT "
+                f"be listed), use_gait_phase and gait_clock in the YAML."
+            )
+
+        self.policy = PolicyMLP(
+            num_obs=self.num_obs,
+            layer_sizes=layer_sizes,
+            activation=self.cfg.get("activation", "elu"),
+        ).to(self.device)
+
+        self.state_preprocessor = RunningStandardScaler(
+            self.num_obs, device=self.device
+        )
+        self._load_skrl_checkpoint(ckpt_path)
 
     def _infer_layer_sizes(self, ckpt_path: str, hidden_sizes_hint: list) -> list:
         """Output dims of the checkpoint's policy Linear layers, in order."""
@@ -404,6 +425,9 @@ class HexapodPolicyNode(Node):
         if unexpected:
             self.get_logger().warn(f"Unexpected keys when loading policy: {unexpected}")
 
+        self._load_state_preprocessor(ckpt, path)
+
+    def _load_state_preprocessor(self, ckpt: dict, path: str):
         # skrl stores the preprocessor in a sibling file when store_separately=True.
         preproc_sd = None
         for key in ("state_preprocessor", "_state_preprocessor"):
@@ -529,8 +553,11 @@ class HexapodPolicyNode(Node):
         self.command[2] = msg.angular.z
 
     def _gait_phase_obs(self) -> np.ndarray:
-        """Open-loop gait clock [sin, cos], driven by the step counter as in training."""
+        """Open-loop gait clock, driven by the step counter as in training."""
         phase = (self._gait_step * self.gait_step_dt * self.gait_freq) % 1.0
+        if self.gait_clock == "per_leg":
+            ang = 2.0 * np.pi * ((phase + self.gait_phase_offsets) % 1.0)
+            return np.concatenate([np.sin(ang), np.cos(ang)]).astype(np.float32)
         ang = 2.0 * np.pi * phase
         return np.array([np.sin(ang), np.cos(ang)], dtype=np.float32)
 
@@ -555,6 +582,60 @@ class HexapodPolicyNode(Node):
         terms += [self.projected_gravity, jp, jv, self.command, self.last_action]
         return np.concatenate(terms).astype(np.float32)
 
+    def _publish_default_pose(self):
+        msg = JointState()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.name = list(self.action_joint_names)
+        msg.position = self.default_joint_pos.tolist()
+        self.cmd_pub.publish(msg)
+
+    def _ready_to_engage(self) -> bool:
+        """Extra precondition (besides the startup ramp) for running the policy."""
+        return True
+
+    def _format_observation(self, obs_np: np.ndarray) -> str:
+        np.set_printoptions(precision=4, suppress=True, linewidth=200)
+        n_j = self.num_obs_joints
+        o = 0
+        blv_s = obs_np[o : o + 3]
+        o += 3
+        bav_s = obs_np[o : o + 3]
+        o += 3
+        gait_s = None
+        if self.use_gait_phase:
+            gait_s = obs_np[o : o + self.gait_phase_dim]
+            o += self.gait_phase_dim
+        grav_s = obs_np[o : o + 3]
+        o += 3
+        jp_s = obs_np[o : o + n_j]
+        o += n_j
+        jv_s = obs_np[o : o + n_j]
+        o += n_j
+        cmd_s = obs_np[o : o + 3]
+        o += 3
+        act_s = obs_np[o : o + self.num_action_joints]
+        gait_line = (
+            f"  gait_phase        ({gait_s})\n" if gait_s is not None else ""
+        )
+        return (
+            f"----- Observation dump (step {self._step_count}) -----\n"
+            f"  base_lin_vel      ({blv_s})\n"
+            f"  base_ang_vel      ({bav_s})\n"
+            f"{gait_line}"
+            f"  projected_gravity ({grav_s})\n"
+            f"  joint_pos[{n_j}]    ({jp_s})\n"
+            f"  joint_vel[{n_j}]    ({jv_s})\n"
+            f"  command           ({cmd_s})\n"
+            f"  last_action[{self.num_action_joints}] ({act_s})\n"
+            f"  joint_pos_relative={self.joint_pos_relative} "
+            f"rotate_odom_to_body={self.rotate_odom_to_body} "
+            f"gait=({self.gait_clock if self.use_gait_phase else 'off'}, freq={self.gait_freq}, dt={self.gait_step_dt:.4f}) "
+            f"preprocessor={'on' if self.state_preprocessor.enabled else 'off'}"
+        )
+
+    def _dump_observation(self, obs_np: np.ndarray):
+        self.get_logger().info(self._format_observation(obs_np))
+
     def _control_step(self):
         if self._joint_state_to_obs_idx is None:
             return
@@ -562,13 +643,12 @@ class HexapodPolicyNode(Node):
         # Hold the default pose before engaging the policy.
         if self._startup_steps_remaining > 0:
             self._startup_steps_remaining -= 1
-            msg = JointState()
-            msg.header.stamp = self.get_clock().now().to_msg()
-            msg.name = list(self.action_joint_names)
-            msg.position = self.default_joint_pos.tolist()
-            self.cmd_pub.publish(msg)
+            self._publish_default_pose()
             if self._startup_steps_remaining == 0:
                 self.get_logger().info("Startup ramp complete -- engaging policy.")
+            return
+        if not self._ready_to_engage():
+            self._publish_default_pose()
             return
 
         obs_np = self._build_observation()
@@ -585,44 +665,7 @@ class HexapodPolicyNode(Node):
         )
         if should_dump:
             self._obs_dumped = True
-            np.set_printoptions(precision=4, suppress=True, linewidth=200)
-            n_j = self.num_obs_joints
-            o = 0
-            blv_s = obs_np[o : o + 3]
-            o += 3
-            bav_s = obs_np[o : o + 3]
-            o += 3
-            gait_s = None
-            if self.use_gait_phase:
-                gait_s = obs_np[o : o + 2]
-                o += 2
-            grav_s = obs_np[o : o + 3]
-            o += 3
-            jp_s = obs_np[o : o + n_j]
-            o += n_j
-            jv_s = obs_np[o : o + n_j]
-            o += n_j
-            cmd_s = obs_np[o : o + 3]
-            o += 3
-            act_s = obs_np[o:]
-            gait_line = (
-                f"  gait_phase        ({gait_s})\n" if gait_s is not None else ""
-            )
-            self.get_logger().info(
-                f"----- Observation dump (step {self._step_count}) -----\n"
-                f"  base_lin_vel      ({blv_s})\n"
-                f"  base_ang_vel      ({bav_s})\n"
-                f"{gait_line}"
-                f"  projected_gravity ({grav_s})\n"
-                f"  joint_pos[{n_j}]    ({jp_s})\n"
-                f"  joint_vel[{n_j}]    ({jv_s})\n"
-                f"  command           ({cmd_s})\n"
-                f"  last_action[{self.num_action_joints}] ({act_s})\n"
-                f"  joint_pos_relative={self.joint_pos_relative} "
-                f"rotate_odom_to_body={self.rotate_odom_to_body} "
-                f"gait=({'on' if self.use_gait_phase else 'off'}, freq={self.gait_freq}, dt={self.gait_step_dt:.4f}) "
-                f"preprocessor={'on' if self.state_preprocessor.enabled else 'off'}"
-            )
+            self._dump_observation(obs_np)
 
         with torch.no_grad():
             obs_t = torch.from_numpy(obs_np).unsqueeze(0).to(self.device)

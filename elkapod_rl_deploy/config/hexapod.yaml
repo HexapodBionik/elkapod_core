@@ -87,5 +87,7 @@ joint_vel_relative: false
 # Set false if the Action Graph already publishes body-frame twist.
 rotate_odom_to_body: true
 
+# Diagnostic only: feeds zero base/joint velocities to the policy.
+debug_zero_velocities: false
 debug_obs_dump: true
 debug_obs_dump_every_n_steps: 50

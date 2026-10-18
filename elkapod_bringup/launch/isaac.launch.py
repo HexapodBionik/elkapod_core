@@ -2,8 +2,9 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
@@ -19,6 +20,12 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'terrain', default_value='flat', choices=['flat', 'rough'],
+            description="RL policy variant. 'rough' needs elevation_mapping running"),
         IncludeLaunchDescription(PythonLaunchDescriptionSource(elkapod_rsp_launch_path)),
-        IncludeLaunchDescription(PythonLaunchDescriptionSource(elkapod_rl_policy_launch_path)),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(elkapod_rl_policy_launch_path),
+            launch_arguments={'terrain': LaunchConfiguration('terrain')}.items(),
+        ),
     ])

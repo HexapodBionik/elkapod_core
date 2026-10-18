@@ -27,6 +27,7 @@ setup(
     entry_points={
         "console_scripts": [
             "policy_node = elkapod_rl_deploy.policy_node:main",
+            "rough_policy_node = elkapod_rl_deploy.rough_policy_node:main",
         ],
     },
 )
