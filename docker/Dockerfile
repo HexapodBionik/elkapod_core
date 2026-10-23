@@ -5,8 +5,8 @@ ARG BASE_IMAGE=ghcr.io/hexapodbionik/elkapod-ros-jazzy-base:latest
 # so the expensive rosdep layer below stays cached whenever only sources change.
 FROM ${BASE_IMAGE} AS manifests
 COPY . /tmp/repo
-RUN mkdir -p /manifests && cd /tmp/repo && \
-    find . -name package.xml -exec cp --parents {} /manifests/ \;
+RUN mkdir -p /tmp/manifests && cd /tmp/repo && \
+    find . -name package.xml -exec cp --parents {} /tmp/manifests/ \;
 
 # -------------------------------------------------------------------- deps --
 FROM ${BASE_IMAGE} AS deps
@@ -18,11 +18,14 @@ WORKDIR /ws
 COPY repos.yaml /ws/repos.yaml
 RUN mkdir -p src && vcs import src < /ws/repos.yaml
 
-COPY --from=manifests /manifests /ws/src/${REPO_NAME}
+RUN --mount=type=cache,target=/home/ubuntu/.cache/pip,uid=1000,gid=1000 \
+    pip install --index-url https://download.pytorch.org/whl/cpu torch "numpy<2"
+
+COPY --chown=ubuntu:ubuntu --from=manifests /tmp/manifests /ws/src/${REPO_NAME}
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-    apt-get update && \
+    sudo apt-get update && \
     rosdep install --from-paths src --ignore-src -y \
         --rosdistro "${ROS_DISTRO}" \
         ${ROSDEP_SKIP_KEYS:+--skip-keys "${ROSDEP_SKIP_KEYS}"}
@@ -34,17 +37,16 @@ ARG REPO_NAME=elkapod_core
 ARG COLCON_PACKAGES=""
 WORKDIR /ws
 
-COPY . /ws/src/${REPO_NAME}
+COPY --chown=ubuntu:ubuntu . /ws/src/${REPO_NAME}
 
-RUN --mount=type=cache,target=/root/.ccache \
+RUN --mount=type=cache,target=/home/ubuntu/.ccache,uid=1000,gid=1000 \
     source "/opt/ros/${ROS_DISTRO}/setup.bash" && \
     colcon build \
         --event-handlers console_direct+ \
         --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo \
         ${COLCON_PACKAGES:+--packages-up-to ${COLCON_PACKAGES}}
 
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["bash"]

@@ -16,6 +16,7 @@
   <depend>rclcpp</depend>
   <depend>rclcpp_lifecycle</depend>
   <depend>elkapod_msgs</depend>
+  <depend>topic_based_ros2_control</depend>
   <!-- hardware/elkapod_comm.cpp links against libserial -->
   <depend>libserial-dev</depend>
 

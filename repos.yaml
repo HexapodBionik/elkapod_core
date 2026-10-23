@@ -3,3 +3,7 @@ repositories:
     type: git
     url: https://github.com/HexapodBionik/elkapod_msgs.git
     version: main
+  topic_based_ros2_control:
+    type: git
+    url: https://github.com/PickNikRobotics/topic_based_ros2_control.git
+    version: main
