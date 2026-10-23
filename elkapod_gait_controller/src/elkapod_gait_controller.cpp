@@ -337,10 +337,10 @@ controller_interface::return_type ElkapodGaitController::update(const rclcpp::Ti
   }
 
   // Pitch && Roll PIDs
-  const double e_roll = set_roll_ - roll_;
+  const double e_roll = 0.0;
   double u_roll = roll_pid_->compute_command(e_roll, period);
 
-  const double e_pitch = set_pitch_ - pitch_;
+  const double e_pitch = 0.0;
   double u_pitch = pitch_pid_->compute_command(e_pitch, period);
 
   if (state_ != State::IDLE) {
