@@ -50,3 +50,24 @@ COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["bash"]
+
+# --------------------------------------------------------------------- dev --
+FROM deps AS dev
+SHELL ["/bin/bash", "-lc"]
+WORKDIR /ws
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    sudo apt-get update && \
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        ros-${ROS_DISTRO}-teleop-twist-keyboard \
+        ros-${ROS_DISTRO}-rqt-graph \
+        ros-${ROS_DISTRO}-rviz2 \
+        ros-${ROS_DISTRO}-plotjuggler \
+        gdb htop btop
+
+COPY --from=build --chown=ubuntu:ubuntu /ws/install /ws/install
+
+COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["bash"]
