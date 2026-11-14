@@ -6,25 +6,18 @@ from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
-# terrain -> (executable, node name, default config, default checkpoint)
-POLICIES = {
-    "flat": ("policy_node", "elkapod_policy_node", "hexapod.yaml", "best_agent.pt"),
-    "rough": (
-        "rough_policy_node",
-        "elkapod_rough_policy_node",
-        "hexapod_rough.yaml",
-        "rough_agent.pt",
-    ),
+VARIANTS = {
+    "flat": ("elkapod_policy_node", "hexapod.yaml", "best_agent.pt"),
+    "rough": ("elkapod_rough_policy_node", "hexapod_rough.yaml", "rough_agent.pt"),
 }
-
 
 def launch_setup(context, *args, **kwargs):
     config_dir = os.path.join(get_package_share_directory("elkapod_rl_deploy"), "config")
 
-    terrain = LaunchConfiguration("terrain").perform(context)
-    if terrain not in POLICIES:
-        raise RuntimeError(f"terrain must be one of {list(POLICIES)}, got '{terrain}'")
-    executable, name, default_config, default_checkpoint = POLICIES[terrain]
+    variant = LaunchConfiguration("variant").perform(context)
+    if variant not in VARIANTS:
+        raise RuntimeError(f"type must be one of {list(VARIANTS)}, got '{variant}'")
+    name, default_config, default_checkpoint = VARIANTS[variant]
 
     config_file = LaunchConfiguration("config_file").perform(context) or os.path.join(
         config_dir, default_config
@@ -35,14 +28,13 @@ def launch_setup(context, *args, **kwargs):
 
     node = Node(
         package="elkapod_rl_deploy",
-        executable=executable,
+        executable="policy_node",
         name=name,
         output="screen",
         emulate_tty=True,
         parameters=[{
             "config_file": config_file,
             "checkpoint_path": checkpoint_path,
-            "control_rate_hz": float(LaunchConfiguration("control_rate_hz").perform(context)),
             "use_sim_time": True,
         }],
     )
@@ -50,38 +42,27 @@ def launch_setup(context, *args, **kwargs):
 
 
 def generate_launch_description():
-    terrain_arg = DeclareLaunchArgument(
-        "terrain",
+    variant_arg = DeclareLaunchArgument(
+        "variant",
         default_value="flat",
-        choices=list(POLICIES),
+        choices=list(VARIANTS),
         description=(
-            "Policy variant: 'flat' (proprioceptive only) or 'rough' (height scan "
-            "from elevation_mapping_cupy)."
+            "Policy variant: end2end policy without height map (flat), end2end policy with height map (rough)."
         ),
     )
     checkpoint_arg = DeclareLaunchArgument(
         "checkpoint_path",
         default_value="",
-        description="Absolute path to the skrl .pt checkpoint (empty = terrain default)",
+        description="Absolute path to the skrl .pt checkpoint (empty = variant default)",
     )
     config_arg = DeclareLaunchArgument(
         "config_file",
         default_value="",
-        description="Path to YAML config (empty = terrain default)",
+        description="Path to YAML config (empty = variant default)",
     )
-    rate_arg = DeclareLaunchArgument(
-        "control_rate_hz",
-        default_value="50.0",
-        description=(
-            "Inference loop frequency (Hz). 0 = use the value from the YAML "
-            "config (which must match 1/(sim.dt*decimation) from training)."
-        ),
-    )
-
     return LaunchDescription([
-        terrain_arg,
+        variant_arg,
         checkpoint_arg,
         config_arg,
-        rate_arg,
         OpaqueFunction(function=launch_setup),
     ])

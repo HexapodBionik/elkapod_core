@@ -69,7 +69,6 @@ clip_actions: 100.0
 
 hidden_sizes: [512, 256, 128]
 activation: elu
-final_layer: separate
 
 use_cuda: true
 
@@ -80,14 +79,13 @@ use_gait_phase: true
 gait_freq: 1.5
 gait_step_dt: 0.02      # sim.dt * decimation
 
-# true if training used mdp.joint_pos_rel / mdp.joint_vel_rel
+# true if training used mdp.joint_pos_rel
 joint_pos_relative: false
-joint_vel_relative: false
 
 # Set false if the Action Graph already publishes body-frame twist.
 rotate_odom_to_body: true
 
 # Diagnostic only: feeds zero base/joint velocities to the policy.
 debug_zero_velocities: false
-debug_obs_dump: true
+# Log the observation every N policy steps (0 = off).
 debug_obs_dump_every_n_steps: 50

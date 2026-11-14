@@ -16,16 +16,16 @@ def generate_launch_description():
     elkapod_rl_policy_launch_path = os.path.join(
             get_package_share_directory('elkapod_rl_deploy'),
             'launch',
-            'hexapod_policy.launch.py'
+            'elkapod_policy.launch.py'
     )
 
     return LaunchDescription([
         DeclareLaunchArgument(
-            'terrain', default_value='flat', choices=['flat', 'rough'],
+            'variant', default_value='rough', choices=['flat', 'rough'],
             description="RL policy variant. 'rough' needs elevation_mapping running"),
         IncludeLaunchDescription(PythonLaunchDescriptionSource(elkapod_rsp_launch_path)),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(elkapod_rl_policy_launch_path),
-            launch_arguments={'terrain': LaunchConfiguration('terrain')}.items(),
+            launch_arguments={'variant': LaunchConfiguration('variant')}.items(),
         ),
     ])

@@ -81,16 +81,15 @@ gait_step_dt: 0.02      # sim.dt * decimation
 gait_clock: per_leg
 gait_phase_offsets: [0.0, 0.5, 0.5, 0.0, 0.0, 0.5]  # mdp/clock.py TRIPOD_OFFSETS
 
-# true if training used mdp.joint_pos_rel / mdp.joint_vel_rel
+# true if training used mdp.joint_pos_rel
 joint_pos_relative: false
-joint_vel_relative: false
 
 # Set false if the Action Graph already publishes body-frame twist.
 rotate_odom_to_body: true
 
 # Diagnostic only: feeds zero base/joint velocities to the policy.
 debug_zero_velocities: false
-debug_obs_dump: true
+# Log the observation every N policy steps (0 = off).
 debug_obs_dump_every_n_steps: 50
 
 # Policy network (skrl agent.yaml: models.policy.network).
